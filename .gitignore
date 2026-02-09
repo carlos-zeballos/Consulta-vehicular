@@ -1,0 +1,80 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build outputs
+dist/
+build/
+*.zip
+
+# Screenshots and debug files
+screenshots/
+debug-*.html
+debug-*.png
+sbs-debug-*.html
+sbs-debug-*.png
+callao-debug-*.html
+callao-debug-*.png
+captcha-*.png
+resultado.png
+sbs_resultado.png
+1dc45080-a3b9-4c81-8167-33780b9ee152.png
+debug-sutran-no-data.png
+
+# Test files
+test-*.js
+*.test.js
+
+# PDFs generados
+*.pdf
+test-reporte-*.pdf
+verificacion-*.pdf
+
+# Datos reales / ejemplos (no subir a repos públicos)
+EJEMPLOS_DATOS_REALES.json
+
+# cPanel specific
+proyecto-cpanel/
+.cpanelignore
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Playwright/Puppeteer
+.playwright/
+.local-chromium/
+
+# Coupons (NO subir secretos)
+data/coupons.json
+data/coupon-state.json

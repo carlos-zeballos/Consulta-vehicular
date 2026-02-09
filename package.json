@@ -1,0 +1,50 @@
+{
+  "name": "consulta-papeletas-lima-callao",
+  "version": "1.0.0",
+  "description": "Consulta de papeletas de SAT Lima y Callao con resolución de CAPTCHA automática",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "2captcha-ts": "^2.4.1",
+    "axios": "^1.13.2",
+    "axios-cookiejar-support": "^4.0.7",
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
+    "cheerio": "^1.1.2",
+    "cloudscraper": "^4.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "form-data": "^4.0.4",
+    "mercadopago": "^2.8.0",
+    "mysql2": "^3.15.0",
+    "pdfkit": "^0.17.2",
+    "playwright": "^1.57.0",
+    "puppeteer": "^19.11.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "tesseract.js": "^7.0.0",
+    "tough-cookie": "^4.1.4"
+  },
+  "engines": {
+    "node": ">=18.x",
+    "npm": ">=9.x"
+  },
+  "puppeteer": {
+    "skip_chromium_download": false
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carlos-zeballos/Consulta-vehicular.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/carlos-zeballos/Consulta-vehicular/issues"
+  },
+  "homepage": "https://github.com/carlos-zeballos/Consulta-vehicular#readme"
+}

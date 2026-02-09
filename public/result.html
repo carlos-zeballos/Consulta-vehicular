@@ -1,0 +1,334 @@
+<html lang="es">
+<head>
+  <meta charset="UTF-8" >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- html2pdf removido - usando PDFKit en el servidor -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>
+<!-- jsPDF y html2canvas removidos - usando PDFKit en el servidor -->
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Estilos del proyecto -->
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="result.css">
+  <link rel="stylesheet" href="css/app.css">
+   
+  <title>Historial del Vehículo - Consulta Vehicular</title>
+  <!-- Favicon placeholder para evitar 404 -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+<body class="report-page">
+  <!-- WhatsApp Float -->
+  <a href="https://wa.me/51949319753?text=Hola%2C%20necesito%20ayuda%20con%20el%20informe%20vehicular"
+   class="whatsapp-float" target="_blank" title="¿Necesitas ayuda?">
+  <div class="whatsapp-content">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="whatsapp-icon">
+      <path fill="white" d="M380.9 97.1C339.3 55.5 282.4 32 222.6 32c-121.1 0-219.6 98.5-219.6 219.6 0 38.6 10 76.3 29 109.3L4.4 480l123.4-32.4c31.9 17.5 67.8 26.8 104.8 26.8h.1c121.1 0 219.6-98.5 219.6-219.6 0-59.8-23.5-116.7-66.4-158.7zM222.6 438.6c-30.2 0-59.9-8.1-85.7-23.4l-6.1-3.6-73.2 19.2 19.5-71.1-4.5-7c-17.8-27.7-27.1-59.9-27.1-93 0-94.2 76.6-170.8 170.8-170.8 45.7 0 88.7 17.8 121 50.1s50.1 75.3 50.1 121c0 94.1-76.6 170.6-170.8 170.6zm101.2-130.1c-5.5-2.8-32.7-16.1-37.8-17.9-5.1-1.9-8.8-2.8-12.5 2.8s-14.4 17.9-17.7 21.6c-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66.1-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7s-12.5-30-17.1-41.1c-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2s-9.7 1.4-14.8 6.9c-5.1 5.6-19.4 19-19.4 46.3s19.9 53.7 22.7 57.4c2.8 3.7 39.2 60 95.1 84.2 13.3 5.7 23.7 9.1 31.8 11.6 13.4 4.3 25.6 3.7 35.2 2.2 10.7-1.6 32.7-13.4 37.3-26.4 4.6-13.1 4.6-24.3 3.2-26.3-1.3-2.1-5-3.3-10.5-6.1z"/>
+    </svg>
+    <span>¿Necesitas ayuda?</span>
+  </div>
+</a>
+
+  <!-- Header del Reporte -->
+  <div class="report-header" id="reportHeader" style="display: none;">
+    <div class="report-header-content">
+      <div class="report-title-section">
+        <h1>Historial del Vehículo</h1>
+        <div class="subtitle">
+          <span id="reportPlaca">Placa: -</span>
+          <span id="reportFecha">Fecha de consulta: -</span>
+        </div>
+      </div>
+      <div class="report-header-right">
+        <!-- Imagen placeholder - Reemplazar por: public/img/report-mascot.png -->
+        <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200&h=200&fit=crop" 
+             alt="Vehículo" 
+             class="report-image-placeholder"
+             onerror="this.style.display='none'">
+        <div class="report-highlights" id="reportHighlights">
+          <!-- Se llenará dinámicamente -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content"> 
+<!-- 🔹 Contenedor de Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="openTab(event, 'vehicular')">🚘 Consulta Vehicular</button>
+  <button class="tab-btn" onclick="redirigirASunarp()">👤 Consulta Propietario</button>
+</div>
+<div id="vehicular" class="tab-content active"> 
+  <div class="container-fluid report-fluid px-3 px-md-4">
+    <div class="header">
+      <img src="principal.png" alt="Logo Consulta Vehicular">
+      <h1> </h1>
+      <p> ¡Consulta en segundos el historial de cualquier vehículo con solo su placa!     </p>
+    </div>
+<div class="input-search">
+  <input type="text" id="placa" placeholder="    Ejemplo: ABC123" />
+</div>
+<button onclick="consultar()">Consultar</button>
+<!-- Botón para modo prueba se creará dinámicamente después de cargar scripts -->
+ 
+  <!-- Dashboard Metrics -->
+  <div class="dashboard-metrics" id="dashboardMetrics" style="display: none;"></div>
+
+  <!-- Contenedor del Reporte -->
+  <div class="report-container" id="reportContainer" style="display: none;">
+    <div class="report-actions">
+      <button class="btn-report btn-report-primary" id="btn-download-pdf-static" onclick="if(window.App && window.App.downloadPDF){window.App.downloadPDF();}else{alert('Cargando funciones... Por favor espere un momento y vuelva a intentar.');}">
+        <i class="bi bi-file-pdf"></i> Descargar PDF
+      </button>
+      <button class="btn-report btn-report-secondary" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <i class="bi bi-arrow-up"></i> Volver arriba
+      </button>
+      <button class="btn-report btn-report-danger" onclick="App.cerrarConsulta()" style="background: #DC2626;">
+        <i class="bi bi-x-circle"></i> Cerrar Consulta
+      </button>
+    </div>
+
+    <!-- Grid Layout para Secciones -->
+    <div class="report-grid" id="reportGrid">
+      <!-- Shells se inicializarán por JS -->
+    </div>
+  </div>
+
+
+  <!-- Las secciones se crean dinámicamente en reportGrid -->
+     
+  </div>
+  </div>
+
+<div id="propietario" class="tab-content">
+
+
+  <h1>Consulta de Asientos SUNARP</h1>
+
+  <form id="formConsulta" class="buscador">
+    <div class="campo">
+      <label for="placa">Placa</label>
+      <input type="text" id="placaa" name="placa" required placeholder="Ej: ABC123">
+    </div>
+    <div class="campo">
+      <label for="ciudad">Oficina Registral</label>
+      <select id="ciudad" name="ciudad" required>
+        <option value="">Seleccione...</option>
+        <option value="ABANCAY">ABANCAY</option>
+       <option value="ANDAHUAYLAS">ANDAHUAYLAS</option>
+       <option value="AREQUIPA">AREQUIPA</option> 
+       <option value="AYACUCHO">AYACUCHO</option>
+       <option value="BAGUA">BAGUA</option>
+      <option value="BARRANCA">BARRANCA</option>
+        <option value="CAJAMARCA">CAJAMARCA</option>
+       <option value="CALLAO">CALLAO</option>
+       <option value="CAMANA">CAMANA</option>
+       <option value="CASMA">CASMA</option>
+       <option value="CASTILLA_APLAO">CASTILLA_APLAO</option>
+       <option value="CAÑETE">CAÑETE</option>
+       <option value="CHACHAPOYAS">CHACHAPOYAS</option>
+       <option value="CHEPEN">CHEPEN</option>
+       <option value="CHICLAYO">CHICLAYO</option>
+       <option value="CHIMBOTE">CHIMBOTE</option>
+       <option value="CHINCHA">CHINCHA</option>
+       <option value="CHOTA">CHOTA</option>
+       <option value="CUSCO">CUSCO</option>
+       <option value="ESPINAR">ESPINAR</option>
+       <option value="HUACHO">HUACHO</option>
+      <option value="HUAMANCHUCO">HUAMANCHUCO</option>
+      <option value="HUANCAVELICA">HUANCAVELICA</option>
+      <option value="HUANCAYO">HUANCAYO</option>
+      <option value="HUANTA">HUANTA</option>
+       <option value="HUANUCO">HUANUCO</option>
+        <option value="HUARAL">HUARAL</option>
+      <option value="HUARAZ">HUARAZ</option>
+      <option value="ICA">ICA</option>
+       <option value="ILO">ILO</option>
+        <option value="IZLAY_MOLLENDO">IZLAY_MOLLENDO</option>
+         <option value="JAEN">JAEN</option>
+          <option value="JULIACA">JULIACA</option>
+           <option value="LA MERCED(SELVA CENTRAL)">LA MERCED(SELVA CENTRAL)</option>
+        <option value="LIMA">LIMA</option>
+        <option value="MADRE DE DIOS">MADRE DE DIOS</option>
+        <option value="MAYNAS">MAYNAS</option>
+        <option value="MOQUEGUA">MOQUEGUA</option>
+        <option value="NAZC">NAZCA</option>
+        <option value="OTUZCO">OTUZCO</option>
+        <option value="PASCO">PASCO</option>
+<option value="PISCO">PISCO</option>
+<option value="PIURA">PIURA</option>
+        <option value="PUCALLPA">PUCALLPA</option>
+        <option value="PUNO">PUNO</option>
+        <option value="QUILLABAMBA">QUILLABAMBA</option>
+        <option value="SAN PEDRO">SAN PEDRO</option>
+        <option value="SATIPO">SATIPO</option>
+        <option value="SULLANA">SULLANA</option>
+        <option value="TACNA">TACNA</option>
+        <option value="TARMA">TARMA</option>
+        <option value="TINGO MARIA">TINGO MARIA</option>
+        <option value="TRUJILLO">TRUJILLO</option>
+        <option value="TUMBES">TUMBES</option>
+      </select>
+    </div>
+    <button type="submit">🔍 Consultar</button>
+  </form>
+
+  <div id="resultado-PROPIETARIOS"></div>
+
+  <!-- Modal global -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h2>Detalles</h2>
+      <div id="modal-body"></div>
+      <button class="modal-close">Cerrar</button>
+    </div>
+  </div>
+
+
+
+</div>
+  </div>
+  <div class="footer">
+    <p>© 2025 Consulta Vehicular. Todos los derechos reservados By PaginasWebPro.</p>
+    <p>Contacto: <a href="https://wa.me/51926838543?text=Hola%2C%20necesito%20ayuda%20con%20el%20informe%20vehicular">israelsq03@gmail.com</a></p>
+  </div>
+<!-- Ventana flotante -->
+<div id="overlayCarga"></div>
+
+<div id="ventanaCarga">
+  ⏳ Se está realizando la consulta...
+</div>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Scripts del proyecto -->
+  <!-- Cache-bust para asegurar que siempre cargue la versión más reciente -->
+  <script src="js/app.js?v=20260207_2"></script>
+  <script src="js/mock-data.js"></script>
+  <script>
+    // Asegurar que el botón de PDF funcione cuando se carga la página
+    document.addEventListener('DOMContentLoaded', function() {
+      // Configurar el botón estático de PDF
+      const btnPdfStatic = document.getElementById('btn-download-pdf-static');
+      if (btnPdfStatic) {
+        btnPdfStatic.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (window.App && window.App.downloadPDF) {
+            window.App.downloadPDF();
+          } else {
+            // Esperar un momento y volver a intentar
+            setTimeout(function() {
+              if (window.App && window.App.downloadPDF) {
+                window.App.downloadPDF();
+              } else {
+                alert('Error: La función de descarga no está disponible. Por favor, recargue la página.');
+              }
+            }, 500);
+          }
+        });
+      }
+    });
+    
+    // Modo de prueba
+    const modoPrueba = new URLSearchParams(window.location.search).get('modo') === 'prueba';
+    
+    if (modoPrueba) {
+      document.addEventListener('DOMContentLoaded', () => {
+        // Aviso de modo prueba
+        const aviso = document.createElement('div');
+        aviso.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#FFC107;color:#000;padding:8px;text-align:center;z-index:10000;font-weight:bold;font-size:14px;';
+        aviso.textContent = '⚠️ MODO PRUEBA - Puedes consultar sin pagar';
+        document.body.insertBefore(aviso, document.body.firstChild);
+        
+        // Contenedor de botones
+        const container = document.createElement('div');
+        container.style.cssText = 'display:flex;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap;';
+        
+        
+        // Insertar después del botón consultar
+        const consultarBtn = document.querySelector('button[onclick="consultar()"]');
+        if (consultarBtn && consultarBtn.parentNode) {
+          consultarBtn.parentNode.insertBefore(container, consultarBtn.nextSibling);
+        }
+      });
+    }
+
+    // Funciones UI
+    function formatDate() {
+      return new Date().toLocaleString('es-PE', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    }
+    
+    // Función descargarPDF removida - ahora se usa App.downloadPDF() que usa PDFKit en el servidor
+    
+    function openTab(evt, tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.style.display = 'none';
+        el.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      
+      document.getElementById(tabName).style.display = 'block';
+      document.getElementById(tabName).classList.add('active');
+      evt.currentTarget.classList.add('active');
+    }
+    
+    function redirigirASunarp() {
+      const mensaje = 'Por políticas de privacidad del Perú, para conocer los nombres completos de los propietarios de vehículos, debe ingresar directamente al portal oficial de SUNARP.';
+      const confirmar = confirm(mensaje + '\n\n¿Desea ser redirigido a SUNARP ahora?');
+      if (confirmar) {
+        window.open('https://www.sunarpgobperu.com/', '_blank');
+      }
+    }
+    
+    // Formulario SUNARP
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('formConsulta');
+      const modal = document.getElementById('modal');
+      const modalClose = document.querySelector('.modal-close');
+      
+      if (form) {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const resultadoo = document.getElementById('resultado-PROPIETARIOS');
+          const placa = document.getElementById('placaa')?.value.trim();
+          const ciudad = document.getElementById('ciudad')?.value.trim();
+          
+          if (!placa || !ciudad) return;
+          
+          if (resultadoo) resultadoo.innerHTML = '<p style="text-align:center;">⏳ Consultando...</p>';
+          
+          try {
+            const res = await fetch('/api/asientos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ placa, ciudad })
+            });
+    const data = await res.json();
+
+            if (data?.asientos?.length > 0) {
+              resultadoo.innerHTML = data.asientos.map((a, i) => `
+                <div class="asiento">
+                  <p><strong>Título:</strong> ${a.titulo}</p>
+                  <p><strong>Nro:</strong> ${a.nroAsiento}</p>
+                  <p><strong>Acto:</strong> ${a.acto}</p>
+        </div>
+              `).join('');
+    } else {
+              resultadoo.innerHTML = '<p style="text-align:center;">❌ No se encontraron asientos.</p>';
+            }
+  } catch (err) {
+            if (resultadoo) resultadoo.innerHTML = '<p style="text-align:center;">⚠️ Error en la consulta</p>';
+          }
+        });
+      }
+      
+      if (modalClose) modalClose.addEventListener('click', () => modal.style.display = 'none');
+      if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+    });
+  </script>
+</body>
+</html>

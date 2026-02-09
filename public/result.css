@@ -1,0 +1,95 @@
+/* ============================================
+   RESULT.CSS (MINIMAL)
+   - app.css es el dueño del layout (grid, cards, etc.)
+   - aquí solo dejamos estilos específicos del contenido renderizado
+   ============================================ */
+
+/* ============================================
+   MENSAJES (si necesitas ajustar detalles visuales sin tocar app.css)
+   ============================================ */
+.message {
+  margin: 12px 0;
+}
+
+/* ============================================
+   SECCIONES CON ARRAYS (tablas, listas)
+   ============================================ */
+.array-section {
+  margin-top: 16px;
+}
+
+.array-title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text, #1E293B);
+}
+
+/* ============================================
+   SANITIZACIÓN DE HTML EXTERNO
+   ============================================ */
+.sanitized-content {
+  isolation: isolate;
+}
+
+.sanitized-content * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.sanitized-content table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.sanitized-content table,
+.sanitized-content th,
+.sanitized-content td {
+  border: 1px solid var(--border, #E2E8F0) !important;
+}
+
+/* ============================================
+   NUEVO: Tabla compacta Campo/Valor (estilo reporte empresarial)
+   ============================================ */
+.kv-table {
+  width: 100%;
+  border: 1px solid var(--border-color, #E2E8F0);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.kv-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color, #E2E8F0);
+}
+
+.kv-row:last-child {
+  border-bottom: none;
+}
+
+.kv-key {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.kv-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .kv-row {
+    grid-template-columns: 1fr;
+  }
+}
