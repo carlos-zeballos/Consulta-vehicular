@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    image: consulta-vehicular:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      # APIs / Pagos
+      FACTILIZA_TOKEN: "${FACTILIZA_TOKEN}"
+      CAPTCHA_API_KEY: "${CAPTCHA_API_KEY}"
+      ACCESS_TOKEN: "${ACCESS_TOKEN}"
+      PUBLIC_KEY: "${PUBLIC_KEY}"
+      # Cupones (secretos)
+      COUPON_ADMIN_CODE: "${COUPON_ADMIN_CODE}"
+      COUPONS_PUBLIC_CODES: "${COUPONS_PUBLIC_CODES}"
+      COUPON_HASH_SALT: "${COUPON_HASH_SALT}"
+      # Opcional (si deseas cambiar el prefijo)
+      BASE_PATH: "${BASE_PATH}"
+    ports:
+      # Solo expuesto localmente; Nginx publica 80/443
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # Persistir estados (p.ej. coupon-state.json) en VPS
+      - app_data:/app/data
+
+volumes:
+  app_data:
+
