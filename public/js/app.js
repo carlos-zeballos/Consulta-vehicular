@@ -1311,9 +1311,31 @@
   // ============================================
   async function runAllRequests(placa) {
     const keys = Object.keys(SECTIONS);
+
+    // IMPORTANTE (COSTOS + ESTABILIDAD EN PRODUCCIÓN):
+    // Este frontend lanza muchas consultas /api/*.
+    // En plataformas tipo Cloud Run eso puede crear muchas instancias en paralelo (más costo).
+    // Limitar concurrencia mantiene el costo por "consulta" estable y reduce bloqueos en portales externos.
+    const MAX_PARALLEL_REQUESTS = 4;
+
+    async function runPool(items, worker, limit) {
+      const executing = new Set();
+      const results = [];
+      for (const item of items) {
+        const p = Promise.resolve().then(() => worker(item));
+        results.push(p);
+        executing.add(p);
+        const clean = () => executing.delete(p);
+        p.then(clean).catch(clean);
+        if (executing.size >= limit) {
+          await Promise.race(executing);
+        }
+      }
+      return Promise.allSettled(results);
+    }
     
-    // Crear promesas para cada endpoint
-    const promises = keys.map(async (key) => {
+    // Crear worker para cada endpoint
+    const worker = async (key) => {
       const url = ENDPOINTS[key];
       if (!url) {
         renderSection(key, { ok: false, status: 'error', message: 'Endpoint no configurado' });
@@ -1401,10 +1423,10 @@
       }
       
       renderSection(key, result);
-    });
+    };
     
-    // Ejecutar todas en paralelo
-    await Promise.allSettled(promises);
+    // Ejecutar con concurrencia limitada
+    await runPool(keys, worker, MAX_PARALLEL_REQUESTS);
   }
 
   // ============================================
