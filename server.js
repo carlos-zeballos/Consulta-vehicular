@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SERVER.JS - Consulta Vehicular
  * ProducciÃ³n cPanel - Contrato JSON Ãºnico
  */
@@ -293,7 +293,7 @@ function respond(res, { ok, source, status, message, data = null, meta = {} }, c
     }
   };
   
-  // Log de respuesta formateada para debugging (SAT y SUNARP)
+  // Log de respuesta formateada para debugging (SAT)
   if (source === 'sat') {
     console.log(`\n[SAT] ========== RESPUESTA FINAL ==========`);
     console.log(`[SAT] Status Code: ${finalCode}`);
@@ -926,7 +926,7 @@ app.post("/api/vehiculo", async (req, res) => {
 
     const response = await axios.get(`https://api.factiliza.com/v1/placa/info/${placa}`, {
       headers: { Authorization: FACTILIZA_TOKEN },
-      timeout: 10000
+      timeout: 60000 // Aumentado de 10s a 60s para obtener respuesta completa
     });
 
     if (response.data && response.data.data) {
@@ -1466,8 +1466,13 @@ app.post("/api/siniestro", async (req, res) => {
     // Intentar primero con scraper optimizado (rÃ¡pido como MTC)
     try {
       const SBSSOATScraper = require('./sbs-scraper-final');
-      const scraper = new SBSSOATScraper();
-      const resultado = await scraper.consultarPlaca(placa, 2); // 2 intentos mÃ¡ximo
+      const scraper = new SBSSOATScraper(CAPTCHA_API_KEY); // Pasar API key de 2Captcha si está configurada
+      const resultado = await Promise.race([
+        scraper.consultarPlaca(placa, 5), // 5 intentos mÃ¡ximo para mayor confiabilidad
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout: La consulta tardÃ³ mÃ¡s de 300 segundos")), 300000)
+        )
+      ]);
       
       console.log(`[SINIESTRO] Resultado del scraper:`, JSON.stringify(resultado, null, 2).substring(0, 500));
       
@@ -1480,9 +1485,22 @@ app.post("/api/siniestro", async (req, res) => {
       const accidentes = resultado.accidentes_ultimos_5_anios || 0;
       const status = accidentes > 0 ? "warn" : "success";
 
-      // Si no hay pÃ³lizas, devolver empty
+      // Si no hay pÃ³lizas, verificar si es porque no hay registros o por error
       if (!resultado.polizas || resultado.polizas.length === 0) {
-        console.log(`[SINIESTRO] No hay pÃ³lizas, devolviendo empty`);
+        // Si el resultado tiene un mensaje de "Sin registros", es válido
+        if (resultado.message === 'Sin registros') {
+          console.log(`[SINIESTRO] Sin registros confirmado, devolviendo empty`);
+          return respond(res, {
+            ok: true,
+            source: "siniestro",
+            status: "empty",
+            data: null,
+            message: "No se encontraron registros de SOAT para esta placa"
+          });
+        }
+        
+        // Si no hay mensaje, puede ser un error o realmente no hay registros
+        console.log(`[SINIESTRO] No hay pÃ³lizas sin mensaje de confirmación, devolviendo empty`);
         return respond(res, {
           ok: true,
           source: "siniestro",
@@ -1548,6 +1566,17 @@ app.post("/api/siniestro", async (req, res) => {
     
     // Mensaje de error claro
     let errorMessage = "Error al consultar el servicio SBS. Por favor intente mÃ¡s tarde.";
+    
+    // Si el error es porque no se encontraron registros, devolver empty en lugar de error
+    if (error.message && (error.message.includes('Sin registros') || error.message.includes('No se encontraron registros'))) {
+      return respond(res, {
+        ok: true,
+        source: "siniestro",
+        status: "empty",
+        data: null,
+        message: "No se encontraron registros de SOAT para esta placa"
+      });
+    }
     
     if (error.message.includes('SELECTOR_MISSING')) {
       errorMessage = "El portal cambiÃ³ su estructura. Contacte al administrador.";
@@ -4358,10 +4387,14 @@ app.post("/api/vehiculo", async (req, res) => {
   const { placa } = req.body;
   if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
   
+  // Aumentar timeout del request
+  req.setTimeout(300000); // 5 minutos
+  
   try {
     const token = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODkyMiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.kcxt3XYtXWWgNZdMnaENUZj-568RMkDRAVqV-DRk73I";
     const response = await axios.get(`https://api.factiliza.com/v1/placa/info/${placa}`, {
-      headers: { Authorization: token }
+      headers: { Authorization: token },
+      timeout: 300000 // 5 minutos
     });
     
     res.json({
@@ -4381,56 +4414,6 @@ app.post("/api/vehiculo", async (req, res) => {
   }
 });
 
-// Siniestro - Alias para /siniestro
-app.post("/api/siniestro", async (req, res) => {
-  const { placa } = req.body;
-  if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
-  
-  try {
-    const puppeteer = require("puppeteer");
-    const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36');
-    await page.goto('https://servicios.sbs.gob.pe/reportesoat/', { waitUntil: 'networkidle2' });
-    await page.waitForSelector('#ctl00_MainBodyContent_txtPlaca', { visible: true });
-    await page.click('#ctl00_MainBodyContent_txtPlaca', { clickCount: 3 });
-    await page.type('#ctl00_MainBodyContent_txtPlaca', placa);
-    await page.click('#ctl00_MainBodyContent_btnIngresarPla');
-    await page.evaluate(() => {
-      document.querySelector('#ctl00_MainBodyContent_btnIngresarPla').click();
-    });
-    await page.waitForFunction(() => {
-      return document.querySelector('#ctl00_MainBodyContent_cantidad') ||
-             document.body.innerText.includes('no se encontrÃ³');
-    }, { timeout: 35000 });
-    
-    const resultado = await page.evaluate(() => {
-      const getText = (selector) => {
-        const el = document.querySelector(selector);
-        return el ? el.innerText.trim() : null;
-      };
-      return {
-        placa: getText('#ctl00_MainBodyContent_placa'),
-        fechaConsulta: getText('#ctl00_MainBodyContent_fecha_consulta'),
-        actualizadoA: getText('#ctl00_MainBodyContent_fecha_act'),
-        cantidadAccidentes: getText('#ctl00_MainBodyContent_cantidad'),
-      };
-    });
-    
-    await browser.close();
-    
-    if (!resultado.placa) {
-      return res.json({ ok: true, source: "siniestro", status: "empty", data: null });
-    }
-    
-    res.json({ ok: true, source: "siniestro", status: "success", data: resultado });
-  } catch (error) {
-    res.json({ ok: false, source: "siniestro", status: "error", message: error.message, data: null });
-  }
-});
 
 // RevisiÃ³n - Alias para /api/consultar-revision
 app.post("/api/revision", async (req, res) => {

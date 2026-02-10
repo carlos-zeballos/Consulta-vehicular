@@ -216,7 +216,7 @@ async function consultSbsSoat(placa) {
         '__VIEWSTATEGENERATOR': viewStateGenerator,
         '__EVENTVALIDATION': eventValidation,
         'ctl00$MainBodyContent$txtPlaca': placaNormalizada,
-        'ctl00$MainBodyContent$rblOpcionesSeguros': 'Soat',
+        'ctl00$MainBodyContent$rblOpcionesSeguros': 'Vehicular', // Usar 'Vehicular' para obtener historial completo
         'ctl00$MainBodyContent$hdnReCaptchaV3': hdnReCaptchaV3,
         'ctl00$MainBodyContent$btnIngresarPla': 'Consultar'
       });
@@ -351,17 +351,29 @@ async function consultSbsSoat(placa) {
       const tabla = $result('#listSoatPlacaVeh tbody tr');
 
       if (tabla.length === 0) {
-        // Verificar si hay mensaje de "sin datos"
+        // Verificar si hay mensaje de "sin datos" - buscar en múltiples lugares
         const mensaje = cleanText($result('body').text());
-        if (mensaje.toLowerCase().includes('no se encontr') || mensaje.toLowerCase().includes('sin registros')) {
+        const mensajeElement = $result('#ctl00_MainBodyContent_message_not_found, .message, .alert, .alert-info').text();
+        const textoCompleto = mensaje + ' ' + mensajeElement;
+        
+        const tieneMensajeSinRegistros = textoCompleto.toLowerCase().includes('no se encontr') || 
+                                        textoCompleto.toLowerCase().includes('sin registros') ||
+                                        textoCompleto.toLowerCase().includes('no tiene información') ||
+                                        textoCompleto.toLowerCase().includes('no tiene información reportada');
+        
+        if (tieneMensajeSinRegistros) {
+          console.log('[SBS] Mensaje de "sin registros" detectado, devolviendo resultado vacío');
           return {
+            success: true,
             placa: placaNormalizada.toUpperCase(),
             fecha_consulta: normalizeDateTime(fechaConsultaText) || new Date().toISOString(),
             fecha_actualizacion: fechaActualizacionText || '',
             accidentes_ultimos_5_anios: 0,
-            polizas: []
+            polizas: [],
+            message: 'Sin registros'
           };
         }
+        
         throw new Error("SELECTOR_MISSING: No se encontró la tabla de pólizas (#listSoatPlacaVeh)");
       }
 
@@ -390,6 +402,7 @@ async function consultSbsSoat(placa) {
       });
 
       return {
+        success: true,
         placa: placaText || placaNormalizada.toUpperCase(),
         fecha_consulta: normalizeDateTime(fechaConsultaText) || new Date().toISOString(),
         fecha_actualizacion: fechaActualizacionText || '',

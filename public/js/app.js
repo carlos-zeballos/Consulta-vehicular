@@ -186,8 +186,10 @@
                                 url.includes('/api/chiclayo') ||
                                 url.includes('/api/infogas') ||
                                 url.includes('/api/placas-pe');
-      // Complejos 300s, manual 300s, normal 120s
-      const timeoutMs = options.useManual ? 300000 : (isComplexEndpoint ? 300000 : 120000); 
+      // Siniestro y Vehiculo necesitan más tiempo: 300s (5 minutos)
+      const isVeryComplexEndpoint = url.includes('/api/siniestro') || url.includes('/api/vehiculo');
+      // Complejos 300s, siniestro/vehiculo 300s, manual 300s, normal 120s
+      const timeoutMs = options.useManual ? 300000 : (isVeryComplexEndpoint ? 300000 : (isComplexEndpoint ? 300000 : 120000)); 
       
       const timeout = setTimeout(() => {
         controller.abort();
