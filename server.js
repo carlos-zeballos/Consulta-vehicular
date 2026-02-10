@@ -175,8 +175,13 @@ app.post("/api/coupons/redeem", (req, res) => {
 const FACTILIZA_TOKEN = process.env.FACTILIZA_TOKEN || "";
 const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || "";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "";
-const COUPON_ADMIN_CODE = process.env.COUPON_ADMIN_CODE || "";
-const COUPONS_PUBLIC_CODES = process.env.COUPONS_PUBLIC_CODES || "";
+// Códigos de cupones por defecto (si no están en .env)
+const DEFAULT_COUPON_ADMIN_CODE = "ADMIN-VALHAR-2025";
+const DEFAULT_COUPONS_PUBLIC_CODES = "PROMO-VALHAR1:5,PROMO-VALHAR2:5,PROMO-VALHAR3:5";
+
+// Usar variables de entorno si existen, sino usar valores por defecto
+const COUPON_ADMIN_CODE = process.env.COUPON_ADMIN_CODE || DEFAULT_COUPON_ADMIN_CODE;
+const COUPONS_PUBLIC_CODES = process.env.COUPONS_PUBLIC_CODES || DEFAULT_COUPONS_PUBLIC_CODES;
 const COUPON_HASH_SALT = process.env.COUPON_HASH_SALT || "v1";
 const PORT = process.env.PORT || 3000;
 
