@@ -377,16 +377,21 @@ class ApesegSoatScraper {
         let intentos = 0;
         const maxIntentos = 30; // 30 intentos x 2 segundos = 60 segundos máximo
         
-        while (intentos < maxIntentos && !certificadosInterceptados) {
+        while (intentos < maxIntentos && certificadosInterceptados === null) {
           await page.waitForTimeout(2000); // Esperar 2 segundos entre verificaciones
           intentos++;
-          if (certificadosInterceptados) {
-            console.log(`[APESEG] ✅ Certificados interceptados después de ${intentos * 2} segundos`);
+          if (certificadosInterceptados !== null) {
+            // Se interceptó algo (puede ser array vacío o con datos)
+            console.log(`[APESEG] ✅ Respuesta interceptada después de ${intentos * 2} segundos`);
             break;
           }
           if (intentos % 5 === 0) {
-            console.log(`[APESEG] Esperando... (${intentos * 2}s/${maxIntentos * 2}s)`);
+            console.log(`[APESEG] Esperando respuesta... (${intentos * 2}s/${maxIntentos * 2}s)`);
           }
+        }
+        
+        if (certificadosInterceptados === null && intentos >= maxIntentos) {
+          console.log('[APESEG] ⚠️ Timeout esperando respuesta de certificados');
         }
         
         // Si se interceptaron certificados, usarlos
@@ -438,8 +443,19 @@ class ApesegSoatScraper {
       await browser.close();
       browser = null;
 
-      // Si llegamos aquí sin datos, retornar vacío
-      if (!certificadosInterceptados || certificadosInterceptados.length === 0) {
+      // Si llegamos aquí sin datos, verificar si fue procesado o no se interceptó nada
+      if (certificadosInterceptados === null) {
+        // No se interceptó ninguna respuesta - puede ser que la página no haya respondido
+        console.log('[APESEG] ⚠️ No se interceptó ninguna respuesta de certificados');
+        return {
+          success: true,
+          placa: placa,
+          polizas: [],
+          message: 'No se encontraron certificados SOAT para esta placa'
+        };
+      } else if (Array.isArray(certificadosInterceptados) && certificadosInterceptados.length === 0) {
+        // Se interceptó pero está vacío - sin certificados
+        console.log('[APESEG] ⚠️ Se interceptó respuesta pero está vacía');
         return {
           success: true,
           placa: placa,
@@ -448,6 +464,7 @@ class ApesegSoatScraper {
         };
       }
 
+      // Si hay certificados, formatearlos
       return this.formatResponse(certificadosInterceptados, placa);
     } catch (error) {
       if (browser) {
