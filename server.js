@@ -910,9 +910,9 @@ app.post("/api/soat", async (req, res) => {
       usePuppeteer: true
     });
 
-    // Usar Promise.race para timeout de 5 minutos
+    // Usar Promise.race para timeout de 6 minutos (aumentado para asegurar resultados)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Timeout: La consulta tardó más de 5 minutos')), 300000);
+      setTimeout(() => reject(new Error('Timeout: La consulta tardó más de 6 minutos')), 360000);
     });
 
     const consultaPromise = scraper.consultarPlaca(placa);
