@@ -39,6 +39,7 @@ const PlacasPeScraper = require("./placas-pe-scraper");
 const CallaoPapeletasScraper = require("./callao-papeletas-scraper");
 const PitFotoScraper = require("./pit-foto-scraper");
 const PunoPapeletasScraper = require("./puno-papeletas-scraper");
+const ApesegSoatScraper = require("./apeseg-soat-scraper");
 const { renderPdf } = require('./renderPdf');
 
 const app = express();
@@ -891,29 +892,89 @@ app.get("/api/health", (req, res) => {
 });
 
 // ============================================
-// API: SOAT (Factiliza)
+// API: SOAT (APESEG)
 // ============================================
 app.post("/api/soat", async (req, res) => {
   const { placa } = req.body;
   if (!placa) return respond(res, { ok: false, source: "soat", status: "error", message: "Placa requerida" }, 400);
 
-  try {
-    if (!FACTILIZA_TOKEN) {
-      return respond(res, { ok: false, source: "soat", status: "error", message: "Token no configurado" }, 500);
-    }
+  const startTime = Date.now();
+  console.log(`[SOAT-APESEG] Iniciando consulta para placa: ${placa}`);
 
-    const response = await axios.get(`https://api.factiliza.com/v1/placa/soat/${placa}`, {
-      headers: { Authorization: FACTILIZA_TOKEN },
-      timeout: 10000
+  try {
+    const scraper = new ApesegSoatScraper({
+      captchaApiKey: CAPTCHA_API_KEY,
+      usePuppeteer: true
     });
 
-    if (response.data && response.data.data) {
-      respond(res, { ok: true, source: "soat", status: "success", data: response.data.data });
-    } else {
-      respond(res, { ok: true, source: "soat", status: "empty", data: null });
+    // Usar Promise.race para timeout de 5 minutos
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout: La consulta tardó más de 5 minutos')), 300000);
+    });
+
+    const consultaPromise = scraper.consultarPlaca(placa);
+
+    const resultado = await Promise.race([consultaPromise, timeoutPromise]);
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`[SOAT-APESEG] Consulta completada en ${elapsed}s para placa: ${placa}`);
+
+    if (!resultado.success) {
+      return respond(res, {
+        ok: false,
+        source: "soat",
+        status: "error",
+        message: resultado.message || "Error al consultar SOAT"
+      }, 500);
     }
+
+    if (!resultado.polizas || resultado.polizas.length === 0) {
+      return respond(res, {
+        ok: true,
+        source: "soat",
+        status: "empty",
+        data: null,
+        message: "No se encontraron certificados SOAT para esta placa"
+      });
+    }
+
+    // Formatear respuesta al formato esperado por el frontend
+    // Si hay pólizas, mostrar la vigente primero y luego todas en un array
+    const polizaVigente = resultado.poliza_vigente || resultado.polizas[0] || null;
+    
+    const data = {
+      placa: resultado.placa,
+      // Campos principales (de la póliza vigente o la primera)
+      compania_aseguradora: polizaVigente?.compania_aseguradora || '',
+      clase_vehiculo: polizaVigente?.clase_vehiculo || '',
+      uso_vehiculo: polizaVigente?.uso_vehiculo || '',
+      numero_accidentes: 0, // No disponible en APESEG
+      numero_poliza: polizaVigente?.numero_poliza || '',
+      numero_certificado: polizaVigente?.numero_certificado || '',
+      inicio_vigencia: polizaVigente?.inicio_vigencia || '',
+      fin_vigencia: polizaVigente?.fin_vigencia || '',
+      estado: polizaVigente?.estado || '',
+      comentario: polizaVigente?.comentario || '',
+      // Array de todas las pólizas para mostrar en tabla
+      polizas: resultado.polizas || []
+    };
+
+    respond(res, {
+      ok: true,
+      source: "soat",
+      status: "success",
+      data: data
+    });
   } catch (error) {
-    respond(res, { ok: false, source: "soat", status: "error", message: error.message }, 500);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.error(`[SOAT-APESEG] Error después de ${elapsed}s:`, error.message);
+    
+    respond(res, {
+      ok: false,
+      source: "soat",
+      status: "error",
+      message: error.message || "Error al consultar SOAT"
+    }, 500);
   }
 });
 
