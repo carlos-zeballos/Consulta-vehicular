@@ -374,38 +374,50 @@ class ApesegSoatScraper {
         
         // Esperar tiempo inicial para que se procese la petición
         console.log('[APESEG] Esperando procesamiento inicial...');
-        await page.waitForTimeout(5000); // 5 segundos iniciales
+        await page.waitForTimeout(8000); // 8 segundos iniciales para que cargue
         
-        // Esperar a que se complete la petición (aumentado tiempo para asegurar resultados)
-        console.log('[APESEG] Esperando respuesta de la API...');
+        // Esperar a que aparezcan resultados en la página (priorizar DOM sobre intercepción)
+        console.log('[APESEG] Esperando que aparezcan resultados en la página...');
         let intentos = 0;
-        const maxIntentos = 50; // 50 intentos x 3 segundos = 150 segundos (2.5 minutos) máximo
+        const maxIntentos = 60; // 60 intentos x 3 segundos = 180 segundos (3 minutos) máximo
+        let datosEncontradosEnDOM = false;
         
-        while (intentos < maxIntentos && certificadosInterceptados === null) {
+        while (intentos < maxIntentos && !datosEncontradosEnDOM && certificadosInterceptados === null) {
           await page.waitForTimeout(3000); // Esperar 3 segundos entre verificaciones
           intentos++;
           
-          // Verificar si hay datos en el DOM mientras esperamos
-          if (intentos % 3 === 0) {
-            const hayDatosEnDOM = await page.evaluate(() => {
-              // Buscar tablas con resultados
-              const tablas = document.querySelectorAll('table, .table, [class*="table"], [id*="table"]');
-              if (tablas.length > 0) {
-                for (const tabla of tablas) {
-                  const texto = tabla.textContent || '';
-                  if (texto.includes('Interseguro') || texto.includes('Rimac') || texto.includes('La Positiva') || 
-                      texto.includes('NombreCompania') || texto.includes('NumeroPoliza')) {
-                    return true;
-                  }
+          // Verificar si hay datos en el DOM (prioridad)
+          const hayDatosEnDOM = await page.evaluate(() => {
+            // Buscar tablas con resultados
+            const tablas = document.querySelectorAll('table, .table, [class*="table"], [id*="table"], tbody');
+            if (tablas.length > 0) {
+              for (const tabla of tablas) {
+                const texto = tabla.textContent || '';
+                if (texto.includes('Interseguro') || texto.includes('Rimac') || texto.includes('La Positiva') || 
+                    texto.includes('NombreCompania') || texto.includes('NumeroPoliza') ||
+                    texto.includes('VIGENTE') || texto.includes('VENCIDO')) {
+                  return true;
                 }
               }
-              return false;
-            });
-            
-            if (hayDatosEnDOM) {
-              console.log('[APESEG] ✅ Datos detectados en el DOM, extrayendo...');
-              break;
             }
+            
+            // Buscar elementos que contengan datos de pólizas
+            const elementos = document.querySelectorAll('*');
+            for (const el of elementos) {
+              const texto = el.textContent || '';
+              if ((texto.includes('Interseguro') || texto.includes('Rimac') || texto.includes('La Positiva')) &&
+                  (texto.includes('/202') || texto.includes('VIGENTE') || texto.includes('VENCIDO'))) {
+                return true;
+              }
+            }
+            
+            return false;
+          });
+          
+          if (hayDatosEnDOM) {
+            console.log(`[APESEG] ✅ Datos detectados en el DOM después de ${intentos * 3} segundos, extrayendo...`);
+            datosEncontradosEnDOM = true;
+            break;
           }
           
           if (certificadosInterceptados !== null) {
@@ -413,13 +425,14 @@ class ApesegSoatScraper {
             console.log(`[APESEG] ✅ Respuesta interceptada después de ${intentos * 3} segundos`);
             break;
           }
+          
           if (intentos % 10 === 0) {
-            console.log(`[APESEG] Esperando respuesta... (${intentos * 3}s/${maxIntentos * 3}s)`);
+            console.log(`[APESEG] Esperando resultados... (${intentos * 3}s/${maxIntentos * 3}s)`);
           }
         }
         
-        if (certificadosInterceptados === null && intentos >= maxIntentos) {
-          console.log('[APESEG] ⚠️ Timeout esperando respuesta de certificados, intentando extraer del DOM...');
+        if (!datosEncontradosEnDOM && certificadosInterceptados === null && intentos >= maxIntentos) {
+          console.log('[APESEG] ⚠️ Timeout esperando resultados, intentando extraer del DOM de todas formas...');
         }
         
         // Si se interceptaron certificados, usarlos
@@ -478,55 +491,82 @@ class ApesegSoatScraper {
             }
           }
           
-          // 4. Extraer datos de tablas HTML directamente
-          const tablas = document.querySelectorAll('table, .table, [class*="table"], [id*="table"], tbody');
+          // 4. Extraer datos de tablas HTML directamente (método mejorado)
+          const tablas = document.querySelectorAll('table, .table, [class*="table"], [id*="table"], tbody, [role="table"]');
+          console.log('[APESEG-DOM] Tablas encontradas:', tablas.length);
+          
           for (const tabla of tablas) {
             const filas = tabla.querySelectorAll('tr');
-            if (filas.length > 1) { // Tiene al menos header + datos
+            console.log('[APESEG-DOM] Filas en tabla:', filas.length);
+            
+            if (filas.length > 0) {
               const datosExtraidos = [];
-              let headers = [];
               
-              // Obtener headers de la primera fila
-              const primeraFila = filas[0];
-              const celdasHeader = primeraFila.querySelectorAll('th, td');
-              headers = Array.from(celdasHeader).map(c => (c.textContent || '').trim());
-              
-              // Si no hay headers, usar índices
-              if (headers.length === 0 || headers.every(h => !h)) {
-                headers = Array.from({ length: celdasHeader.length }, (_, i) => `col${i}`);
-              }
-              
-              // Extraer datos de las filas siguientes
-              for (let i = 1; i < filas.length; i++) {
+              // Buscar filas que contengan datos de pólizas
+              for (let i = 0; i < filas.length; i++) {
                 const fila = filas[i];
                 const celdas = fila.querySelectorAll('td, th');
-                if (celdas.length > 0) {
-                  const filaData = {};
-                  Array.from(celdas).forEach((celda, idx) => {
-                    const header = headers[idx] || `col${idx}`;
-                    filaData[header] = (celda.textContent || '').trim();
-                  });
+                const textoFila = (fila.textContent || '').trim();
+                
+                // Verificar si esta fila tiene datos relevantes de SOAT
+                if (textoFila && (textoFila.includes('Interseguro') || textoFila.includes('Rimac') || 
+                    textoFila.includes('La Positiva') || textoFila.includes('Mapfre') ||
+                    textoFila.includes('VIGENTE') || textoFila.includes('VENCIDO') || 
+                    textoFila.includes('ANULADO') || /\d{2}\/\d{2}\/\d{4}/.test(textoFila))) {
                   
-                  // Verificar si esta fila tiene datos relevantes de SOAT
-                  const textoFila = fila.textContent || '';
-                  if (textoFila.includes('Interseguro') || textoFila.includes('Rimac') || 
-                      textoFila.includes('La Positiva') || textoFila.includes('VIGENTE') || 
-                      textoFila.includes('VENCIDO') || /^\d{2}\/\d{2}\/\d{4}/.test(textoFila)) {
-                    // Mapear a formato esperado
-                    const poliza = {
-                      NombreCompania: filaData['Compañía'] || filaData['Aseguradora'] || filaData['NombreCompania'] || filaData[0] || '',
-                      NombreClaseVehiculo: filaData['Clase'] || filaData['Clase Vehículo'] || filaData['NombreClaseVehiculo'] || filaData[1] || '',
-                      NombreUsoVehiculo: filaData['Uso'] || filaData['Uso Vehículo'] || filaData['NombreUsoVehiculo'] || filaData[2] || '',
-                      NumeroPoliza: filaData['Póliza'] || filaData['N° Póliza'] || filaData['NumeroPoliza'] || filaData[3] || '',
-                      CodigoUnicoPoliza: filaData['Certificado'] || filaData['N° Certificado'] || filaData['CodigoUnicoPoliza'] || filaData[4] || '',
-                      FechaInicio: filaData['Inicio'] || filaData['Inicio Vigencia'] || filaData['FechaInicio'] || filaData[5] || '',
-                      FechaFin: filaData['Fin'] || filaData['Fin Vigencia'] || filaData['FechaFin'] || filaData[6] || '',
-                      Estado: filaData['Estado'] || filaData[7] || '',
-                      TipoCertificado: filaData['Tipo'] || filaData['Tipo Certificado'] || filaData['TipoCertificado'] || 'DIGITAL'
-                    };
+                  if (celdas.length >= 3) {
+                    // Extraer datos de las celdas
+                    const valores = Array.from(celdas).map(c => (c.textContent || '').trim()).filter(v => v);
                     
-                    if (poliza.NombreCompania || poliza.NumeroPoliza) {
-                      datosExtraidos.push(poliza);
+                    // Intentar identificar columnas por contenido
+                    let compania = '';
+                    let clase = '';
+                    let uso = '';
+                    let poliza = '';
+                    let certificado = '';
+                    let inicio = '';
+                    let fin = '';
+                    let estado = '';
+                    
+                    valores.forEach((valor, idx) => {
+                      if (!compania && (valor.includes('Interseguro') || valor.includes('Rimac') || 
+                          valor.includes('La Positiva') || valor.includes('Mapfre') || 
+                          valor.includes('Pacífico') || valor.includes('Protecta'))) {
+                        compania = valor;
+                      } else if (!clase && (valor.includes('CAMIONETA') || valor.includes('AUTOMOVIL') || 
+                          valor.includes('MOTOCICLETA') || valor.includes('RURAL') || valor.includes('SUV'))) {
+                        clase = valor;
+                      } else if (!uso && (valor.includes('PARTICULAR') || valor.includes('COMERCIAL') || 
+                          valor.includes('OFICIAL'))) {
+                        uso = valor;
+                      } else if (!poliza && valor.length > 5 && /^[0-9]+$/.test(valor.replace(/\s/g, ''))) {
+                        poliza = valor;
+                      } else if (!certificado && valor.length > 5 && /^[0-9]+$/.test(valor.replace(/\s/g, '')) && valor !== poliza) {
+                        certificado = valor;
+                      } else if (!inicio && /\d{2}\/\d{2}\/\d{4}/.test(valor)) {
+                        inicio = valor;
+                      } else if (!fin && /\d{2}\/\d{2}\/\d{4}/.test(valor) && valor !== inicio) {
+                        fin = valor;
+                      } else if (!estado && (valor.includes('VIGENTE') || valor.includes('VENCIDO') || valor.includes('ANULADO'))) {
+                        estado = valor;
+                      }
+                    });
+                    
+                    // Si encontramos al menos compañía o póliza, crear registro
+                    if (compania || poliza) {
+                      const polizaData = {
+                        NombreCompania: compania || valores[0] || '',
+                        NombreClaseVehiculo: clase || valores.find(v => v.includes('CAMIONETA') || v.includes('AUTOMOVIL')) || '',
+                        NombreUsoVehiculo: uso || valores.find(v => v.includes('PARTICULAR') || v.includes('COMERCIAL')) || 'PARTICULAR',
+                        NumeroPoliza: poliza || valores.find(v => v.length > 10 && /^[0-9]+$/.test(v.replace(/\s/g, ''))) || '',
+                        CodigoUnicoPoliza: certificado || poliza || '',
+                        FechaInicio: inicio || valores.find(v => /\d{2}\/\d{2}\/\d{4}/.test(v)) || '',
+                        FechaFin: fin || valores.find((v, i, arr) => /\d{2}\/\d{2}\/\d{4}/.test(v) && arr.indexOf(v) !== arr.findIndex(x => /\d{2}\/\d{2}\/\d{4}/.test(x))) || '',
+                        Estado: estado || valores.find(v => v.includes('VIGENTE') || v.includes('VENCIDO')) || '',
+                        TipoCertificado: valores.find(v => v.includes('DIGITAL') || v.includes('FISICO')) || 'DIGITAL'
+                      };
+                      
+                      datosExtraidos.push(polizaData);
                     }
                   }
                 }
@@ -537,6 +577,35 @@ class ApesegSoatScraper {
                 return datosExtraidos;
               }
             }
+          }
+          
+          // 5. Buscar en divs o elementos que puedan contener datos estructurados
+          const elementosConTexto = document.querySelectorAll('div, span, p, li');
+          const datosDeTexto = [];
+          for (const el of elementosConTexto) {
+            const texto = (el.textContent || '').trim();
+            if (texto.length > 20 && (texto.includes('Interseguro') || texto.includes('Rimac') || texto.includes('La Positiva'))) {
+              // Intentar parsear texto estructurado
+              const match = texto.match(/(Interseguro|Rimac|La Positiva|Mapfre|Pacífico|Protecta)[\s\S]{0,200}?(\d{2}\/\d{2}\/\d{4})[\s\S]{0,200}?(\d{2}\/\d{2}\/\d{4})/);
+              if (match) {
+                datosDeTexto.push({
+                  NombreCompania: match[1],
+                  FechaInicio: match[2],
+                  FechaFin: match[3],
+                  NombreClaseVehiculo: '',
+                  NombreUsoVehiculo: 'PARTICULAR',
+                  NumeroPoliza: '',
+                  CodigoUnicoPoliza: '',
+                  Estado: texto.includes('VIGENTE') ? 'VIGENTE' : (texto.includes('VENCIDO') ? 'VENCIDO' : ''),
+                  TipoCertificado: 'DIGITAL'
+                });
+              }
+            }
+          }
+          
+          if (datosDeTexto.length > 0) {
+            console.log('[APESEG-DOM] ✅ Datos extraídos de texto:', datosDeTexto.length);
+            return datosDeTexto;
           }
           
           // 5. Buscar en el body completo por texto que indique datos
