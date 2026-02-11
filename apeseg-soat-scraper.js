@@ -268,8 +268,8 @@ class ApesegSoatScraper {
         timeout: 60000
       });
 
-      // Esperar a que la página cargue completamente
-      await page.waitForTimeout(5000);
+      // Esperar a que la página cargue completamente (optimizado: menos tiempo)
+      await page.waitForTimeout(2000);
 
       // Interactuar con el formulario: obtener captcha, resolverlo, llenar placa y enviar
       console.log('[APESEG] Interactuando con el formulario...');
@@ -322,9 +322,9 @@ class ApesegSoatScraper {
           const captchaId = solveResponse.data.request;
           console.log('[APESEG] Captcha ID:', captchaId);
 
-          // Esperar a que se resuelva (máximo 2 minutos)
-          for (let i = 0; i < 24; i++) {
-            await new Promise(resolve => setTimeout(resolve, 5000));
+          // Esperar a que se resuelva (optimizado: verificar cada 3 segundos, máximo 90 segundos)
+          for (let i = 0; i < 30; i++) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
             const resultResponse = await axios.get(
               `http://2captcha.com/res.php?key=${this.captchaApiKey}&action=get&id=${captchaId}&json=1`
@@ -362,8 +362,22 @@ class ApesegSoatScraper {
         console.log('[APESEG] Enviando formulario...');
         await page.click('button[type="submit"]');
         
-        // Esperar a que se carguen los resultados
-        await page.waitForTimeout(8000);
+        // Esperar a que se complete la petición (optimizado: esperar hasta que se intercepten certificados o timeout)
+        console.log('[APESEG] Esperando respuesta de la API...');
+        let intentos = 0;
+        const maxIntentos = 30; // 30 intentos x 2 segundos = 60 segundos máximo
+        
+        while (intentos < maxIntentos && !certificadosInterceptados) {
+          await page.waitForTimeout(2000); // Esperar 2 segundos entre verificaciones
+          intentos++;
+          if (certificadosInterceptados) {
+            console.log(`[APESEG] ✅ Certificados interceptados después de ${intentos * 2} segundos`);
+            break;
+          }
+          if (intentos % 5 === 0) {
+            console.log(`[APESEG] Esperando... (${intentos * 2}s/${maxIntentos * 2}s)`);
+          }
+        }
         
         // Si se interceptaron certificados, usarlos
         if (certificadosInterceptados && certificadosInterceptados.length > 0) {
@@ -373,93 +387,58 @@ class ApesegSoatScraper {
           return this.formatResponse(certificadosInterceptados, placa);
         }
         
-        // Intentar extraer datos de la respuesta de la API interceptada
-        await page.waitForTimeout(3000);
+        // Si no se interceptaron, intentar extraer del DOM (fallback)
+        console.log('[APESEG] Intentando extraer datos del DOM como fallback...');
+        const datosDelDOM = await page.evaluate(() => {
+          // Buscar datos en variables globales o scripts
+          if (window.certificados || window.data || window.resultados) {
+            return window.certificados || window.data || window.resultados;
+          }
+          
+          // Buscar en scripts que puedan contener JSON
+          const scripts = Array.from(document.querySelectorAll('script'));
+          for (const script of scripts) {
+            const content = script.textContent || '';
+            if (content.includes('NombreCompania') || content.includes('NumeroPoliza')) {
+              try {
+                const match = content.match(/\[[\s\S]{100,}?\]/);
+                if (match) {
+                  return JSON.parse(match[0]);
+                }
+              } catch (e) {
+                // Continuar buscando
+              }
+            }
+          }
+          return null;
+        });
         
-        if (certificadosInterceptados && certificadosInterceptados.length > 0) {
-          console.log('[APESEG] ✅ Certificados obtenidos después de esperar');
+        if (datosDelDOM && Array.isArray(datosDelDOM) && datosDelDOM.length > 0) {
+          console.log('[APESEG] ✅ Datos extraídos del DOM:', datosDelDOM.length);
           await browser.close();
           browser = null;
-          return this.formatResponse(certificadosInterceptados, placa);
+          return this.formatResponse(datosDelDOM, placa);
         }
-        
-        // Si no se interceptaron, intentar extraer del DOM o de la respuesta de red
-        console.log('[APESEG] Intentando extraer datos de la respuesta...');
         
       } catch (interactError) {
         console.error('[APESEG] Error interactuando con el formulario:', interactError.message);
         throw interactError;
       }
 
-      // Esperar un poco más para que se completen las peticiones
-      await page.waitForTimeout(3000);
-      
-      // Si se interceptaron certificados, usarlos
-      if (certificadosInterceptados && certificadosInterceptados.length > 0) {
-        console.log('[APESEG] ✅ Usando certificados interceptados después de interacción');
-        await browser.close();
-        browser = null;
-        return this.formatResponse(certificadosInterceptados, placa);
-      }
-
-      // Si no se obtuvieron certificados por interacción, intentar API directa con el token
-      console.log('[APESEG] Intentando consulta API directa desde el navegador...');
-      const resultado = await page.evaluate(async (placa, baseUrl, token) => {
-        const headers = {
-          'accept': '*/*',
-          'accept-language': 'es-PE,es;q=0.9,en;q=0.8',
-          'cache-control': 'no-cache',
-          'origin': baseUrl,
-          'pragma': 'no-cache',
-          'referer': `${baseUrl}/consulta-soat/resultados`,
-          'x-referrer': 'https://www.apeseg.org.pe/',
-          'x-source': 'apeseg'
-        };
-
-        // Agregar token si está disponible
-        if (token) {
-          headers['authorization'] = `Bearer ${token}`;
-          console.log('[APESEG-BROWSER] Usando token para consulta');
-        }
-
-        try {
-          console.log('[APESEG-BROWSER] Consultando placa con token...');
-          
-          const directResponse = await fetch(`${baseUrl}/consulta-soat/api/certificados/placa/${placa}`, {
-            method: 'GET',
-            headers: headers,
-            credentials: 'include'
-          });
-
-          if (directResponse.ok) {
-            const directData = await directResponse.json();
-            console.log('[APESEG-BROWSER] ✅ Consulta exitosa!', directData?.length || 0);
-            return { success: true, data: directData };
-          } else {
-            const errorText = await directResponse.text();
-            console.log('[APESEG-BROWSER] Consulta falló:', directResponse.status, errorText);
-            throw new Error(`Consulta falló: ${directResponse.status} - ${errorText}`);
-          }
-        } catch (error) {
-          console.error('[APESEG-BROWSER] Error:', error.message);
-          return { success: false, error: error.message };
-        }
-      }, placa, this.baseUrl, authToken);
-
       await browser.close();
       browser = null;
 
-      // Si se interceptaron certificados durante la ejecución, usarlos
-      if (certificadosInterceptados && certificadosInterceptados.length > 0) {
-        console.log('[APESEG] ✅ Usando certificados interceptados');
-        return this.formatResponse(certificadosInterceptados, placa);
+      // Si llegamos aquí sin datos, retornar vacío
+      if (!certificadosInterceptados || certificadosInterceptados.length === 0) {
+        return {
+          success: true,
+          placa: placa,
+          polizas: [],
+          message: 'No se encontraron certificados SOAT para esta placa'
+        };
       }
 
-      if (!resultado.success) {
-        throw new Error(resultado.error || 'Error consultando placa');
-      }
-
-      return this.formatResponse(resultado.data, placa);
+      return this.formatResponse(certificadosInterceptados, placa);
     } catch (error) {
       if (browser) {
         await browser.close();
