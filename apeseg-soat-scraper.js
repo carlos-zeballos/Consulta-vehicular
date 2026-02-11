@@ -478,7 +478,68 @@ class ApesegSoatScraper {
             }
           }
           
-          // 4. Buscar en el body completo por texto que indique datos
+          // 4. Extraer datos de tablas HTML directamente
+          const tablas = document.querySelectorAll('table, .table, [class*="table"], [id*="table"], tbody');
+          for (const tabla of tablas) {
+            const filas = tabla.querySelectorAll('tr');
+            if (filas.length > 1) { // Tiene al menos header + datos
+              const datosExtraidos = [];
+              let headers = [];
+              
+              // Obtener headers de la primera fila
+              const primeraFila = filas[0];
+              const celdasHeader = primeraFila.querySelectorAll('th, td');
+              headers = Array.from(celdasHeader).map(c => (c.textContent || '').trim());
+              
+              // Si no hay headers, usar índices
+              if (headers.length === 0 || headers.every(h => !h)) {
+                headers = Array.from({ length: celdasHeader.length }, (_, i) => `col${i}`);
+              }
+              
+              // Extraer datos de las filas siguientes
+              for (let i = 1; i < filas.length; i++) {
+                const fila = filas[i];
+                const celdas = fila.querySelectorAll('td, th');
+                if (celdas.length > 0) {
+                  const filaData = {};
+                  Array.from(celdas).forEach((celda, idx) => {
+                    const header = headers[idx] || `col${idx}`;
+                    filaData[header] = (celda.textContent || '').trim();
+                  });
+                  
+                  // Verificar si esta fila tiene datos relevantes de SOAT
+                  const textoFila = fila.textContent || '';
+                  if (textoFila.includes('Interseguro') || textoFila.includes('Rimac') || 
+                      textoFila.includes('La Positiva') || textoFila.includes('VIGENTE') || 
+                      textoFila.includes('VENCIDO') || /^\d{2}\/\d{2}\/\d{4}/.test(textoFila)) {
+                    // Mapear a formato esperado
+                    const poliza = {
+                      NombreCompania: filaData['Compañía'] || filaData['Aseguradora'] || filaData['NombreCompania'] || filaData[0] || '',
+                      NombreClaseVehiculo: filaData['Clase'] || filaData['Clase Vehículo'] || filaData['NombreClaseVehiculo'] || filaData[1] || '',
+                      NombreUsoVehiculo: filaData['Uso'] || filaData['Uso Vehículo'] || filaData['NombreUsoVehiculo'] || filaData[2] || '',
+                      NumeroPoliza: filaData['Póliza'] || filaData['N° Póliza'] || filaData['NumeroPoliza'] || filaData[3] || '',
+                      CodigoUnicoPoliza: filaData['Certificado'] || filaData['N° Certificado'] || filaData['CodigoUnicoPoliza'] || filaData[4] || '',
+                      FechaInicio: filaData['Inicio'] || filaData['Inicio Vigencia'] || filaData['FechaInicio'] || filaData[5] || '',
+                      FechaFin: filaData['Fin'] || filaData['Fin Vigencia'] || filaData['FechaFin'] || filaData[6] || '',
+                      Estado: filaData['Estado'] || filaData[7] || '',
+                      TipoCertificado: filaData['Tipo'] || filaData['Tipo Certificado'] || filaData['TipoCertificado'] || 'DIGITAL'
+                    };
+                    
+                    if (poliza.NombreCompania || poliza.NumeroPoliza) {
+                      datosExtraidos.push(poliza);
+                    }
+                  }
+                }
+              }
+              
+              if (datosExtraidos.length > 0) {
+                console.log('[APESEG-DOM] ✅ Datos extraídos de tabla HTML:', datosExtraidos.length);
+                return datosExtraidos;
+              }
+            }
+          }
+          
+          // 5. Buscar en el body completo por texto que indique datos
           const bodyText = document.body.textContent || '';
           if (bodyText.includes('NombreCompania') || bodyText.includes('NumeroPoliza')) {
             // Hay datos en la página, pero no los podemos extraer fácilmente
