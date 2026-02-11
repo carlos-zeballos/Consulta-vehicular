@@ -244,7 +244,7 @@ class ApesegSoatScraper {
           }
         }
         
-        // Capturar certificados
+        // Capturar certificados - también capturar errores para debug
         if (url.includes(`/consulta-soat/api/certificados/placa/`)) {
           try {
             const status = response.status();
@@ -262,6 +262,9 @@ class ApesegSoatScraper {
                 console.log('[APESEG-INTERCEPT] ⚠️ Array vacío - sin certificados');
                 certificadosInterceptados = []; // Marcar como procesado pero vacío
               }
+            } else if (status === 403) {
+              console.log(`[APESEG-INTERCEPT] ⚠️ 403 Forbidden - La API bloqueó el acceso, esperando a que la app frontend cargue los datos`);
+              // No marcar como null, dejar que el DOM extraction maneje esto
             } else {
               console.log(`[APESEG-INTERCEPT] ⚠️ Respuesta no válida: status=${status}, contentType=${contentType}`);
             }
@@ -372,9 +375,18 @@ class ApesegSoatScraper {
         console.log('[APESEG] Enviando formulario...');
         await page.click('button[type="submit"]');
         
-        // Esperar tiempo inicial para que se procese la petición
-        console.log('[APESEG] Esperando procesamiento inicial...');
-        await page.waitForTimeout(10000); // 10 segundos iniciales para que cargue completamente
+        // Esperar a que la página navegue a resultados
+        console.log('[APESEG] Esperando navegación a página de resultados...');
+        try {
+          await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+          console.log('[APESEG] ✅ Navegación completada');
+        } catch (e) {
+          console.log('[APESEG] ⚠️ Timeout en navegación, continuando...');
+        }
+        
+        // Esperar tiempo adicional para que la app React/Vue cargue los datos
+        console.log('[APESEG] Esperando que la aplicación frontend cargue los datos...');
+        await page.waitForTimeout(15000); // 15 segundos para que React/Vue cargue los datos
         
         // Esperar a que aparezcan resultados en la página (priorizar DOM sobre intercepción)
         console.log('[APESEG] Esperando que aparezcan resultados en la página...');
@@ -684,35 +696,109 @@ class ApesegSoatScraper {
         console.log('[APESEG] ⚠️ No se encontraron datos en primera extracción, esperando y analizando...');
         await page.waitForTimeout(10000); // Esperar 10 segundos adicionales
         
-        // Intentar extraer del DOM una vez más después de esperar
-        console.log('[APESEG] Intentando segunda extracción del DOM...');
+        // Intentar extraer del DOM una vez más después de esperar - método mejorado para React/Vue
+        console.log('[APESEG] Intentando segunda extracción del DOM (método mejorado para React/Vue)...');
         const datosDelDOM2 = await page.evaluate(() => {
-          // 1. Buscar en variables globales
-          if (window.certificados || window.data || window.resultados) {
-            const datos = window.certificados || window.data || window.resultados;
-            if (Array.isArray(datos) && datos.length > 0) {
-              return datos;
+          // 1. Buscar en variables globales de React/Vue
+          if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+            // Intentar acceder a datos de React
+            try {
+              const reactRoot = document.querySelector('#app, #root, [data-v-app]');
+              if (reactRoot && reactRoot._reactInternalInstance) {
+                // Intentar extraer datos del estado de React
+                console.log('[APESEG-DOM] React detectado');
+              }
+            } catch (e) {}
+          }
+          
+          // 2. Buscar en el estado de la aplicación (puede estar en window.__INITIAL_STATE__ o similar)
+          const stateKeys = ['__INITIAL_STATE__', '__APP_STATE__', '__DATA__', 'certificados', 'data', 'resultados'];
+          for (const key of stateKeys) {
+            if (window[key] && Array.isArray(window[key]) && window[key].length > 0) {
+              console.log(`[APESEG-DOM] Datos encontrados en window.${key}`);
+              return window[key];
             }
           }
           
-          // 2. Buscar en scripts
-          const scripts = Array.from(document.querySelectorAll('script'));
-          for (const script of scripts) {
-            const content = script.textContent || '';
-            if (content.includes('NombreCompania') || content.includes('NumeroPoliza')) {
-              try {
-                const match = content.match(/\[[\s\S]{100,}?\]/);
-                if (match) {
-                  const parsed = JSON.parse(match[0]);
+          // 3. Buscar en elementos de la página que puedan contener datos JSON
+          const elementosConDatos = document.querySelectorAll('[data-certificados], [data-resultados], [data-data], script[type="application/json"]');
+          for (const el of elementosConDatos) {
+            try {
+              const dataAttr = el.getAttribute('data-certificados') || el.getAttribute('data-resultados') || el.getAttribute('data-data');
+              if (dataAttr) {
+                const parsed = JSON.parse(dataAttr);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  console.log('[APESEG-DOM] Datos encontrados en atributo data-*');
+                  return parsed;
+                }
+              }
+              if (el.tagName === 'SCRIPT' && el.textContent) {
+                try {
+                  const parsed = JSON.parse(el.textContent);
                   if (Array.isArray(parsed) && parsed.length > 0) {
+                    console.log('[APESEG-DOM] Datos encontrados en script JSON');
                     return parsed;
                   }
+                } catch (e) {}
+              }
+            } catch (e) {}
+          }
+          
+          // 4. Buscar en el contenido renderizado de React/Vue (divs, spans, etc.)
+          const elementosRenderizados = document.querySelectorAll('div, span, p, li, td');
+          const datosEncontrados = [];
+          
+          for (const el of elementosRenderizados) {
+            const texto = (el.textContent || '').trim();
+            // Buscar patrones que indiquen datos de pólizas
+            if (texto.length > 20 && texto.length < 500) {
+              const tieneCompania = texto.includes('Interseguro') || texto.includes('Rimac') || 
+                                   texto.includes('La Positiva') || texto.includes('Mapfre');
+              const tieneFechas = /\d{1,2}\/\d{1,2}\/\d{4}/.test(texto);
+              const tieneNumeros = /[0-9]{10,}/.test(texto);
+              
+              if (tieneCompania && (tieneFechas || tieneNumeros)) {
+                // Intentar extraer datos del texto
+                const fechas = texto.match(/\d{1,2}\/\d{1,2}\/\d{4}/g) || [];
+                const numeros = texto.match(/[0-9]{10,}/g) || [];
+                const compania = texto.match(/(Interseguro|Rimac|La Positiva|Mapfre|Pacífico|Protecta|Crecer|Qualitas)/)?.[0] || '';
+                const estado = texto.match(/(VIGENTE|VENCIDO|ANULADO)/i)?.[0] || '';
+                
+                if (compania && (fechas.length > 0 || numeros.length > 0)) {
+                  datosEncontrados.push({
+                    NombreCompania: compania,
+                    NombreClaseVehiculo: texto.match(/(CAMIONETA|AUTOMOVIL|MOTOCICLETA|RURAL|SUV|PICKUP)[^,]*/i)?.[0] || '',
+                    NombreUsoVehiculo: texto.match(/(PARTICULAR|COMERCIAL|OFICIAL|TAXI)/i)?.[0] || 'PARTICULAR',
+                    NumeroPoliza: numeros[0] || '',
+                    CodigoUnicoPoliza: numeros[1] || numeros[0] || '',
+                    FechaInicio: fechas[0] || '',
+                    FechaFin: fechas[1] || fechas[0] || '',
+                    Estado: estado || '',
+                    TipoCertificado: texto.includes('DIGITAL') ? 'DIGITAL' : (texto.includes('FISICO') ? 'FISICO' : 'DIGITAL')
+                  });
                 }
-              } catch (e) {}
+              }
             }
           }
           
-          // 3. Buscar tablas con datos
+          // Eliminar duplicados
+          if (datosEncontrados.length > 0) {
+            const unicos = [];
+            const vistos = new Set();
+            for (const dato of datosEncontrados) {
+              const key = `${dato.NombreCompania}-${dato.NumeroPoliza}-${dato.FechaInicio}`;
+              if (!vistos.has(key)) {
+                vistos.add(key);
+                unicos.push(dato);
+              }
+            }
+            if (unicos.length > 0) {
+              console.log(`[APESEG-DOM] Datos extraídos de elementos renderizados: ${unicos.length}`);
+              return unicos;
+            }
+          }
+          
+          // 5. Buscar tablas con datos (método tradicional)
           const tablas = document.querySelectorAll('table, .table, [class*="table"], tbody');
           for (const tabla of tablas) {
             const filas = tabla.querySelectorAll('tr');
@@ -749,6 +835,7 @@ class ApesegSoatScraper {
                 }
               }
               if (datosExtraidos.length > 0) {
+                console.log(`[APESEG-DOM] Datos extraídos de tabla: ${datosExtraidos.length}`);
                 return datosExtraidos;
               }
             }
