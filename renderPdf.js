@@ -794,9 +794,9 @@ function renderDetalleCiudades(report) {
         </table>
       `;
     } else if (status === 'empty') {
-      body = `<p style="margin:0; color:#64748b;">Libre / Sin registros.</p>`;
+      body = `<p style="margin:0; color:#64748b;">Sin resultados.</p>`;
     } else {
-      body = `<p style="margin:0; color:#64748b;">No verificado.</p>`;
+      body = `<p style="margin:0; color:#64748b;">Sin resultados.</p>`;
     }
 
     return `<div class="card">${header}<div class="card-body">${body}</div></div>`;
@@ -1529,8 +1529,8 @@ function renderRiskScore(riskData) {
       </div>
       <div class="card-body">
         <div class="score-display">
-          <div class="score-value">${Number(riskData.porcentajeRiesgo ?? riskData.score ?? 0)}%</div>
-          <div class="score-label">${cleanText(riskData.categoria || 'Nivel de riesgo')}</div>
+          <div class="score-value">${cleanText(riskData.categoria || 'Nivel de riesgo')}</div>
+          <div class="score-label">${riskData.porcentajeCumplimiento ? `Cumplimiento: ${riskData.porcentajeCumplimiento.toFixed(1)}%` : 'Nivel de riesgo'}</div>
           <div class="score-bar">
             <div class="score-fill" style="width: ${Number(riskData.porcentajeRiesgo ?? riskData.score ?? 0)}%; background: ${(Number(riskData.porcentajeRiesgo ?? riskData.score ?? 0)) <= 30 ? '#065f46' : (Number(riskData.porcentajeRiesgo ?? riskData.score ?? 0)) <= 60 ? '#92400e' : '#dc2626'};"></div>
           </div>

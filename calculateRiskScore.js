@@ -103,23 +103,43 @@ function calculateRiskScore(report) {
 
   // =========================
   // Cumplimiento (en orden) y % de riesgo
+  // NUEVA LÓGICA: Cada pilar vale 33.33%
   // =========================
-  const okCount = (soatOk ? 1 : 0) + (citvOk ? 1 : 0) + (infraccionesOk ? 1 : 0);
-  const porcentajeCumplimiento = okCount === 3 ? 100 : okCount === 2 ? 66 : okCount === 1 ? 33 : 0;
-
-  let categoria = 'Riesgoso';
-  let porcentajeRiesgo = 95;
-  if (okCount === 3) {
-    categoria = 'Sin riesgo';
+  let porcentajeCumplimiento = 0;
+  
+  // SOAT vigente = 33.33%
+  if (soatOk) {
+    porcentajeCumplimiento += 33.33;
+  }
+  
+  // CITV vigente = 33.33%
+  if (citvOk) {
+    porcentajeCumplimiento += 33.33;
+  }
+  
+  // SAT sin infracciones = 33.33% (si hay al menos 1 infracción = 0%)
+  if (infraccionesOk) {
+    porcentajeCumplimiento += 33.34; // 33.34 para que sume exactamente 100
+  }
+  
+  // Redondear a 2 decimales
+  porcentajeCumplimiento = Math.round(porcentajeCumplimiento * 100) / 100;
+  
+  // Determinar categoría como texto: SEGURO, MEDIO, ALTO, MUY ALTO
+  let categoria = 'MUY ALTO';
+  let porcentajeRiesgo = 99;
+  
+  if (porcentajeCumplimiento === 100) {
+    categoria = 'SEGURO';
     porcentajeRiesgo = 0;
-  } else if (okCount === 2) {
-    categoria = 'Riesgo moderado';
-    porcentajeRiesgo = 60;
-  } else if (okCount === 1) {
-    categoria = 'Riesgoso';
-    porcentajeRiesgo = 95; // >90% solicitado
+  } else if (porcentajeCumplimiento >= 66.66) {
+    categoria = 'MEDIO';
+    porcentajeRiesgo = 33;
+  } else if (porcentajeCumplimiento >= 33.33) {
+    categoria = 'ALTO';
+    porcentajeRiesgo = 66;
   } else {
-    categoria = 'Riesgoso';
+    categoria = 'MUY ALTO';
     porcentajeRiesgo = 99;
   }
 
@@ -261,17 +281,20 @@ function generarExplicacion(checks, score, categoria) {
 
 function generarExplicacionPilares(ctx) {
   const faltantes = [];
-  if (!ctx.soatOk) faltantes.push('SOAT');
-  if (!ctx.citvOk) faltantes.push('CITV');
-  if (!ctx.infraccionesOk) faltantes.push('Infracciones');
+  if (!ctx.soatOk) faltantes.push('SOAT vigente');
+  if (!ctx.citvOk) faltantes.push('CITV vigente');
+  if (!ctx.infraccionesOk) faltantes.push('Sin infracciones en SAT');
 
-  if (ctx.categoria === 'Sin riesgo') {
-    return 'Sin riesgo. SOAT, CITV y verificación de infracciones se encuentran en orden.';
+  if (ctx.categoria === 'SEGURO') {
+    return 'SEGURO. SOAT vigente, CITV vigente y sin infracciones en SAT.';
   }
-  if (ctx.categoria === 'Riesgo moderado') {
-    return `Riesgo moderado. Falta(n) verificación/condición en: ${faltantes.join(', ')}.`;
+  if (ctx.categoria === 'MEDIO') {
+    return `MEDIO. Falta(n): ${faltantes.join(', ')}.`;
   }
-  return `Riesgoso. Falta(n) verificación/condición en: ${faltantes.join(', ')}.`;
+  if (ctx.categoria === 'ALTO') {
+    return `ALTO. Falta(n): ${faltantes.join(', ')}.`;
+  }
+  return `MUY ALTO. Falta(n): ${faltantes.join(', ')}.`;
 }
 
 module.exports = {

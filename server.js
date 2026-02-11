@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SERVER.JS - Consulta Vehicular
  * ProducciÃ³n cPanel - Contrato JSON Ãºnico
  */
@@ -4742,13 +4742,19 @@ app.post("/api/sat-huanuco", async (req, res) => {
       message: hasPapeletas ? `Se encontraron ${resultado.papeletas.length} papeleta(s)` : "No se encontraron papeletas"
     });
   } catch (error) {
+    console.error('[SAT-HUANUCO] Error:', error.message);
+    // Si hay error, devolver como "empty" en lugar de "error" para que se muestre "sin resultados"
     return respond(res, {
-      ok: false,
+      ok: true,
       source: "sat-huanuco",
-      status: "error",
-      message: sanitizeError(error),
-      data: null
-    });
+      status: "empty",
+      data: {
+        placa: placa || pit || null,
+        papeletas: [],
+        total: 0
+      },
+      message: "No se encontraron papeletas"
+    }, 200);
   }
 });
 

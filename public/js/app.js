@@ -566,7 +566,7 @@
           <div class="message empty">
             <span class="message-icon">📭</span>
             <div>
-              <strong>Sin información registrada</strong>
+              <strong>Sin resultados</strong>
               <p>Este vehículo no tiene registros en ${escapeHTML(config.title)}.</p>
             </div>
           </div>`
@@ -678,7 +678,7 @@
               <div class="message empty">
                 <span class="message-icon">✅</span>
                 <div>
-                  <strong>Sin papeletas pendientes</strong>
+                  <strong>Sin resultados</strong>
                   <p>${data.mensaje || "Este vehículo no cuenta con papeletas registradas en la Municipalidad de Arequipa"}</p>
                 </div>
               </div>`
