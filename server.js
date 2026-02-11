@@ -174,7 +174,9 @@ app.post("/api/coupons/redeem", (req, res) => {
 // VARIABLES DE ENTORNO
 // ============================================
 // Token de Factiliza - Actualizado
-const FACTILIZA_TOKEN = process.env.FACTILIZA_TOKEN || "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MDM0NyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.9bJbiftCYHZTHI-Y8rE0QvfQKW1TUHFO69QGYZnbyyo";
+// Asegurar que siempre tenga "Bearer" al inicio
+const FACTILIZA_TOKEN_RAW = process.env.FACTILIZA_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MDM0NyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.9bJbiftCYHZTHI-Y8rE0QvfQKW1TUHFO69QGYZnbyyo";
+const FACTILIZA_TOKEN = FACTILIZA_TOKEN_RAW.startsWith('Bearer ') ? FACTILIZA_TOKEN_RAW : `Bearer ${FACTILIZA_TOKEN_RAW}`;
 const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || "";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "";
 // Códigos de cupones por defecto (si no están en .env)
@@ -1002,7 +1004,33 @@ app.post("/api/vehiculo", async (req, res) => {
       respond(res, { ok: true, source: "vehiculo", status: "empty", data: null });
     }
   } catch (error) {
-    respond(res, { ok: false, source: "vehiculo", status: "error", message: error.message }, 500);
+    console.error('[VEHICULO-FACTILIZA] Error:', error.message);
+    console.error('[VEHICULO-FACTILIZA] Status:', error.response?.status);
+    console.error('[VEHICULO-FACTILIZA] Response:', error.response?.data);
+    console.error('[VEHICULO-FACTILIZA] Token usado:', FACTILIZA_TOKEN ? FACTILIZA_TOKEN.substring(0, 30) + '...' : 'NO CONFIGURADO');
+    
+    // Mejorar mensaje de error
+    let errorMessage = 'Error al consultar información del vehículo';
+    if (error.response) {
+      // Error de la API
+      if (error.response.status === 401) {
+        errorMessage = 'Token de autenticación inválido o expirado';
+      } else if (error.response.status === 404) {
+        errorMessage = 'No se encontró información para esta placa';
+      } else if (error.response.status === 429) {
+        errorMessage = 'Demasiadas solicitudes. Por favor, intente más tarde';
+      } else if (error.response.data?.message) {
+        errorMessage = error.response.data.message;
+      } else {
+        errorMessage = `Error del servidor (${error.response.status})`;
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = 'La consulta tardó demasiado tiempo';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    respond(res, { ok: false, source: "vehiculo", status: "error", message: errorMessage }, 500);
   }
 });
 
