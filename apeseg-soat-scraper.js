@@ -374,7 +374,7 @@ class ApesegSoatScraper {
         
         // Esperar tiempo inicial para que se procese la petición
         console.log('[APESEG] Esperando procesamiento inicial...');
-        await page.waitForTimeout(8000); // 8 segundos iniciales para que cargue
+        await page.waitForTimeout(10000); // 10 segundos iniciales para que cargue completamente
         
         // Esperar a que aparezcan resultados en la página (priorizar DOM sobre intercepción)
         console.log('[APESEG] Esperando que aparezcan resultados en la página...');
@@ -620,15 +620,46 @@ class ApesegSoatScraper {
         
         if (datosDelDOM && Array.isArray(datosDelDOM) && datosDelDOM.length > 0) {
           console.log('[APESEG] ✅ Datos extraídos del DOM:', datosDelDOM.length);
+          console.log('[APESEG] Primeros datos:', JSON.stringify(datosDelDOM[0], null, 2));
           await browser.close();
           browser = null;
           return this.formatResponse(datosDelDOM, placa);
         }
         
+        // Si no se encontraron datos, tomar screenshot para debug
+        if (!datosDelDOM || datosDelDOM.length === 0) {
+          console.log('[APESEG] ⚠️ No se encontraron datos, tomando screenshot para debug...');
+          try {
+            await page.screenshot({ path: `apeseg-debug-${placa}-${Date.now()}.png`, fullPage: true });
+            const htmlContent = await page.content();
+            const fs = require('fs');
+            fs.writeFileSync(`apeseg-debug-${placa}-${Date.now()}.html`, htmlContent);
+            console.log('[APESEG] Screenshot y HTML guardados para análisis');
+          } catch (e) {
+            console.warn('[APESEG] No se pudo guardar screenshot:', e.message);
+          }
+        }
+        
         // Esperar un poco más y verificar nuevamente la intercepción (puede que llegue tarde)
         if (certificadosInterceptados === null) {
-          console.log('[APESEG] Esperando 10 segundos adicionales por si la respuesta llega tarde...');
-          await page.waitForTimeout(10000);
+          console.log('[APESEG] Esperando 15 segundos adicionales por si la respuesta llega tarde...');
+          await page.waitForTimeout(15000);
+          
+          // Intentar extraer del DOM una vez más después de esperar
+          const datosDelDOM2 = await page.evaluate(() => {
+            // Buscar cualquier texto que contenga datos de pólizas
+            const bodyText = document.body.textContent || '';
+            if (bodyText.includes('Interseguro') || bodyText.includes('Rimac') || bodyText.includes('La Positiva')) {
+              // Hay datos pero no los podemos extraer fácilmente
+              return { hayDatos: true, texto: bodyText.substring(0, 500) };
+            }
+            return null;
+          });
+          
+          if (datosDelDOM2 && datosDelDOM2.hayDatos) {
+            console.log('[APESEG] ⚠️ Se detectaron datos en la página pero no se pudieron extraer automáticamente');
+            console.log('[APESEG] Texto encontrado:', datosDelDOM2.texto);
+          }
           
           if (certificadosInterceptados && certificadosInterceptados.length > 0) {
             console.log('[APESEG] ✅ Certificados interceptados después de espera adicional');
