@@ -1382,44 +1382,13 @@
   // EJECUTAR TODAS LAS CONSULTAS
   // ============================================
   async function runAllRequests(placa) {
+    // Ejecutar consultas SECUENCIALMENTE, una por una, en el orden definido
+    // Esto reduce la carga del servidor y hace que los resultados aparezcan ordenadamente
     const keys = Object.keys(SECTIONS);
-
-    // OPTIMIZACIÓN: Priorizar consultas rápidas primero, luego las complejas
-    // Consultas rápidas (API directas, sin scraping complejo)
-    const fastEndpoints = ['vehiculo', 'soat', 'impuesto-vehicular', 'certificado-vehiculo'];
-    // Consultas complejas (requieren scraping, captcha, más tiempo)
-    const complexEndpoints = ['siniestro', 'revision', 'sutran', 'sat', 'arequipa', 'piura', 'tarapoto', 'chiclayo', 'infogas', 'placas-pe', 'callao', 'puno', 'pit-foto'];
-    // SAT provinciales (mediana complejidad)
-    const satProvinciales = keys.filter(k => k.startsWith('sat-') && k !== 'sat-trujillo');
     
-    // Ordenar: rápidas primero, luego SAT provinciales, luego complejas
-    const prioritizedKeys = [
-      ...keys.filter(k => fastEndpoints.includes(k)),
-      ...satProvinciales,
-      ...keys.filter(k => complexEndpoints.includes(k) || !fastEndpoints.includes(k) && !satProvinciales.includes(k) && k !== 'sat-trujillo')
-    ];
-
-    // Aumentar concurrencia: 6 para consultas rápidas, 4 para complejas
-    const MAX_PARALLEL_FAST = 6;  // Más paralelismo para consultas rápidas
-    const MAX_PARALLEL_COMPLEX = 4; // Menos para consultas complejas
-
-    async function runPool(items, worker, limit) {
-      const executing = new Set();
-      const results = [];
-      for (const item of items) {
-        const p = Promise.resolve().then(() => worker(item));
-        results.push(p);
-        executing.add(p);
-        const clean = () => executing.delete(p);
-        p.then(clean).catch(clean);
-        if (executing.size >= limit) {
-          await Promise.race(executing);
-        }
-      }
-      return Promise.allSettled(results);
-    }
+    console.log(`[OPTIMIZACIÓN] Ejecutando ${keys.length} consultas secuencialmente (una por una) en orden`);
     
-    // Crear worker para cada endpoint (debe estar definido antes de usarlo)
+    // Crear worker para cada endpoint
     const worker = async (key) => {
       const url = ENDPOINTS[key];
       if (!url) {
