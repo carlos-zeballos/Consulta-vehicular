@@ -14,6 +14,34 @@ const BASE_URL = "https://rec.mtc.gob.pe";
 const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY;
 
 /**
+ * Detectar si la respuesta es un bloqueo WAF/Cloudflare
+ */
+function detectBlocked(response, pageContent = '') {
+  if (!response) return false;
+  
+  const status = response.status();
+  const headers = response.headers();
+  const server = (headers['server'] || '').toLowerCase();
+  const contentType = (headers['content-type'] || '').toLowerCase();
+  
+  // Detectar bloqueo por:
+  // 1. Status 403
+  // 2. Server cloudflare
+  // 3. Contenido HTML con "challenge" o "checking your browser"
+  if (status === 403) {
+    console.log(`[MTC-BLOCKED] 🚫 HTTP 403 detectado - Posible bloqueo WAF`);
+    return true;
+  }
+  
+  if (server.includes('cloudflare') && (status >= 400 || pageContent.includes('challenge') || pageContent.includes('checking your browser'))) {
+    console.log(`[MTC-BLOCKED] 🚫 Cloudflare challenge detectado`);
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Resolver captcha de imagen usando 2Captcha
  */
 async function resolverCaptchaImagen(base64Image) {
@@ -90,9 +118,18 @@ async function getCitvCaptchaAdvanced() {
     
     // Paso 1: Ir a la página principal
     console.log(`[MTC-ADVANCED] Navegando a formulario...`);
-    await guaranteePageLoad(page, `${BASE_URL}/Citv/ArConsultaCitv`, {
+    const response = await guaranteePageLoad(page, `${BASE_URL}/Citv/ArConsultaCitv`, {
       referer: 'https://www.google.com/'
     });
+    
+    // Detectar bloqueo WAF/Cloudflare
+    const pageContent = await page.content().catch(() => '');
+    if (detectBlocked(response, pageContent)) {
+      const error = new Error('MTC_BLOCKED: Acceso bloqueado por WAF/Cloudflare. Requiere proxy o IP residencial.');
+      error.code = 'MTC_BLOCKED';
+      await browser.close();
+      throw error;
+    }
     
     await humanDelay(2000, 4000);
     
@@ -166,9 +203,18 @@ async function consultCitvByPlacaAdvanced(placa, captcha) {
     
     // Paso 1: Ir a la página principal
     console.log(`[MTC-ADVANCED] 🚗 Consultando placa: ${placaNormalizada}`);
-    await guaranteePageLoad(page, `${BASE_URL}/Citv/ArConsultaCitv`, {
+    const response = await guaranteePageLoad(page, `${BASE_URL}/Citv/ArConsultaCitv`, {
       referer: 'https://www.google.com/'
     });
+    
+    // Detectar bloqueo WAF/Cloudflare
+    const pageContent = await page.content().catch(() => '');
+    if (detectBlocked(response, pageContent)) {
+      const error = new Error('MTC_BLOCKED: Acceso bloqueado por WAF/Cloudflare. Requiere proxy o IP residencial.');
+      error.code = 'MTC_BLOCKED';
+      await browser.close();
+      throw error;
+    }
     
     await humanDelay(2000, 4000);
     

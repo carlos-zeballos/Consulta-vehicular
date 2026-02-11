@@ -108,79 +108,47 @@ class CallaoPapeletasScraper {
       });
       
       console.log('🌐 Navegando al sitio...');
-      await page.goto(this.baseURL, { waitUntil: 'networkidle', timeout: 30000 });
-      await this.delay(2000);
+      await page.goto(this.baseURL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      
+      // Esperar a que el DOM esté completamente renderizado
+      await page.waitForLoadState('domcontentloaded');
+      await this.delay(1500);
 
       // Esperar a que el formulario esté disponible
       console.log('⏳ Esperando que el formulario se cargue...');
       
-      // Buscar el input de placa - múltiples selectores
+      // Intentar seleccionar radio "Número de Placa" si existe
+      console.log('   🔘 Intentando seleccionar radio "Número de Placa"...');
+      try {
+        const radioLocator = page.locator('input[value*="placa" i], input[value*="Placa"], label:has-text("Número de Placa"), label:has-text("Placa")').first();
+        const radioCount = await radioLocator.count();
+        if (radioCount > 0) {
+          await radioLocator.click({ timeout: 5000 });
+          console.log('   ✅ Radio "Número de Placa" seleccionado');
+          await this.delay(500);
+        }
+      } catch (e) {
+        console.log('   ℹ️ No se encontró radio "Número de Placa" (puede no ser necesario)');
+      }
+      
+      // Buscar el input de placa usando locator robusto
       console.log('   🔍 Buscando campo de placa...');
-      const selectoresPlaca = [
-        'input[name="placa"]',
-        'input[id*="placa" i]',
-        'input[placeholder*="placa" i]',
-        'input[type="text"]',
-        '#placa',
-        'input.form-control',
-        'input[class*="form"]'
-      ];
+      const placaLocator = page.locator(
+        'input#placa, input[name*="placa" i], input[id*="placa" i], input[placeholder*="placa" i], form input[type="text"]'
+      ).first();
       
-      let placaInput = null;
-      let placaInputSelector = null;
-      for (const selector of selectoresPlaca) {
-        try {
-          await page.waitForSelector(selector, { timeout: 3000 });
-          placaInput = await page.$(selector);
-          if (placaInput) {
-            placaInputSelector = selector;
-            console.log(`   ✅ Campo de placa encontrado: ${selector}`);
-            break;
-          }
-        } catch (e) {
-          // Continuar con siguiente selector
-        }
-      }
+      // Esperar a que el input esté visible
+      await placaLocator.waitFor({ state: 'visible', timeout: 60000 });
+      console.log('   ✅ Campo de placa encontrado y visible');
       
-      if (!placaInput) {
-        console.log('   ⚠️ No se encontró campo de placa, intentando con evaluate...');
-        const encontrado = await page.evaluate((placa) => {
-          const inputs = document.querySelectorAll('input[type="text"]');
-          for (const input of inputs) {
-            const name = (input.name || '').toLowerCase();
-            const id = (input.id || '').toLowerCase();
-            const placeholder = (input.placeholder || '').toLowerCase();
-            if (name.includes('placa') || id.includes('placa') || placeholder.includes('placa')) {
-              input.value = placa.toUpperCase();
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              return true;
-            }
-          }
-          // Si no encontramos, usar el primer input de texto
-          if (inputs.length > 0) {
-            inputs[0].value = placa.toUpperCase();
-            inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
-            inputs[0].dispatchEvent(new Event('change', { bubbles: true }));
-            return true;
-          }
-          return false;
-        }, placa);
-        
-        if (!encontrado) {
-          throw new Error('No se pudo encontrar el campo de placa');
-        }
-        console.log('   ✅ Placa ingresada usando evaluate');
-      } else {
-        // Llenar el campo de placa
-        console.log(`📝 Ingresando placa: ${placa}`);
-        await placaInput.fill(placa.toUpperCase());
-        await this.delay(1000);
-        // Disparar eventos para que el formulario detecte el cambio
-        await placaInput.dispatchEvent('input');
-        await placaInput.dispatchEvent('change');
-        await this.delay(500);
-      }
+      // Si llegamos aquí, el input está visible, no necesitamos placaInput
+      let placaInput = true;
+      let placaInputSelector = 'locator';
+      
+      // Llenar el campo de placa usando el locator
+      console.log(`📝 Ingresando placa: ${placa}`);
+      await placaLocator.fill(placa.toUpperCase());
+      await this.delay(1000);
 
       // Resolver CAPTCHA
       console.log('🔐 Resolviendo CAPTCHA...');
@@ -263,19 +231,19 @@ class CallaoPapeletasScraper {
       console.log('   ⏳ Esperando a que carguen los resultados...');
       await this.delay(3000);
       
-      // Esperar a que aparezca la tabla o algún indicador de resultados
+      // Esperar a que aparezca la tabla o algún indicador de resultados usando locator robusto
       try {
-        await page.waitForSelector('table, .table, tbody tr, [class*="resultado"], [id*="resultado"]', { 
-          timeout: 15000,
-          state: 'visible'
-        });
+        const resultadoLocator = page.locator(
+          'table tbody tr, .table tbody tr, table, .table, [class*="resultado"], [id*="resultado"], div:has-text("No se encontraron")'
+        ).first();
+        await resultadoLocator.waitFor({ state: 'visible', timeout: 20000 });
         console.log('   ✅ Indicador de resultados encontrado');
       } catch (e) {
-        console.log('   ⚠️ No se encontró indicador inmediato, esperando más tiempo...');
+        console.log('   ⚠️ No se encontró indicador inmediato de resultados, continuando...');
       }
       
       // Esperar más tiempo para que cargue contenido dinámico
-      await this.delay(8000);
+      await this.delay(5000);
       
       // Verificar si la página cambió o si hay resultados visibles
       const urlDespues = page.url();

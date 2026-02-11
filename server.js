@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SERVER.JS - Consulta Vehicular
  * ProducciÃ³n cPanel - Contrato JSON Ãºnico
  */
@@ -186,6 +186,20 @@ const COUPON_HASH_SALT = process.env.COUPON_HASH_SALT || "v1";
 const PORT = process.env.PORT || 3000;
 
 // ============================================
+// DETECCIÓN DE AMBIENTE Y TIMEOUTS DINÁMICOS
+// ============================================
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || 
+                      (process.env.PUBLIC_BASE_URL && !process.env.PUBLIC_BASE_URL.includes('localhost'));
+
+// Configuración de timeouts por ambiente
+const TIMEOUTS = {
+  navigation: IS_PRODUCTION ? 120000 : 60000,   // 2min prod, 1min dev
+  selector: IS_PRODUCTION ? 60000 : 30000,      // 1min prod, 30s dev
+  overall: IS_PRODUCTION ? 300000 : 180000,     // 5min prod, 3min dev
+  captcha: IS_PRODUCTION ? 90000 : 60000        // 1.5min prod, 1min dev
+};
+
+// ============================================
 // CUPONES (SECRETOS: solo backend / variables de entorno)
 // ============================================
 const COUPON_STATE_PATH = path.join(__dirname, "data", "coupon-state.json");
@@ -309,6 +323,84 @@ function respond(res, { ok, source, status, message, data = null, meta = {} }, c
   
   
   return res.status(finalCode).json(response);
+}
+
+// ============================================
+// CLASIFICAR ERRORES DE RED
+// ============================================
+/**
+ * Clasificar errores de red (timeout, connection refused, DNS, etc.)
+ * Retorna un objeto con clasificación y mensaje user-friendly
+ */
+function classifyNetworkError(error) {
+  const errorMsg = (error.message || '').toLowerCase();
+  const errorCode = error.code || '';
+  
+  // Connection refused (servidor no responde o puerto cerrado)
+  if (errorCode === 'ECONNREFUSED' || errorMsg.includes('connection refused')) {
+    return {
+      type: 'network_blocked',
+      status: 'empty',
+      message: 'El servicio no está disponible en este momento. Por favor, intente más tarde.',
+      code: 503
+    };
+  }
+  
+  // Timeout (servidor no responde a tiempo)
+  if (errorCode === 'ETIMEDOUT' || 
+      errorMsg.includes('timeout') || 
+      errorMsg.includes('time out') ||
+      errorMsg.includes('timed out')) {
+    return {
+      type: 'network_timeout',
+      status: 'empty',
+      message: 'El servidor tardó demasiado en responder. Por favor, intente más tarde.',
+      code: 504
+    };
+  }
+  
+  // DNS resolution failed
+  if (errorCode === 'ENOTFOUND' || errorMsg.includes('not found') || errorMsg.includes('enotfound')) {
+    return {
+      type: 'network_dns',
+      status: 'empty',
+      message: 'No se pudo conectar con el servicio. Por favor, intente más tarde.',
+      code: 503
+    };
+  }
+  
+  // Network unreachable
+  if (errorCode === 'ENETUNREACH' || errorMsg.includes('network unreachable')) {
+    return {
+      type: 'network_unreachable',
+      status: 'empty',
+      message: 'Red no alcanzable. El servicio podría estar caído temporalmente.',
+      code: 503
+    };
+  }
+  
+  // SSL/Certificate errors
+  if (errorMsg.includes('certificate') || errorMsg.includes('ssl') || errorMsg.includes('tls')) {
+    return {
+      type: 'network_ssl',
+      status: 'error',
+      message: 'Error de seguridad al conectar con el servicio.',
+      code: 500
+    };
+  }
+  
+  // Generic network error
+  if (errorCode.startsWith('E') || errorMsg.includes('network') || errorMsg.includes('socket')) {
+    return {
+      type: 'network_generic',
+      status: 'empty',
+      message: 'Error de conexión. El servicio podría estar temporalmente no disponible.',
+      code: 503
+    };
+  }
+  
+  // Not a network error
+  return null;
 }
 
 // ============================================
@@ -1422,6 +1514,17 @@ app.post("/api/revision", async (req, res) => {
         status: "error",
         message: "Servicio bloquea consultas automatizadas temporalmente"
       }, 503);
+    }
+
+    // Detectar bloqueo WAF/Cloudflare (desde Contabo datacenter IPs)
+    if (error.code === 'MTC_BLOCKED' || error.message.includes('MTC_BLOCKED')) {
+      console.log(`[MTC] 🚫 Bloqueo WAF/Cloudflare detectado - IP datacenter bloqueada`);
+      return respond(res, {
+        ok: false,
+        source: "revision",
+        status: "blocked",
+        message: "El servicio MTC está bloqueando consultas desde este servidor. Esto es temporal y se debe a medidas de seguridad del portal oficial."
+      }, 403);
     }
 
     if (error.message.includes('MTC_SERVICE_ERROR') || error.message.includes('MTC_ERROR: -2')) {
@@ -5205,7 +5308,8 @@ app.post("/api/generar-pdf", async (req, res) => {
 // ============================================
 // INICIO DEL SERVIDOR
 // ============================================
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
+  console.log(`[ENV] Ambiente detectado: ${IS_PRODUCTION ? 'PRODUCCIÓN' : 'DESARROLLO'}`);
   console.log(`✅ Servidor activo en http://localhost:${PORT}`);
   console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
   console.log(`📋 Endpoints disponibles:`);
@@ -5235,4 +5339,12 @@ app.listen(PORT, () => {
   console.log(`   - POST /api/placas-pe`);
   console.log(`   - POST /api/callao`);
   console.log(`   - POST /api/generar-pdf`);
+  console.log(`\n[TIMEOUTS] Playwright: navigation=${TIMEOUTS.navigation}ms, selector=${TIMEOUTS.selector}ms, overall=${TIMEOUTS.overall}ms`);
 });
+
+// Configurar timeouts del servidor HTTP para evitar que Nginx corte
+server.headersTimeout = 650000;    // 10min 50s
+server.requestTimeout = 650000;    // 10min 50s
+server.keepAliveTimeout = 650000;  // 10min 50s
+
+console.log(`[TIMEOUTS] HTTP Server: headers=${server.headersTimeout}ms, request=${server.requestTimeout}ms, keepAlive=${server.keepAliveTimeout}ms`);
