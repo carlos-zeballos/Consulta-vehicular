@@ -662,12 +662,22 @@ class ApesegSoatScraper {
         });
         
         // PRIORIDAD: Si se extrajeron datos del DOM, usarlos inmediatamente
+        console.log('[APESEG] Verificando datos extraídos del DOM...');
+        console.log('[APESEG] datosDelDOM es array?', Array.isArray(datosDelDOM));
+        console.log('[APESEG] datosDelDOM length?', datosDelDOM?.length);
+        
         if (datosDelDOM && Array.isArray(datosDelDOM) && datosDelDOM.length > 0) {
           console.log('[APESEG] ✅ Datos extraídos del DOM:', datosDelDOM.length);
           console.log('[APESEG] Primeros datos:', JSON.stringify(datosDelDOM[0], null, 2));
+          console.log('[APESEG] Todos los datos:', JSON.stringify(datosDelDOM, null, 2));
           await browser.close();
           browser = null;
-          return this.formatResponse(datosDelDOM, placa);
+          const resultado = this.formatResponse(datosDelDOM, placa);
+          console.log('[APESEG] Resultado formateado:', JSON.stringify(resultado, null, 2));
+          return resultado;
+        } else {
+          console.log('[APESEG] ⚠️ No se encontraron datos en primera extracción del DOM');
+          console.log('[APESEG] datosDelDOM:', datosDelDOM);
         }
         
         // Si no se encontraron datos, esperar un poco más y analizar la página
@@ -750,9 +760,15 @@ class ApesegSoatScraper {
         if (datosDelDOM2 && Array.isArray(datosDelDOM2) && datosDelDOM2.length > 0) {
           console.log('[APESEG] ✅ Datos extraídos del DOM en segunda extracción:', datosDelDOM2.length);
           console.log('[APESEG] Primeros datos:', JSON.stringify(datosDelDOM2[0], null, 2));
+          console.log('[APESEG] Todos los datos:', JSON.stringify(datosDelDOM2, null, 2));
           await browser.close();
           browser = null;
-          return this.formatResponse(datosDelDOM2, placa);
+          const resultado = this.formatResponse(datosDelDOM2, placa);
+          console.log('[APESEG] Resultado formateado:', JSON.stringify(resultado, null, 2));
+          return resultado;
+        } else {
+          console.log('[APESEG] ⚠️ No se encontraron datos en segunda extracción del DOM');
+          console.log('[APESEG] datosDelDOM2:', datosDelDOM2);
         }
         
         // Si aún no hay datos, analizar la página para debug
