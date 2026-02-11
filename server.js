@@ -173,7 +173,7 @@ app.post("/api/coupons/redeem", (req, res) => {
 // ============================================
 // VARIABLES DE ENTORNO
 // ============================================
-// Token de Factiliza - Actualizado
+// Token de Factiliza - Actualizado (funcional)
 // Asegurar que siempre tenga "Bearer" al inicio
 const FACTILIZA_TOKEN_RAW = process.env.FACTILIZA_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MDM0NyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.9bJbiftCYHZTHI-Y8rE0QvfQKW1TUHFO69QGYZnbyyo";
 const FACTILIZA_TOKEN = FACTILIZA_TOKEN_RAW.startsWith('Bearer ') ? FACTILIZA_TOKEN_RAW : `Bearer ${FACTILIZA_TOKEN_RAW}`;
