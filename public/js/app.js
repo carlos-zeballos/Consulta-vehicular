@@ -1419,23 +1419,7 @@
       return Promise.allSettled(results);
     }
     
-    // Ejecutar en fases: primero rápidas, luego complejas
-    const fastKeys = prioritizedKeys.filter(k => fastEndpoints.includes(k));
-    const complexKeys = prioritizedKeys.filter(k => !fastEndpoints.includes(k) && k !== 'sat-trujillo');
-    
-    console.log(`[OPTIMIZACIÓN] Ejecutando ${fastKeys.length} consultas rápidas primero, luego ${complexKeys.length} complejas`);
-    
-    // Fase 1: Consultas rápidas con mayor paralelismo
-    if (fastKeys.length > 0) {
-      await runPool(fastKeys, worker, MAX_PARALLEL_FAST);
-    }
-    
-    // Fase 2: Consultas complejas con paralelismo moderado
-    if (complexKeys.length > 0) {
-      await runPool(complexKeys, worker, MAX_PARALLEL_COMPLEX);
-    }
-    
-    // Crear worker para cada endpoint
+    // Crear worker para cada endpoint (debe estar definido antes de usarlo)
     const worker = async (key) => {
       const url = ENDPOINTS[key];
       if (!url) {
