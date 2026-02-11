@@ -974,6 +974,32 @@ class ApesegSoatScraper {
         });
         
         console.log('[APESEG] Análisis de página:', JSON.stringify(analisisPagina, null, 2));
+
+        const textoMuestraLower = String(analisisPagina?.textoMuestra || '').toLowerCase();
+        const fullBodyLower = await page.evaluate(() => String(document.body?.textContent || '').toLowerCase());
+
+        const hasUnauthorized = textoMuestraLower.includes('acceso no autorizado') || fullBodyLower.includes('acceso no autorizado');
+        const hasApiConnError = textoMuestraLower.includes('error de conexión con la api') || fullBodyLower.includes('error de conexión con la api');
+        const hasCaptchaIncorrect = textoMuestraLower.includes('captcha incorrecto') || fullBodyLower.includes('captcha incorrecto');
+        const hasRateLimit = textoMuestraLower.includes('too many attempts') || fullBodyLower.includes('too many attempts');
+
+        const hasExplicitNoData =
+          textoMuestraLower.includes('no se encontraron certificados') ||
+          fullBodyLower.includes('no se encontraron certificados') ||
+          textoMuestraLower.includes('sin resultados') ||
+          fullBodyLower.includes('sin resultados') ||
+          textoMuestraLower.includes('sin registros') ||
+          fullBodyLower.includes('sin registros');
+
+        if (hasUnauthorized || hasApiConnError || hasRateLimit) {
+          throw new Error('APESEG_TRANSIENT_ERROR: El portal APESEG bloqueó temporalmente la consulta (403/API).');
+        }
+        if (hasCaptchaIncorrect) {
+          throw new Error('APESEG_CAPTCHA_INVALID: Captcha incorrecto detectado en APESEG.');
+        }
+        if (!hasExplicitNoData && certificadosInterceptados === null) {
+          throw new Error('APESEG_NO_CONFIRMATION: No hubo confirmación de datos ni de vacío real.');
+        }
         
         // Tomar screenshot para debug
         try {
@@ -1002,7 +1028,7 @@ class ApesegSoatScraper {
       await browser.close();
       browser = null;
 
-      // Si llegamos aquí sin datos, significa que no se encontraron datos ni en DOM ni en intercepción
+      // Si llegamos aquí sin datos, significa "sin datos" confirmado.
       console.log('[APESEG] ⚠️ No se encontraron datos después de todos los intentos');
       console.log('[APESEG] certificadosInterceptados:', certificadosInterceptados);
       
@@ -1111,14 +1137,36 @@ class ApesegSoatScraper {
     }
 
     try {
-      // Intentar primero con HTTP (más rápido)
-      try {
-        return await this.consultarPlacaHttp(placaNormalizada);
-      } catch (httpError) {
-        console.log('[APESEG] HTTP falló, intentando con Puppeteer...', httpError.message);
-        // Si falla HTTP, usar Puppeteer
-        return await this.consultarPlacaPuppeteer(placaNormalizada);
+      // La API HTTP de login es inestable (500 con "email field is required").
+      // Priorizamos Puppeteer para replicar el flujo real del sitio.
+      let lastError = null;
+      const maxAttempts = 3;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          console.log(`[APESEG] Intento global ${attempt}/${maxAttempts} para placa ${placaNormalizada}`);
+          return await this.consultarPlacaPuppeteer(placaNormalizada);
+        } catch (err) {
+          lastError = err;
+          const msg = String(err?.message || '');
+          console.warn(`[APESEG] Intento ${attempt} falló: ${msg}`);
+
+          const isRetryable =
+            msg.includes('APESEG_TRANSIENT_ERROR') ||
+            msg.includes('APESEG_CAPTCHA_INVALID') ||
+            msg.includes('APESEG_NO_CONFIRMATION') ||
+            msg.includes('Timeout');
+
+          if (!isRetryable || attempt === maxAttempts) {
+            throw err;
+          }
+
+          // Backoff corto para evitar rate-limit temporal.
+          await new Promise(resolve => setTimeout(resolve, 2500 * attempt));
+        }
       }
+
+      throw lastError || new Error('APESEG_UNKNOWN_ERROR');
     } catch (error) {
       console.error('[APESEG] Error consultando placa:', error.message);
       throw error;

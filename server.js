@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SERVER.JS - Consulta Vehicular
  * ProducciÃ³n cPanel - Contrato JSON Ãºnico
  */
@@ -971,13 +971,28 @@ app.post("/api/soat", async (req, res) => {
   } catch (error) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
     console.error(`[SOAT-APESEG] Error después de ${elapsed}s:`, error.message);
-    
+
+    const msg = String(error?.message || '');
+    let publicMessage = msg || "Error al consultar SOAT";
+    let statusCode = 500;
+
+    if (msg.includes('APESEG_TRANSIENT_ERROR')) {
+      publicMessage = "APESEG está bloqueando temporalmente la consulta. Reintenta en 1-2 minutos.";
+      statusCode = 503;
+    } else if (msg.includes('APESEG_CAPTCHA_INVALID')) {
+      publicMessage = "El captcha de APESEG fue rechazado. Reintenta nuevamente.";
+      statusCode = 503;
+    } else if (msg.includes('APESEG_NO_CONFIRMATION')) {
+      publicMessage = "APESEG no confirmó resultados en este intento. Reintenta en unos segundos.";
+      statusCode = 503;
+    }
+
     respond(res, {
       ok: false,
       source: "soat",
       status: "error",
-      message: error.message || "Error al consultar SOAT"
-    }, 500);
+      message: publicMessage
+    }, statusCode);
   }
 });
 
