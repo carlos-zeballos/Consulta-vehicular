@@ -173,7 +173,8 @@ app.post("/api/coupons/redeem", (req, res) => {
 // ============================================
 // VARIABLES DE ENTORNO
 // ============================================
-const FACTILIZA_TOKEN = process.env.FACTILIZA_TOKEN || "";
+// Token de Factiliza - Actualizado
+const FACTILIZA_TOKEN = process.env.FACTILIZA_TOKEN || "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MDM0NyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.9bJbiftCYHZTHI-Y8rE0QvfQKW1TUHFO69QGYZnbyyo";
 const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || "";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "";
 // Códigos de cupones por defecto (si no están en .env)

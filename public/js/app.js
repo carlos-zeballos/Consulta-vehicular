@@ -186,9 +186,9 @@
                                 url.includes('/api/chiclayo') ||
                                 url.includes('/api/infogas') ||
                                 url.includes('/api/placas-pe');
-      // Siniestro y Vehiculo necesitan más tiempo: 300s (5 minutos)
-      const isVeryComplexEndpoint = url.includes('/api/siniestro') || url.includes('/api/vehiculo');
-      // Complejos 300s, siniestro/vehiculo 300s, manual 300s, normal 120s
+      // SOAT, Siniestro y Vehiculo necesitan más tiempo: 300s (5 minutos) - SOAT ahora usa APESEG con captcha
+      const isVeryComplexEndpoint = url.includes('/api/siniestro') || url.includes('/api/vehiculo') || url.includes('/api/soat');
+      // Complejos 300s, siniestro/vehiculo/soat 300s, manual 300s, normal 120s
       const timeoutMs = options.useManual ? 300000 : (isVeryComplexEndpoint ? 300000 : (isComplexEndpoint ? 300000 : 120000)); 
       
       const timeout = setTimeout(() => {
@@ -392,8 +392,78 @@
       };
     }
     
-    // Manejo especial para CALLAO - DEBE IR ANTES DE LAS VERIFICACIONES GENERALES
-    if (key === 'callao') {
+      // Manejo especial para SOAT - DEBE IR ANTES DE LAS VERIFICACIONES GENERALES
+      if (key === 'soat') {
+        console.log(`[FRONTEND-SOAT] Procesando datos de SOAT`);
+        console.log(`[FRONTEND-SOAT] payload:`, payload);
+        
+        // Si hay error
+        if (payload?.ok === false || payload?.status === 'error') {
+          const errorMsg = payload?.message || 'Error al consultar SOAT';
+          return {
+            status: 'error',
+            content: `
+              <div class="message error">
+                <span class="message-icon">⚠️</span>
+                <div>
+                  <strong>Error al consultar SOAT</strong>
+                  <p>${escapeHTML(errorMsg)}</p>
+                </div>
+              </div>`
+          };
+        }
+        
+        // Si hay datos exitosos
+        if (payload?.status === 'success' && data) {
+          // Guardar datos originales para PDF
+          const container = document.getElementById(`resultado-${key}`);
+          if (container) {
+            container.dataset.originalData = JSON.stringify(payload);
+            console.log('[SOAT] Datos originales guardados en DOM:', payload);
+          }
+          
+          // Si hay pólizas, mostrarlas todas
+          if (data.polizas && Array.isArray(data.polizas) && data.polizas.length > 0) {
+            console.log(`[FRONTEND-SOAT] ✅ Pólizas encontradas: ${data.polizas.length}`);
+            
+            // Determinar estado: success si hay vigente, warn si todas están vencidas
+            const tieneVigente = data.polizas.some(p => p.estado === 'VIGENTE');
+            const status = tieneVigente ? 'success' : 'warn';
+            
+            return {
+              status: status,
+              content: createInfoGrid(data, key)
+            };
+          }
+          
+          // Si hay datos pero no pólizas (datos principales)
+          if (data.compania_aseguradora || data.numero_poliza || data.estado) {
+            return {
+              status: data.estado === 'VIGENTE' ? 'success' : 'warn',
+              content: createInfoGrid(data, key)
+            };
+          }
+        }
+        
+        // Si está vacío o no encontrado
+        if (payload?.status === 'empty' || !data || (!data.polizas && !data.compania_aseguradora)) {
+          const mensaje = payload?.message || "No se encontraron certificados SOAT para esta placa";
+          return {
+            status: 'empty',
+            content: `
+              <div class="message empty">
+                <span class="message-icon">📭</span>
+                <div>
+                  <strong>Sin certificados SOAT</strong>
+                  <p>${escapeHTML(mensaje)}</p>
+                </div>
+              </div>`
+          };
+        }
+      }
+      
+      // Manejo especial para CALLAO - DEBE IR ANTES DE LAS VERIFICACIONES GENERALES
+      if (key === 'callao') {
       console.log(`[FRONTEND-CALLAO] Procesando datos`);
       console.log(`[FRONTEND-CALLAO] payload:`, payload);
       console.log(`[FRONTEND-CALLAO] payload.ok:`, payload?.ok);
