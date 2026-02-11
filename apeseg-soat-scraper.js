@@ -388,10 +388,106 @@ class ApesegSoatScraper {
         console.log('[APESEG] Esperando que la aplicación frontend cargue los datos...');
         await page.waitForTimeout(15000); // 15 segundos para que React/Vue cargue los datos
         
-        // Esperar a que aparezcan resultados en la página (priorizar DOM sobre intercepción)
+        // Intentar hacer la llamada directamente desde el navegador usando el token
+        console.log('[APESEG] Intentando obtener certificados directamente desde el navegador...');
+        let tokenObtenido = null;
+        
+        // Esperar un momento para que el token se establezca
+        await page.waitForTimeout(3000);
+        
+        // Intentar obtener certificados directamente desde el contexto del navegador
+        const certificadosDesdeNavegador = await page.evaluate(async (placa) => {
+          try {
+            // Buscar el token en localStorage, sessionStorage o cookies
+            let token = null;
+            
+            // Buscar en localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key.includes('token') || key.includes('auth') || key.includes('access')) {
+                const value = localStorage.getItem(key);
+                if (value && value.length > 20) {
+                  token = value;
+                  break;
+                }
+              }
+            }
+            
+            // Buscar en sessionStorage
+            if (!token) {
+              for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key.includes('token') || key.includes('auth') || key.includes('access')) {
+                  const value = sessionStorage.getItem(key);
+                  if (value && value.length > 20) {
+                    token = value;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            // Si no hay token en storage, intentar hacer la llamada de todas formas
+            // La aplicación puede estar usando el token de manera diferente
+            const url = `https://webapp.apeseg.org.pe/consulta-soat/api/certificados/placa/${placa}`;
+            const headers = {
+              'accept': '*/*',
+              'accept-language': 'en-US,en;q=0.9,es;q=0.8',
+              'cache-control': 'no-cache',
+              'content-type': 'application/json',
+              'pragma': 'no-cache',
+              'referer': 'https://webapp.apeseg.org.pe/consulta-soat/resultados',
+              'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
+              'sec-ch-ua-mobile': '?0',
+              'sec-ch-ua-platform': '"Windows"',
+              'sec-fetch-dest': 'empty',
+              'sec-fetch-mode': 'cors',
+              'sec-fetch-site': 'same-origin',
+              'x-app-secret': '9asjKZ9aJq1@2025',
+              'x-referrer': 'https://www.apeseg.org.pe/',
+              'x-source': 'apeseg'
+            };
+            
+            if (token) {
+              headers['authorization'] = `Bearer ${token}`;
+            }
+            
+            console.log('[APESEG-BROWSER] Intentando obtener certificados con fetch...');
+            const response = await fetch(url, {
+              method: 'GET',
+              headers: headers,
+              credentials: 'include'
+            });
+            
+            console.log('[APESEG-BROWSER] Status:', response.status);
+            
+            if (response.status === 200) {
+              const data = await response.json();
+              console.log('[APESEG-BROWSER] Datos obtenidos:', Array.isArray(data) ? data.length : 'no es array');
+              if (Array.isArray(data) && data.length > 0) {
+                return data;
+              }
+            } else {
+              const errorText = await response.text();
+              console.log('[APESEG-BROWSER] Error:', response.status, errorText);
+            }
+          } catch (e) {
+            console.error('[APESEG-BROWSER] Error en fetch:', e.message);
+          }
+          return null;
+        }, placa);
+        
+        if (certificadosDesdeNavegador && Array.isArray(certificadosDesdeNavegador) && certificadosDesdeNavegador.length > 0) {
+          console.log('[APESEG] ✅ Certificados obtenidos directamente desde el navegador:', certificadosDesdeNavegador.length);
+          await browser.close();
+          browser = null;
+          return this.formatResponse(certificadosDesdeNavegador, placa);
+        }
+        
+        // Si no funcionó, esperar a que aparezcan resultados en la página
         console.log('[APESEG] Esperando que aparezcan resultados en la página...');
         let intentos = 0;
-        const maxIntentos = 60; // 60 intentos x 3 segundos = 180 segundos (3 minutos) máximo
+        const maxIntentos = 40; // 40 intentos x 3 segundos = 120 segundos (2 minutos) máximo
         let datosEncontradosEnDOM = false;
         
         while (intentos < maxIntentos && !datosEncontradosEnDOM && certificadosInterceptados === null) {
