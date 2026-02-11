@@ -931,7 +931,7 @@ app.post("/api/vehiculo", async (req, res) => {
 
     const response = await axios.get(`https://api.factiliza.com/v1/placa/info/${placa}`, {
       headers: { Authorization: FACTILIZA_TOKEN },
-      timeout: 60000 // Aumentado de 10s a 60s para obtener respuesta completa
+      timeout: 300000 // 5 minutos para obtener respuesta completa
     });
 
     if (response.data && response.data.data) {
@@ -4356,68 +4356,10 @@ app.post("/api/sunarp", async (req, res) => {
 // ============================================
 // RUTAS LEGACY (compatibilidad) - Alias directos
 // ============================================
-// ENDPOINTS API PARA FRONTEND (app.js)
+// NOTA: Los endpoints /api/soat y /api/vehiculo ya están definidos arriba
+// (líneas 896 y 923). Estos duplicados han sido eliminados para evitar
+// conflictos y errores 405 (Method Not Allowed).
 // ============================================
-
-// SOAT - API Factiliza
-app.post("/api/soat", async (req, res) => {
-  const { placa } = req.body;
-  if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
-  
-  try {
-    const token = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODkyMiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.kcxt3XYtXWWgNZdMnaENUZj-568RMkDRAVqV-DRk73I";
-    const response = await axios.get(`https://api.factiliza.com/v1/placa/soat/${placa}`, {
-      headers: { Authorization: token }
-    });
-    
-    res.json({
-      ok: true,
-      source: "soat",
-      status: response.data?.data ? "success" : "empty",
-      data: response.data?.data || null
-    });
-  } catch (error) {
-    res.json({
-      ok: false,
-      source: "soat",
-      status: "error",
-      message: error.message,
-      data: null
-    });
-  }
-});
-
-// VehÃ­culo - API Factiliza
-app.post("/api/vehiculo", async (req, res) => {
-  const { placa } = req.body;
-  if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
-  
-  // Aumentar timeout del request
-  req.setTimeout(300000); // 5 minutos
-  
-  try {
-    const token = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODkyMiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.kcxt3XYtXWWgNZdMnaENUZj-568RMkDRAVqV-DRk73I";
-    const response = await axios.get(`https://api.factiliza.com/v1/placa/info/${placa}`, {
-      headers: { Authorization: token },
-      timeout: 300000 // 5 minutos
-    });
-    
-    res.json({
-      ok: true,
-      source: "vehiculo",
-      status: response.data?.data ? "success" : "empty",
-      data: response.data?.data || null
-    });
-  } catch (error) {
-    res.json({
-      ok: false,
-      source: "vehiculo",
-      status: "error",
-      message: error.message,
-      data: null
-    });
-  }
-});
 
 
 // RevisiÃ³n - Alias para /api/consultar-revision
