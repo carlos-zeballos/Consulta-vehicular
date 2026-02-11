@@ -2241,16 +2241,6 @@ function getPDFTemplate() {
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-header">
-      <i class="fas fa-car"></i>
-      <h3>Datos del Vehículo</h3>
-    </div>
-    <div class="card-body">
-      {{VEHICULO}}
-    </div>
-  </div>
-
   {{PLACAS_PE}}
 
   <div class="card">
@@ -2259,7 +2249,6 @@ function getPDFTemplate() {
       <h3>SOAT - Seguro Obligatorio</h3>
     </div>
     <div class="card-body">
-      {{VEHICULO_KV}}
       {{SOAT}}
     </div>
   </div>
@@ -2395,7 +2384,6 @@ async function renderPdf(reportData, placa, fechaConsulta, rawResults = null) {
   let html = getPDFTemplate();
   
   // 4. Generar secciones
-  const vehiculoHTML = renderVehicle(report);
   const placasPeHTML = renderPlacasPe(report);
   const soatHTML = renderSOAT(report);
   const citvHTML = renderCITV(report);
@@ -2419,16 +2407,6 @@ async function renderPdf(reportData, placa, fechaConsulta, rawResults = null) {
   const nivelConfianzaHTML = '';
   
   // 5. Generar contenido combinado para el template actual
-  const vehiculoKV = `
-    <div class="kv-row"><span class="kv-key">Placa:</span><span class="kv-value">${cleanText(report.vehicle.placa)}</span></div>
-    <div class="kv-row"><span class="kv-key">Marca:</span><span class="kv-value">${cleanText(report.vehicle.marca)}</span></div>
-    <div class="kv-row"><span class="kv-key">Modelo:</span><span class="kv-value">${cleanText(report.vehicle.modelo)}</span></div>
-    <div class="kv-row"><span class="kv-key">Color:</span><span class="kv-value">${cleanText(report.vehicle.color)}</span></div>
-    <div class="kv-row"><span class="kv-key">Motor:</span><span class="kv-value">${cleanText(report.vehicle.motor)}</span></div>
-    <div class="kv-row"><span class="kv-key">VIN:</span><span class="kv-value">${cleanText(report.vehicle.vin)}</span></div>
-    <div class="kv-row"><span class="kv-key">Serie:</span><span class="kv-value">${cleanText(report.vehicle.serie)}</span></div>
-  `;
-  
   const summaryBadges = [];
   if (report.soat.estado === 'vigente') {
     summaryBadges.push(`<span class="badge b-ok">${ICONS.check} SOAT Vigente</span>`);
@@ -2468,8 +2446,8 @@ async function renderPdf(reportData, placa, fechaConsulta, rawResults = null) {
   html = html
     .replace(/{{PLACA}}/g, cleanText(placa || report.meta.placa))
     .replace(/{{FECHA}}/g, cleanText(fechaConsulta || formatDate(report.meta.fechaConsulta)))
-    .replace(/{{VEHICULO}}/g, vehiculoHTML)
-    .replace(/{{VEHICULO_KV}}/g, vehiculoKV)
+    .replace(/{{VEHICULO}}/g, '')
+    .replace(/{{VEHICULO_KV}}/g, '')
     .replace(/{{RIESGO_SCORE}}/g, riskData.score)
     .replace(/{{RIESGO_CATEGORIA}}/g, riskData.categoria || (riskData.score <= 30 ? 'Bajo' : riskData.score <= 60 ? 'Moderado' : 'Alto'))
     .replace(/{{RIESGO_COLOR}}/g, riskData.score <= 30 ? 'b-ok' : riskData.score <= 60 ? 'b-warn' : 'b-bad')

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SERVER.JS - Consulta Vehicular
  * ProducciÃ³n cPanel - Contrato JSON Ãºnico
  */
@@ -173,10 +173,6 @@ app.post("/api/coupons/redeem", (req, res) => {
 // ============================================
 // VARIABLES DE ENTORNO
 // ============================================
-// Token de Factiliza - Actualizado (funcional)
-// Asegurar que siempre tenga "Bearer" al inicio
-const FACTILIZA_TOKEN_RAW = process.env.FACTILIZA_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MDM0NyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.9bJbiftCYHZTHI-Y8rE0QvfQKW1TUHFO69QGYZnbyyo";
-const FACTILIZA_TOKEN = FACTILIZA_TOKEN_RAW.startsWith('Bearer ') ? FACTILIZA_TOKEN_RAW : `Bearer ${FACTILIZA_TOKEN_RAW}`;
 const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || "";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "";
 // Códigos de cupones por defecto (si no están en .env)
@@ -606,15 +602,15 @@ function normalizeTimeouts(endpoint) {
   const captchaEndpoints = ['lima', 'impuesto'];
   if (captchaEndpoints.includes(endpoint)) {
     return {
-      navigation: 60000,  // 60s para navegaciÃ³n
-      selector: 10000,    // 10s para selectores
+      navigation: 90000,  // 90s para navegación en VPS
+      selector: 20000,    // 20s para selectores dinámicos
       captcha: 120000,   // 120s total para captcha
       processing: 5000   // 5s para procesar resultados
     };
   }
   return {
-    navigation: 45000,   // 45s para navegaciÃ³n
-    selector: 5000,      // 5s para selectores
+    navigation: 60000,   // 60s para navegación
+    selector: 10000,     // 10s para selectores
     processing: 3000     // 3s para procesar resultados
   };
 }
@@ -993,71 +989,6 @@ app.post("/api/soat", async (req, res) => {
       status: "error",
       message: publicMessage
     }, statusCode);
-  }
-});
-
-// ============================================
-// API: VEHÃCULO (Factiliza)
-// ============================================
-app.post("/api/vehiculo", async (req, res) => {
-  const { placa } = req.body;
-  if (!placa) return respond(res, { ok: false, source: "vehiculo", status: "error", message: "Placa requerida" }, 400);
-
-  try {
-    if (!FACTILIZA_TOKEN) {
-      return respond(res, { ok: false, source: "vehiculo", status: "error", message: "Token no configurado" }, 500);
-    }
-
-    // Log para debugging (solo primeros caracteres del token)
-    console.log(`[VEHICULO-FACTILIZA] Consultando placa: ${placa}`);
-    console.log(`[VEHICULO-FACTILIZA] Token configurado: ${FACTILIZA_TOKEN ? 'SÍ' : 'NO'}`);
-    console.log(`[VEHICULO-FACTILIZA] Token (primeros 50 chars): ${FACTILIZA_TOKEN ? FACTILIZA_TOKEN.substring(0, 50) + '...' : 'N/A'}`);
-    
-    const response = await axios.get(`https://api.factiliza.com/v1/placa/info/${placa}`, {
-      headers: { 
-        'Authorization': FACTILIZA_TOKEN,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      timeout: 300000 // 5 minutos para obtener respuesta completa
-    });
-
-    if (response.data && response.data.data) {
-      respond(res, { ok: true, source: "vehiculo", status: "success", data: response.data.data });
-    } else {
-      respond(res, { ok: true, source: "vehiculo", status: "empty", data: null });
-    }
-  } catch (error) {
-    console.error('[VEHICULO-FACTILIZA] Error:', error.message);
-    console.error('[VEHICULO-FACTILIZA] Status:', error.response?.status);
-    console.error('[VEHICULO-FACTILIZA] Status Text:', error.response?.statusText);
-    console.error('[VEHICULO-FACTILIZA] Response:', error.response?.data);
-    console.error('[VEHICULO-FACTILIZA] Token usado:', FACTILIZA_TOKEN ? FACTILIZA_TOKEN.substring(0, 30) + '...' : 'NO CONFIGURADO');
-    
-    // Mejorar mensaje de error
-    let errorMessage = 'Error al consultar información del vehículo';
-    if (error.response) {
-      // Error de la API
-      if (error.response.status === 401) {
-        errorMessage = 'Token de autenticación inválido o expirado. Por favor, verifica el token de Factiliza en la configuración.';
-        console.error('[VEHICULO-FACTILIZA] ⚠️ ERROR 401: Token inválido o expirado');
-        console.error('[VEHICULO-FACTILIZA] Verifica que el token en .env o en el código sea válido y no haya expirado');
-      } else if (error.response.status === 404) {
-        errorMessage = 'No se encontró información para esta placa';
-      } else if (error.response.status === 429) {
-        errorMessage = 'Demasiadas solicitudes. Por favor, intente más tarde';
-      } else if (error.response.data?.message) {
-        errorMessage = error.response.data.message;
-      } else {
-        errorMessage = `Error del servidor (${error.response.status})`;
-      }
-    } else if (error.code === 'ECONNABORTED') {
-      errorMessage = 'La consulta tardó demasiado tiempo';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-    
-    respond(res, { ok: false, source: "vehiculo", status: "error", message: errorMessage }, 500);
   }
 });
 
@@ -2523,7 +2454,7 @@ app.post("/api/arequipa", async (req, res) => {
           
           const scraperPromise = scraper.consultarPlaca(placa, 2);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: La consulta tomÃ³ mÃ¡s de 2 minutos')), 120000)
+            setTimeout(() => reject(new Error('Timeout: La consulta tomó más de 3 minutos')), 180000)
           );
           
           console.log(`[AREQUIPA] â³ Esperando resultado del scraper...`);
@@ -2754,7 +2685,7 @@ app.post("/api/piura", async (req, res) => {
           
           const scraperPromise = scraper.consultarPlaca(placa, 2);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: La consulta tomÃ³ mÃ¡s de 2 minutos')), 120000)
+            setTimeout(() => reject(new Error('Timeout: La consulta tomó más de 3 minutos')), 180000)
           );
           
           console.log(`[PIURA] â³ Esperando resultado del scraper...`);
@@ -4473,7 +4404,7 @@ app.post("/api/sunarp", async (req, res) => {
 // ============================================
 // RUTAS LEGACY (compatibilidad) - Alias directos
 // ============================================
-// NOTA: Los endpoints /api/soat y /api/vehiculo ya están definidos arriba
+// NOTA: El endpoint /api/soat ya está definido arriba
 // (líneas 896 y 923). Estos duplicados han sido eliminados para evitar
 // conflictos y errores 405 (Method Not Allowed).
 // ============================================
@@ -5279,7 +5210,6 @@ app.listen(PORT, () => {
   console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
   console.log(`📋 Endpoints disponibles:`);
   console.log(`   - POST /api/soat`);
-  console.log(`   - POST /api/vehiculo`);
   console.log(`   - POST /api/siniestro`);
   console.log(`   - POST /api/revision`);
   console.log(`   - POST /api/certificado-vehiculo`);

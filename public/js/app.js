@@ -11,7 +11,6 @@
   // ============================================
   const SECTIONS = {
     'soat': { title: 'SOAT', icon: '📄' },
-    'vehiculo': { title: 'Información del Vehículo', icon: '🚗' },
     'siniestro': { title: 'SBS - Siniestralidad SOAT', icon: '⚠️' },
     'revision': { title: 'Certificados de Inspección Técnica Vehicular', icon: '🔧' },
     'certificado-vehiculo': { title: 'Certificado de lunas polarizadas', icon: '📜' },
@@ -43,7 +42,6 @@
   // ============================================
   const ENDPOINTS = {
     'soat': '/api/soat',
-    'vehiculo': '/api/vehiculo',
     'siniestro': '/api/siniestro',
     'revision': '/api/revision',
     'certificado-vehiculo': '/api/certificado-vehiculo',
@@ -186,10 +184,10 @@
                                 url.includes('/api/chiclayo') ||
                                 url.includes('/api/infogas') ||
                                 url.includes('/api/placas-pe');
-      // SOAT, Siniestro y Vehiculo necesitan más tiempo: SOAT 360s (6 minutos), otros 300s (5 minutos)
-      const isVeryComplexEndpoint = url.includes('/api/siniestro') || url.includes('/api/vehiculo');
+      // SOAT y Siniestro necesitan más tiempo: SOAT 360s (6 minutos), Siniestro 300s (5 minutos)
+      const isVeryComplexEndpoint = url.includes('/api/siniestro');
       const isSoatEndpoint = url.includes('/api/soat');
-      // SOAT 360s (6 min), siniestro/vehiculo 300s (5 min), complejos 300s, manual 300s, normal 120s
+      // SOAT 360s (6 min), siniestro 300s (5 min), complejos 300s, manual 300s, normal 120s
       const timeoutMs = options.useManual ? 300000 : (isSoatEndpoint ? 360000 : (isVeryComplexEndpoint ? 300000 : (isComplexEndpoint ? 300000 : 120000))); 
       
       const timeout = setTimeout(() => {

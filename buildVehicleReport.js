@@ -119,16 +119,12 @@ function cleanText(text) {
  * Extrae año del vehículo de múltiples fuentes
  */
 function extraerAnio(rawData) {
-  const vehiculo = rawData.vehiculo?.data || rawData.vehiculo || {};
   const soat = rawData.soat?.data || rawData.soat || {};
   const revision = rawData.revision?.data || rawData.revision || {};
   const placasPe = rawData['placas-pe']?.data || rawData['placas-pe'] || {};
   
-  // Prioridad: vehiculo.anioFabricacion > vehiculo.anio > soat.anio > revision.anio > placasPe (si tiene año en startDate)
-  const anio = vehiculo.anioFabricacion || 
-               vehiculo.anio || 
-               vehiculo.anio_fabricacion ||
-               soat.anio ||
+  // Prioridad: soat.anio > revision.anio > placasPe (si tiene año en startDate)
+  const anio = soat.anio ||
                revision.anio ||
                (placasPe.startDate ? parseDateSafeLocal(placasPe.startDate)?.getFullYear() : null);
   
@@ -143,16 +139,16 @@ function extraerAnio(rawData) {
  * Normaliza datos del vehículo
  */
 function normalizarVehiculo(rawData) {
-  const vehiculo = rawData.vehiculo?.data || rawData.vehiculo || {};
+  const placasPe = rawData['placas-pe']?.data || rawData['placas-pe'] || {};
   
   return {
-    marca: vehiculo.marca || vehiculo.Marca || 'No disponible',
-    modelo: vehiculo.modelo || vehiculo.Modelo || 'No disponible',
-    color: vehiculo.color || vehiculo.Color || 'No disponible',
-    motor: vehiculo.motor || vehiculo.Motor || 'No disponible',
-    vin: vehiculo.vin || vehiculo.VIN || vehiculo.chasis || 'No disponible',
-    serie: vehiculo.serie || vehiculo.Serie || 'No disponible',
-    placa: vehiculo.placa || vehiculo.Placa || rawData.placa || 'N/A',
+    marca: placasPe.brand || 'No disponible',
+    modelo: placasPe.model || 'No disponible',
+    color: 'No disponible',
+    motor: 'No disponible',
+    vin: placasPe.serialNumber || 'No disponible',
+    serie: placasPe.serialNumber || 'No disponible',
+    placa: placasPe.plateNew || placasPe.placa || rawData.placa || 'N/A',
     anio: extraerAnio(rawData)
   };
 }
@@ -810,15 +806,6 @@ function buildVehicleReport(rawData, placa) {
   
   // Tracking de fuentes (meta.fuentes) - VERSIÓN CEO
   const fuentes = {};
-  
-  if (rawData.vehiculo) {
-    fuentesDisponibles.push('Vehículo');
-    fuentes.vehiculo = {
-      ok: rawData.vehiculo?.ok ?? null,
-      status: rawData.vehiculo?.status ?? null,
-      source: rawData.vehiculo?.source ?? 'vehiculo'
-    };
-  }
   
   if (rawData.soat) {
     fuentesDisponibles.push('SOAT');

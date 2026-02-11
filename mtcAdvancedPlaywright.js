@@ -98,7 +98,7 @@ async function getCitvCaptchaAdvanced() {
     
     // Paso 2: Esperar que el captcha esté visible en el DOM
     console.log(`[MTC-ADVANCED] Esperando captcha en DOM...`);
-    await page.waitForSelector('#imgCaptcha', { timeout: 10000 });
+    await page.waitForSelector('#imgCaptcha', { timeout: 20000 });
     
     // Paso 3: Extraer captcha directamente del DOM
     const captchaSrc = await page.$eval('#imgCaptcha', img => img.getAttribute('src'));
