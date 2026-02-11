@@ -1479,21 +1479,27 @@
       renderSection(key, result);
     };
     
-    // Ejecutar en fases: primero rápidas, luego complejas
-    const fastKeys = prioritizedKeys.filter(k => fastEndpoints.includes(k));
-    const complexKeys = prioritizedKeys.filter(k => !fastEndpoints.includes(k) && k !== 'sat-trujillo');
-    
-    console.log(`[OPTIMIZACIÓN] Ejecutando ${fastKeys.length} consultas rápidas primero, luego ${complexKeys.length} complejas`);
-    
-    // Fase 1: Consultas rápidas con mayor paralelismo
-    if (fastKeys.length > 0) {
-      await runPool(fastKeys, worker, MAX_PARALLEL_FAST);
+    // Ejecutar SECUENCIALMENTE: una consulta a la vez, en el orden definido
+    for (const key of keys) {
+      // SAT Trujillo requiere DNI/CELULAR/CORREO: saltarlo en consulta automática
+      if (key === 'sat-trujillo') {
+        continue;
+      }
+      
+      try {
+        console.log(`[CONSULTA] Procesando: ${key} (${keys.indexOf(key) + 1}/${keys.length})`);
+        await worker(key);
+      } catch (error) {
+        console.error(`[CONSULTA] Error en ${key}:`, error);
+        renderSection(key, {
+          ok: false,
+          status: 'error',
+          message: error.message || 'Error al consultar'
+        });
+      }
     }
     
-    // Fase 2: Consultas complejas con paralelismo moderado
-    if (complexKeys.length > 0) {
-      await runPool(complexKeys, worker, MAX_PARALLEL_COMPLEX);
-    }
+    console.log(`[OPTIMIZACIÓN] ✅ Todas las consultas completadas`);
   }
 
   // ============================================
