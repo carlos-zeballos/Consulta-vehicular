@@ -1384,11 +1384,24 @@
   async function runAllRequests(placa) {
     const keys = Object.keys(SECTIONS);
 
-    // IMPORTANTE (COSTOS + ESTABILIDAD EN PRODUCCIÓN):
-    // Este frontend lanza muchas consultas /api/*.
-    // En plataformas tipo Cloud Run eso puede crear muchas instancias en paralelo (más costo).
-    // Limitar concurrencia mantiene el costo por "consulta" estable y reduce bloqueos en portales externos.
-    const MAX_PARALLEL_REQUESTS = 4;
+    // OPTIMIZACIÓN: Priorizar consultas rápidas primero, luego las complejas
+    // Consultas rápidas (API directas, sin scraping complejo)
+    const fastEndpoints = ['vehiculo', 'soat', 'impuesto-vehicular', 'certificado-vehiculo'];
+    // Consultas complejas (requieren scraping, captcha, más tiempo)
+    const complexEndpoints = ['siniestro', 'revision', 'sutran', 'sat', 'arequipa', 'piura', 'tarapoto', 'chiclayo', 'infogas', 'placas-pe', 'callao', 'puno', 'pit-foto'];
+    // SAT provinciales (mediana complejidad)
+    const satProvinciales = keys.filter(k => k.startsWith('sat-') && k !== 'sat-trujillo');
+    
+    // Ordenar: rápidas primero, luego SAT provinciales, luego complejas
+    const prioritizedKeys = [
+      ...keys.filter(k => fastEndpoints.includes(k)),
+      ...satProvinciales,
+      ...keys.filter(k => complexEndpoints.includes(k) || !fastEndpoints.includes(k) && !satProvinciales.includes(k) && k !== 'sat-trujillo')
+    ];
+
+    // Aumentar concurrencia: 6 para consultas rápidas, 4 para complejas
+    const MAX_PARALLEL_FAST = 6;  // Más paralelismo para consultas rápidas
+    const MAX_PARALLEL_COMPLEX = 4; // Menos para consultas complejas
 
     async function runPool(items, worker, limit) {
       const executing = new Set();
@@ -1404,6 +1417,22 @@
         }
       }
       return Promise.allSettled(results);
+    }
+    
+    // Ejecutar en fases: primero rápidas, luego complejas
+    const fastKeys = prioritizedKeys.filter(k => fastEndpoints.includes(k));
+    const complexKeys = prioritizedKeys.filter(k => !fastEndpoints.includes(k) && k !== 'sat-trujillo');
+    
+    console.log(`[OPTIMIZACIÓN] Ejecutando ${fastKeys.length} consultas rápidas primero, luego ${complexKeys.length} complejas`);
+    
+    // Fase 1: Consultas rápidas con mayor paralelismo
+    if (fastKeys.length > 0) {
+      await runPool(fastKeys, worker, MAX_PARALLEL_FAST);
+    }
+    
+    // Fase 2: Consultas complejas con paralelismo moderado
+    if (complexKeys.length > 0) {
+      await runPool(complexKeys, worker, MAX_PARALLEL_COMPLEX);
     }
     
     // Crear worker para cada endpoint
