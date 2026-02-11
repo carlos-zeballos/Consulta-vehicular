@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SERVER.JS - Consulta Vehicular
  * ProducciÃ³n cPanel - Contrato JSON Ãºnico
  */

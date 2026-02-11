@@ -151,7 +151,7 @@ class ApesegSoatScraper {
 
       // Extraer token de diferentes formatos posibles
       let token = null;
-      
+
       if (loginResponse.data && loginResponse.data.token) {
         token = loginResponse.data.token;
       } else if (typeof loginResponse.data === 'string') {
@@ -421,12 +421,12 @@ class ApesegSoatScraper {
           console.log('[APESEG-BROWSER] Token:', token ? token.substring(0, 30) + '...' : 'NO DISPONIBLE');
           try {
             const url = `https://webapp.apeseg.org.pe/consulta-soat/api/certificados/placa/${placa}`;
-            const headers = {
-              'accept': '*/*',
+        const headers = {
+          'accept': '*/*',
               'accept-language': 'en-US,en;q=0.9,es;q=0.8',
-              'cache-control': 'no-cache',
-              'content-type': 'application/json',
-              'pragma': 'no-cache',
+          'cache-control': 'no-cache',
+          'content-type': 'application/json',
+          'pragma': 'no-cache',
               'referer': 'https://webapp.apeseg.org.pe/consulta-soat/resultados',
               'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
               'sec-ch-ua-mobile': '?0',
@@ -435,10 +435,10 @@ class ApesegSoatScraper {
               'sec-fetch-mode': 'cors',
               'sec-fetch-site': 'same-origin',
               'x-app-secret': '9asjKZ9aJq1@2025',
-              'x-referrer': 'https://www.apeseg.org.pe/',
-              'x-source': 'apeseg'
-            };
-            
+          'x-referrer': 'https://www.apeseg.org.pe/',
+          'x-source': 'apeseg'
+        };
+
             if (token) {
               headers['authorization'] = `Bearer ${token}`;
               console.log('[APESEG-BROWSER] Usando token interceptado');
@@ -449,9 +449,9 @@ class ApesegSoatScraper {
             console.log('[APESEG-BROWSER] Intentando obtener certificados con fetch...');
             const response = await fetch(url, {
               method: 'GET',
-              headers: headers,
-              credentials: 'include'
-            });
+            headers: headers,
+            credentials: 'include'
+          });
             
             console.log('[APESEG-BROWSER] Status:', response.status);
             
@@ -1145,7 +1145,7 @@ class ApesegSoatScraper {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           console.log(`[APESEG] Intento global ${attempt}/${maxAttempts} para placa ${placaNormalizada}`);
-          return await this.consultarPlacaPuppeteer(placaNormalizada);
+        return await this.consultarPlacaPuppeteer(placaNormalizada);
         } catch (err) {
           lastError = err;
           const msg = String(err?.message || '');
