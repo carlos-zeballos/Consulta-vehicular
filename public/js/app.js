@@ -1383,11 +1383,10 @@
   // EJECUTAR TODAS LAS CONSULTAS
   // ============================================
   async function runAllRequests(placa) {
-    // Ejecutar consultas SECUENCIALMENTE, una por una, en el orden definido
-    // Esto reduce la carga del servidor y hace que los resultados aparezcan ordenadamente
+    // Ejecutar consultas EN PARALELO para mayor velocidad
     const keys = Object.keys(SECTIONS);
     
-    console.log(`[OPTIMIZACIÓN] Ejecutando ${keys.length} consultas secuencialmente (una por una) en orden`);
+    console.log(`[OPTIMIZACIÓN] Ejecutando ${keys.length} consultas en paralelo`);
     
     // Crear worker para cada endpoint
     const worker = async (key) => {
@@ -1480,25 +1479,22 @@
       renderSection(key, result);
     };
     
-    // Ejecutar SECUENCIALMENTE: una consulta a la vez, en el orden definido
-    for (const key of keys) {
-      // SAT Trujillo requiere DNI/CELULAR/CORREO: saltarlo en consulta automática
-      if (key === 'sat-trujillo') {
-        continue;
-      }
-      
-      try {
-        console.log(`[CONSULTA] Procesando: ${key} (${keys.indexOf(key) + 1}/${keys.length})`);
-        await worker(key);
-      } catch (error) {
-        console.error(`[CONSULTA] Error en ${key}:`, error);
-        renderSection(key, {
-          ok: false,
-          status: 'error',
-          message: error.message || 'Error al consultar'
+    // Ejecutar EN PARALELO: todas las consultas al mismo tiempo
+    const promises = keys
+      .filter(key => key !== 'sat-trujillo') // SAT Trujillo requiere DNI/CELULAR/CORREO: saltarlo
+      .map(key => {
+        return worker(key).catch(error => {
+          console.error(`[CONSULTA] Error en ${key}:`, error);
+          renderSection(key, {
+            ok: false,
+            status: 'error',
+            message: error.message || 'Error al consultar'
+          });
         });
-      }
-    }
+      });
+    
+    // Esperar a que todas las consultas terminen
+    await Promise.all(promises);
     
     console.log(`[OPTIMIZACIÓN] ✅ Todas las consultas completadas`);
   }
