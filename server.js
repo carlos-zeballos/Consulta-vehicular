@@ -18,6 +18,7 @@ const { consultSbsSoatPlaywright } = require("./sbsPlaywrightAdapter");
 const { getCitvCaptchaPlaywright, consultCitvByPlacaPlaywright } = require("./mtcPlaywrightAdapter");
 const { consultSbsSoatAdvanced } = require("./sbsAdvancedPlaywright");
 const { getCitvCaptchaAdvanced, consultCitvByPlacaAdvanced } = require("./mtcAdvancedPlaywright");
+const { consultCitvByPlacaPuppeteerStealth } = require("./mtcPuppeteerStealthAdapter");
 const MTCCITVScraper = require("./mtc-scraper-final");
 const SATCapturasScraper = require("./sat-scraper");
 const ArequipaPapeletasScraper = require("./arequipa-scraper");
@@ -1283,7 +1284,48 @@ app.post("/api/revision", async (req, res) => {
     } catch (scraperError) {
       console.error(`[MTC] Ã¢ÂÅ’ Error con scraper final:`, scraperError.message);
       if (scraperError && (scraperError.code === 'MTC_BLOCKED' || (scraperError.message && scraperError.message.includes('MTC_BLOCKED')))) {
-        console.log(`[MTC] ðŸš« Bloqueo WAF/Cloudflare detectado (scraper final) - devolviendo status blocked sin fallback`);
+              // Ãšltimo intento sin proxy: Puppeteer Headless + Stealth (puede NO funcionar si la IP estÃ¡ bloqueada)
+      try {
+        console.log(`[MTC] ðŸ•µï¸ Intentando Puppeteer Stealth para: ${placa}`);
+        const stealthRes = await consultCitvByPlacaPuppeteerStealth(placa);
+        const stealthRecords = Array.isArray(stealthRes?.records) ? stealthRes.records : [];
+        if (stealthRes?.status === 'success' && stealthRecords.length > 0) {
+          console.log(`[MTC] âœ… Stealth success: ${stealthRecords.length} registro(s)`);
+          const records = stealthRecords.map(reg => ({
+            placa: reg.placa || placa,
+            nro_certificado: reg.certificado || reg.nro_certificado || '',
+            vigencia_inicio: reg.vigente_desde || reg.vigencia_inicio || '',
+            vigencia_fin: reg.vigente_hasta || reg.vigencia_fin || '',
+            resultado: reg.resultado || '',
+            estado: reg.estado || '',
+            razon_social: reg.empresa || reg.razon_social || '',
+            direccion: reg.direccion || '',
+            tipo_ambito: reg.ambito || reg.tipo_ambito || '',
+            tipo_servicio: reg.tipo_servicio || '',
+            tipo_documento: reg.tipo_documento || '',
+            observacion: reg.observaciones || reg.observacion || ''
+          }));
+          return respond(res, {
+            ok: true,
+            source: 'revision',
+            status: 'success',
+            data: records,
+            message: `Se encontraron ${records.length} certificado(s) de inspecciÃ³n tÃ©cnica`
+          });
+        }
+        if (stealthRes?.status === 'empty') {
+          return respond(res, {
+            ok: true,
+            source: 'revision',
+            status: 'empty',
+            data: [],
+            message: 'No se encontraron certificados de inspecciÃ³n tÃ©cnica'
+          });
+        }
+      } catch (stealthErr) {
+        console.log(`[MTC] âš ï¸ Stealth fallÃ³: ${stealthErr.message}`);
+      }
+console.log(`[MTC] ðŸš« Bloqueo WAF/Cloudflare detectado (scraper final) - devolviendo status blocked sin fallback`);
         return respond(res, {
           ok: true,
           source: 'revision',

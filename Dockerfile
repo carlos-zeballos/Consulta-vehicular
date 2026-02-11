@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Instalar deps primero para aprovechar cache
 COPY package.json package-lock.json ./
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 RUN npm ci --omit=dev
 
 # Copiar el resto del proyecto
