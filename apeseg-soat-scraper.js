@@ -247,13 +247,23 @@ class ApesegSoatScraper {
         // Capturar certificados
         if (url.includes(`/consulta-soat/api/certificados/placa/`)) {
           try {
+            const status = response.status();
             const contentType = response.headers()['content-type'] || '';
-            if (contentType.includes('application/json') && response.status() === 200) {
+            console.log(`[APESEG-INTERCEPT] Respuesta certificados: status=${status}, contentType=${contentType}`);
+            
+            if (status === 200 && contentType.includes('application/json')) {
               const data = await response.json();
+              console.log(`[APESEG-INTERCEPT] Datos recibidos:`, Array.isArray(data) ? `${data.length} items` : 'no es array');
+              
               if (Array.isArray(data) && data.length > 0) {
                 console.log('[APESEG-INTERCEPT] ✅ Certificados interceptados:', data.length);
                 certificadosInterceptados = data;
+              } else if (Array.isArray(data) && data.length === 0) {
+                console.log('[APESEG-INTERCEPT] ⚠️ Array vacío - sin certificados');
+                certificadosInterceptados = []; // Marcar como procesado pero vacío
               }
+            } else {
+              console.log(`[APESEG-INTERCEPT] ⚠️ Respuesta no válida: status=${status}, contentType=${contentType}`);
             }
           } catch (e) {
             console.warn('[APESEG-INTERCEPT] Error parseando certificados:', e.message);
