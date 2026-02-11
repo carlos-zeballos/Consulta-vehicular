@@ -1646,6 +1646,44 @@ function processCitvResult(res, resultado, placa) {
     });
   }
 
+  function parseDateSafeLocal(value) {
+    if (!value) return null;
+    const str = String(value).trim();
+    if (!str) return null;
+
+    // YYYY-MM-DD or YYYY/MM/DD
+    let m = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const d = Number(m[3]);
+      const dt = new Date(y, mo, d);
+      return Number.isNaN(dt.getTime()) ? null : dt;
+    }
+
+    // DD-MM-YYYY or DD/MM/YYYY
+    m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (m) {
+      const d = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const y = Number(m[3]);
+      const dt = new Date(y, mo, d);
+      return Number.isNaN(dt.getTime()) ? null : dt;
+    }
+
+    const dt = new Date(str);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+
+  function computeEstadoFromVigenciaFin(vigenciaFin) {
+    const fin = parseDateSafeLocal(vigenciaFin);
+    if (!fin) return null;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fin.setHours(0, 0, 0, 0);
+    return fin >= hoy ? "VIGENTE" : "VENCIDO";
+  }
+
   // Adaptar records al formato esperado por el frontend
   const records = resultado.records.map(record => ({
     placa: record.placa || placa,
@@ -1665,7 +1703,12 @@ function processCitvResult(res, resultado, placa) {
   // Si solo hay un registro, devolverlo como objeto simple
   if (records.length === 1) {
     const record = records[0];
-    const status = (record.resultado || '').toLowerCase().includes('aprobado') ? 'success' : 'warn';
+    const estado = (record.estado || '').toUpperCase();
+    const status = estado === 'VIGENTE'
+      ? 'success'
+      : estado === 'VENCIDO'
+        ? 'warn'
+        : (record.resultado || '').toLowerCase().includes('aprobado') ? 'success' : 'warn';
     console.log(`[MTC] Ã¢Å“â€¦ Consulta exitosa: 1 certificado encontrado`);
     return respond(res, {
       ok: true,
