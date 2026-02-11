@@ -669,9 +669,45 @@ class ApesegSoatScraper {
           return this.formatResponse(datosDelDOM, placa);
         }
         
-        // Si no se encontraron datos, tomar screenshot para debug
+        // Si no se encontraron datos, tomar screenshot y analizar la página
         if (!datosDelDOM || datosDelDOM.length === 0) {
-          console.log('[APESEG] ⚠️ No se encontraron datos, tomando screenshot para debug...');
+          console.log('[APESEG] ⚠️ No se encontraron datos, analizando página...');
+          
+          // Verificar si hay mensajes de error en la página
+          const analisisPagina = await page.evaluate(() => {
+            const bodyText = document.body.textContent || '';
+            const errores = [];
+            const info = [];
+            
+            // Buscar mensajes de error
+            if (bodyText.includes('error') || bodyText.includes('Error') || bodyText.includes('ERROR')) {
+              errores.push('Se detectó texto de error en la página');
+            }
+            if (bodyText.includes('no se encontr') || bodyText.includes('sin registros') || bodyText.includes('Sin registros')) {
+              info.push('Mensaje de "sin registros" encontrado');
+            }
+            if (bodyText.includes('captcha') || bodyText.includes('Captcha') || bodyText.includes('CAPTCHA')) {
+              info.push('Mensaje relacionado con captcha encontrado');
+            }
+            
+            // Verificar URL actual
+            const url = window.location.href;
+            
+            return {
+              url: url,
+              titulo: document.title,
+              errores: errores,
+              info: info,
+              tieneInterseguro: bodyText.includes('Interseguro'),
+              tieneRimac: bodyText.includes('Rimac'),
+              tieneLaPositiva: bodyText.includes('La Positiva'),
+              tieneFechas: /\d{2}\/\d{2}\/\d{4}/.test(bodyText),
+              longitudTexto: bodyText.length
+            };
+          });
+          
+          console.log('[APESEG] Análisis de página:', JSON.stringify(analisisPagina, null, 2));
+          
           try {
             await page.screenshot({ path: `apeseg-debug-${placa}-${Date.now()}.png`, fullPage: true });
             const htmlContent = await page.content();
