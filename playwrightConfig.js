@@ -5,6 +5,28 @@
 
 const { chromium } = require('playwright');
 
+function parseProxyUrl(proxyUrl) {
+  if (!proxyUrl || typeof proxyUrl !== "string") return null;
+  try {
+    const u = new URL(proxyUrl);
+    const server = u.protocol + "//" + u.hostname + (u.port ? (":" + u.port) : "");
+    const username = u.username ? decodeURIComponent(u.username) : undefined;
+    const password = u.password ? decodeURIComponent(u.password) : undefined;
+    const out = { server: server };
+    if (username) out.username = username;
+    if (password) out.password = password;
+    return out;
+  } catch (e) {
+    try {
+      const u = new URL("http://" + proxyUrl);
+      return { server: "http://" + u.hostname + (u.port ? (":" + u.port) : "") };
+    } catch (e2) {
+      return null;
+    }
+  }
+}
+
+
 /**
  * User agents realistas
  */
@@ -88,14 +110,16 @@ const EVASION_SCRIPTS = `
  * Lanzar navegador con configuración avanzada
  */
 async function launchAdvancedBrowser(options = {}) {
-  const { headless = true, executablePath } = options;
+  const { headless = true, executablePath, proxyUrl } = options;
   
   const viewport = getRandomViewport();
   const userAgent = getRandomUserAgent();
+  const proxy = parseProxyUrl(proxyUrl || process.env.PROXY_URL);
   
   const browser = await chromium.launch({
     headless,
     executablePath: executablePath || process.env.CHROMIUM_PATH,
+    ...(proxy ? { proxy } : {}),
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -162,7 +186,6 @@ async function guaranteePageLoad(page, url, options = {}) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const strategies = [
-        { waitUntil: 'networkidle', timeout: 30000 },
         { waitUntil: 'domcontentloaded', timeout: 30000 },
         { waitUntil: 'load', timeout: 30000 },
         { waitUntil: 'commit', timeout: 30000 }
@@ -174,14 +197,14 @@ async function guaranteePageLoad(page, url, options = {}) {
         await page.setExtraHTTPHeaders({ 'Referer': referer });
       }
       
-      await page.goto(url, strategy);
+      const response = await page.goto(url, strategy);
       
       // Verificar que la página cargó correctamente
       await page.waitForFunction(() => {
         return document.body && document.body.children.length > 0;
       }, { timeout: 10000 });
       
-      return;
+      return response;
     } catch (error) {
       if (attempt === maxRetries) {
         throw new Error(`PAGE_LOAD_FAILED: No se pudo cargar la página después de ${maxRetries} intentos: ${error.message}`);
@@ -204,5 +227,6 @@ module.exports = {
   launchAdvancedBrowser,
   createAdvancedContext,
   guaranteePageLoad,
-  humanDelay
+  humanDelay,
+  parseProxyUrl
 };

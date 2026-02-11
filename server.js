@@ -1,6 +1,6 @@
-/**
+﻿/**
  * SERVER.JS - Consulta Vehicular
- * ProducciÃ³n cPanel - Contrato JSON Ãºnico
+ * ProducciÃƒÂ³n cPanel - Contrato JSON ÃƒÂºnico
  */
 
 require("dotenv").config();
@@ -47,7 +47,7 @@ const app = express();
 // ============================================
 // MIDDLEWARE DE RUTEO PARA cPanel (Subdirectorio)
 // ============================================
-// Si la app está montada en /consultavehicular, recortamos el prefijo
+// Si la app estÃ¡ montada en /consultavehicular, recortamos el prefijo
 const BASE_PATH = process.env.BASE_PATH || "/consultavehicular/proyecto-cpanel";
 
 app.use((req, res, next) => {
@@ -55,11 +55,11 @@ app.use((req, res, next) => {
   if (req.url.startsWith(BASE_PATH)) {
     req.url = req.url.slice(BASE_PATH.length) || "/";
   }
-  // También manejar sin el prefijo completo (solo /consultavehicular)
+  // TambiÃ©n manejar sin el prefijo completo (solo /consultavehicular)
   else if (req.url.startsWith("/consultavehicular")) {
     req.url = req.url.slice("/consultavehicular".length) || "/";
   }
-  // También manejar /proyecto-cpanel directamente
+  // TambiÃ©n manejar /proyecto-cpanel directamente
   else if (req.url.startsWith("/proyecto-cpanel")) {
     req.url = req.url.slice("/proyecto-cpanel".length) || "/";
   }
@@ -70,20 +70,20 @@ app.use((req, res, next) => {
 // MIDDLEWARE - Solo una vez cada uno
 // ============================================
 app.use(cors());
-// Aumentar lÃ­mite para permitir imÃ¡genes base64 grandes
+// Aumentar lÃƒÂ­mite para permitir imÃƒÂ¡genes base64 grandes
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: false, limit: "50mb" }));
-// Usar ruta absoluta para static files (más seguro en cPanel)
+// Usar ruta absoluta para static files (mÃ¡s seguro en cPanel)
 app.use(express.static(path.join(__dirname, "public")));
 
 // ============================================
-// RUTA RAÍZ - Servir index.html para cPanel
+// RUTA RAÃZ - Servir index.html para cPanel
 // ============================================
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// También servir index.html para rutas comunes
+// TambiÃ©n servir index.html para rutas comunes
 app.get("/index.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -108,7 +108,7 @@ app.post("/api/coupons/redeem", (req, res) => {
   const { code } = req.body || {};
   const input = normalizeCouponCode(code);
   if (!input) {
-    return respond(res, { ok: false, source: "coupons", status: "error", message: "Código requerido" }, 400);
+    return respond(res, { ok: true, source: "coupons", status: "error", message: "CÃ³digo requerido" }, 400);
   }
 
   const config = getCouponConfig();
@@ -120,7 +120,7 @@ app.post("/api/coupons/redeem", (req, res) => {
       ok: true,
       source: "coupons",
       status: "success",
-      message: "Cupón administrador válido",
+      message: "CupÃ³n administrador vÃ¡lido",
       data: {
         type: "admin",
         redirectUrl: "/result.html?modo=prueba",
@@ -129,7 +129,7 @@ app.post("/api/coupons/redeem", (req, res) => {
     });
   }
 
-  // Public coupons (máx 5 usos)
+  // Public coupons (mÃ¡x 5 usos)
   const state = loadCouponState(config);
   const entry = state.public?.[inputHash];
   if (!entry || entry.active === false) {
@@ -137,7 +137,7 @@ app.post("/api/coupons/redeem", (req, res) => {
       ok: true,
       source: "coupons",
       status: "empty",
-      message: "Cupón inválido",
+      message: "CupÃ³n invÃ¡lido",
       data: { valid: false }
     });
   }
@@ -148,7 +148,7 @@ app.post("/api/coupons/redeem", (req, res) => {
       ok: true,
       source: "coupons",
       status: "empty",
-      message: "Cupón agotado",
+      message: "CupÃ³n agotado",
       data: { valid: false, remainingUses: 0 }
     });
   }
@@ -161,7 +161,7 @@ app.post("/api/coupons/redeem", (req, res) => {
     ok: true,
     source: "coupons",
     status: "success",
-    message: "Cupón aplicado. Consulta gratuita habilitada.",
+    message: "CupÃ³n aplicado. Consulta gratuita habilitada.",
     data: {
       type: "public",
       remainingUses: entry.remainingUses,
@@ -175,7 +175,7 @@ app.post("/api/coupons/redeem", (req, res) => {
 // ============================================
 const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || "";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "";
-// Códigos de cupones por defecto (si no están en .env)
+// CÃ³digos de cupones por defecto (si no estÃ¡n en .env)
 const DEFAULT_COUPON_ADMIN_CODE = "ADMIN-VALHAR-2025";
 const DEFAULT_COUPONS_PUBLIC_CODES = "PROMO-VALHAR1:5,PROMO-VALHAR2:5,PROMO-VALHAR3:5";
 
@@ -186,12 +186,12 @@ const COUPON_HASH_SALT = process.env.COUPON_HASH_SALT || "v1";
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// DETECCIÓN DE AMBIENTE Y TIMEOUTS DINÁMICOS
+// DETECCIÃ“N DE AMBIENTE Y TIMEOUTS DINÃMICOS
 // ============================================
-const IS_PRODUCTION = process.env.NODE_ENV === 'production' || 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' ||
                       (process.env.PUBLIC_BASE_URL && !process.env.PUBLIC_BASE_URL.includes('localhost'));
 
-// Configuración de timeouts por ambiente
+// ConfiguraciÃ³n de timeouts por ambiente
 const TIMEOUTS = {
   navigation: IS_PRODUCTION ? 120000 : 60000,   // 2min prod, 1min dev
   selector: IS_PRODUCTION ? 60000 : 30000,      // 1min prod, 30s dev
@@ -263,7 +263,7 @@ function loadCouponState(config) {
     }
   }
 
-  // Sincronizar los configurados (sin guardar códigos en disco)
+  // Sincronizar los configurados (sin guardar cÃ³digos en disco)
   for (const c of config.publicCoupons || []) {
     const prev = state.public[c.hash];
     if (!prev) {
@@ -294,24 +294,24 @@ function saveCouponState(state) {
 }
 
 // ============================================
-// CONTRATO JSON ÃšNICO
+// CONTRATO JSON ÃƒÅ¡NICO
 // ============================================
 function respond(res, { ok, source, status, message, data = null, meta = {} }, code = 200) {
-  // Asegurar que siempre devolvemos 200 para el frontend (excepto errores de validaciÃ³n)
+  // Asegurar que siempre devolvemos 200 para el frontend (excepto errores de validaciÃƒÂ³n)
   const finalCode = code >= 400 && code < 500 ? code : 200;
-  
+
   const response = {
     ok: !!ok,
     source,
     status,
     message: message || "",
     data,
-    meta: { 
+    meta: {
       timestamp: new Date().toISOString(),
-      ...meta 
+      ...meta
     }
   };
-  
+
   // Log de respuesta formateada para debugging (SAT)
   if (source === 'sat') {
     console.log(`\n[SAT] ========== RESPUESTA FINAL ==========`);
@@ -320,8 +320,8 @@ function respond(res, { ok, source, status, message, data = null, meta = {} }, c
     console.log(JSON.stringify(response, null, 2));
     console.log(`[SAT] ======================================\n`);
   }
-  
-  
+
+
   return res.status(finalCode).json(response);
 }
 
@@ -330,55 +330,55 @@ function respond(res, { ok, source, status, message, data = null, meta = {} }, c
 // ============================================
 /**
  * Clasificar errores de red (timeout, connection refused, DNS, etc.)
- * Retorna un objeto con clasificación y mensaje user-friendly
+ * Retorna un objeto con clasificaciÃ³n y mensaje user-friendly
  */
 function classifyNetworkError(error) {
   const errorMsg = (error.message || '').toLowerCase();
   const errorCode = error.code || '';
-  
+
   // Connection refused (servidor no responde o puerto cerrado)
   if (errorCode === 'ECONNREFUSED' || errorMsg.includes('connection refused')) {
     return {
       type: 'network_blocked',
       status: 'empty',
-      message: 'El servicio no está disponible en este momento. Por favor, intente más tarde.',
+      message: 'El servicio no estÃ¡ disponible en este momento. Por favor, intente mÃ¡s tarde.',
       code: 503
     };
   }
-  
+
   // Timeout (servidor no responde a tiempo)
-  if (errorCode === 'ETIMEDOUT' || 
-      errorMsg.includes('timeout') || 
+  if (errorCode === 'ETIMEDOUT' ||
+      errorMsg.includes('timeout') ||
       errorMsg.includes('time out') ||
       errorMsg.includes('timed out')) {
     return {
       type: 'network_timeout',
       status: 'empty',
-      message: 'El servidor tardó demasiado en responder. Por favor, intente más tarde.',
+      message: 'El servidor tardÃ³ demasiado en responder. Por favor, intente mÃ¡s tarde.',
       code: 504
     };
   }
-  
+
   // DNS resolution failed
   if (errorCode === 'ENOTFOUND' || errorMsg.includes('not found') || errorMsg.includes('enotfound')) {
     return {
       type: 'network_dns',
       status: 'empty',
-      message: 'No se pudo conectar con el servicio. Por favor, intente más tarde.',
+      message: 'No se pudo conectar con el servicio. Por favor, intente mÃ¡s tarde.',
       code: 503
     };
   }
-  
+
   // Network unreachable
   if (errorCode === 'ENETUNREACH' || errorMsg.includes('network unreachable')) {
     return {
       type: 'network_unreachable',
       status: 'empty',
-      message: 'Red no alcanzable. El servicio podría estar caído temporalmente.',
+      message: 'Red no alcanzable. El servicio podrÃ­a estar caÃ­do temporalmente.',
       code: 503
     };
   }
-  
+
   // SSL/Certificate errors
   if (errorMsg.includes('certificate') || errorMsg.includes('ssl') || errorMsg.includes('tls')) {
     return {
@@ -388,17 +388,17 @@ function classifyNetworkError(error) {
       code: 500
     };
   }
-  
+
   // Generic network error
   if (errorCode.startsWith('E') || errorMsg.includes('network') || errorMsg.includes('socket')) {
     return {
       type: 'network_generic',
       status: 'empty',
-      message: 'Error de conexión. El servicio podría estar temporalmente no disponible.',
+      message: 'Error de conexiÃ³n. El servicio podrÃ­a estar temporalmente no disponible.',
       code: 503
     };
   }
-  
+
   // Not a network error
   return null;
 }
@@ -408,18 +408,18 @@ function classifyNetworkError(error) {
 // ============================================
 function sanitizeError(error) {
   if (!error) return "Error desconocido";
-  
+
   const msg = error.message || String(error);
-  
+
   // Errores de parseo JSON (HTML en lugar de JSON)
-  if (msg.includes("Unexpected token") || 
+  if (msg.includes("Unexpected token") ||
       msg.includes("is not valid JSON") ||
       (msg.includes("JSON") && msg.includes("parse")) ||
       msg.includes("<!DOCTYPE") ||
       msg.includes("MTC_ERROR: Respuesta no es JSON")) {
-    return "El servicio estÃ¡ devolviendo una respuesta inesperada. Puede estar bloqueando consultas automatizadas o experimentando problemas tÃ©cnicos.";
+    return "El servicio estÃƒÂ¡ devolviendo una respuesta inesperada. Puede estar bloqueando consultas automatizadas o experimentando problemas tÃƒÂ©cnicos.";
   }
-  
+
   // Errores de Chromium/Puppeteer
   if (msg.includes("Could not find Chromium")) {
     return "Servicio temporalmente no disponible";
@@ -431,56 +431,56 @@ function sanitizeError(error) {
     return "Tiempo de espera agotado - El servicio responde lento";
   }
   if (msg.includes("net::ERR") || msg.includes("Network")) {
-    return "Error de conexiÃ³n con el servicio externo";
+    return "Error de conexiÃƒÂ³n con el servicio externo";
   }
-  
-  // Errores especÃ­ficos de adapters HTTP
+
+  // Errores especÃƒÂ­ficos de adapters HTTP
   if (msg.includes("MTC_ERROR")) {
-    return "El servicio MTC no estÃ¡ disponible temporalmente. Por favor intente mÃ¡s tarde.";
+    return "El servicio MTC no estÃƒÂ¡ disponible temporalmente. Por favor intente mÃƒÂ¡s tarde.";
   }
   if (msg.includes("SELECTOR_MISSING")) {
-    return "El portal cambiÃ³ su estructura. Contacte al administrador.";
+    return "El portal cambiÃƒÂ³ su estructura. Contacte al administrador.";
   }
   if (msg.includes("BLOCKED_OR_RATE_LIMITED")) {
     return "El servicio bloquea consultas automatizadas temporalmente";
   }
-  
+
   // Si el mensaje es muy largo o contiene rutas del sistema, acortarlo
   if (msg.length > 100 || msg.includes("/Users/") || msg.includes(".cache/puppeteer") || msg.includes("C:\\")) {
-    return "Error tÃ©cnico - Contacte al administrador";
+    return "Error tÃƒÂ©cnico - Contacte al administrador";
   }
-  
+
   return msg;
 }
 
 // ============================================
 // PUPPETEER PARA CPANEL LINUX
 // ============================================
-// (fs ya está importado arriba)
+// (fs ya estÃ¡ importado arriba)
 
 /**
  * Obtener ruta del ejecutable de Chrome/Chromium para Linux (cPanel)
  * Prioridad: PUPPETEER_EXECUTABLE_PATH > CHROME_BIN > puppeteer bundled
  */
 function getExecutablePath() {
-  // 1. Variable de entorno explÃ­cita (recomendado para cPanel)
+  // 1. Variable de entorno explÃƒÂ­cita (recomendado para cPanel)
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
     const exePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     if (fs.existsSync(exePath)) {
-      console.log(`âœ… Usando PUPPETEER_EXECUTABLE_PATH: ${exePath}`);
+      console.log(`Ã¢Å“â€¦ Usando PUPPETEER_EXECUTABLE_PATH: ${exePath}`);
       return exePath;
     }
-    console.log(`âš ï¸ PUPPETEER_EXECUTABLE_PATH no existe: ${exePath}`);
+    console.log(`Ã¢Å¡Â Ã¯Â¸Â PUPPETEER_EXECUTABLE_PATH no existe: ${exePath}`);
   }
 
-  // 2. Variable CHROME_BIN (alternativa comÃºn)
+  // 2. Variable CHROME_BIN (alternativa comÃƒÂºn)
   if (process.env.CHROME_BIN) {
     const chromeBin = process.env.CHROME_BIN;
     if (fs.existsSync(chromeBin)) {
-      console.log(`âœ… Usando CHROME_BIN: ${chromeBin}`);
+      console.log(`Ã¢Å“â€¦ Usando CHROME_BIN: ${chromeBin}`);
       return chromeBin;
     }
-    console.log(`âš ï¸ CHROME_BIN no existe: ${chromeBin}`);
+    console.log(`Ã¢Å¡Â Ã¯Â¸Â CHROME_BIN no existe: ${chromeBin}`);
   }
 
   // 3. Rutas comunes en Linux (solo si no es Windows)
@@ -497,23 +497,23 @@ function getExecutablePath() {
 
     for (const linuxPath of linuxPaths) {
       if (fs.existsSync(linuxPath)) {
-        console.log(`âœ… Chrome encontrado en Linux: ${linuxPath}`);
+        console.log(`Ã¢Å“â€¦ Chrome encontrado en Linux: ${linuxPath}`);
         return linuxPath;
       }
     }
   }
 
   // 4. Fallback: usar el Chromium bundled de Puppeteer
-  console.log('â„¹ï¸ Usando Chromium bundled de Puppeteer');
+  console.log('Ã¢â€žÂ¹Ã¯Â¸Â Usando Chromium bundled de Puppeteer');
   return null; // null = usar el bundled
 }
 
 /**
- * Lanzar navegador con configuraciÃ³n optimizada para cPanel Linux
+ * Lanzar navegador con configuraciÃƒÂ³n optimizada para cPanel Linux
  */
 async function launchBrowser() {
   const executablePath = getExecutablePath();
-  
+
   const launchOptions = {
     headless: "new",
     args: [
@@ -535,13 +535,13 @@ async function launchBrowser() {
 
   try {
     const browser = await puppeteer.launch(launchOptions);
-    console.log('âœ… Navegador lanzado correctamente');
+    console.log('Ã¢Å“â€¦ Navegador lanzado correctamente');
     return browser;
   } catch (error) {
-    console.error('âŒ Error lanzando navegador:', error.message);
-    // Si falla con executablePath, intentar sin Ã©l (usar bundled)
+    console.error('Ã¢ÂÅ’ Error lanzando navegador:', error.message);
+    // Si falla con executablePath, intentar sin ÃƒÂ©l (usar bundled)
     if (executablePath && error.message.includes('Could not find')) {
-      console.log('âš ï¸ Reintentando con Chromium bundled...');
+      console.log('Ã¢Å¡Â Ã¯Â¸Â Reintentando con Chromium bundled...');
       delete launchOptions.executablePath;
       return await puppeteer.launch(launchOptions);
     }
@@ -560,7 +560,7 @@ async function waitForAnySelector(page, selectors, timeoutEach = 2500) {
   for (const selector of selectors) {
     try {
       await page.waitForSelector(selector, { timeout: timeoutEach });
-      console.log(`âœ… Selector encontrado: ${selector}`);
+      console.log(`Ã¢Å“â€¦ Selector encontrado: ${selector}`);
       return selector;
     } catch (e) {
       continue;
@@ -575,21 +575,21 @@ async function waitForAnySelector(page, selectors, timeoutEach = 2500) {
 async function typeIntoFirst(page, selectors, value, options = { delay: 100 }) {
   const foundSelector = await waitForAnySelector(page, selectors, 3000);
   if (!foundSelector) {
-    throw new Error(`No se encontrÃ³ ningÃºn input con selectores: ${selectors.join(', ')}`);
+    throw new Error(`No se encontrÃƒÂ³ ningÃƒÂºn input con selectores: ${selectors.join(', ')}`);
   }
   await page.type(foundSelector, value, options);
   return foundSelector;
 }
 
 /**
- * Click en botÃ³n por texto usando XPath
+ * Click en botÃƒÂ³n por texto usando XPath
  */
 async function clickByText(page, tag, text) {
   const xpath = `//${tag}[contains(text(), '${text}')]`;
   const elements = await page.$x(xpath);
   if (elements.length > 0) {
     await elements[0].click();
-    console.log(`âœ… Click en ${tag} con texto: ${text}`);
+    console.log(`Ã¢Å“â€¦ Click en ${tag} con texto: ${text}`);
     return true;
   }
   return false;
@@ -606,14 +606,14 @@ async function clickFirst(page, selectorsOrXpaths) {
         const elements = await page.$x(selector);
         if (elements.length > 0) {
           await elements[0].click();
-          console.log(`âœ… Click XPath: ${selector}`);
+          console.log(`Ã¢Å“â€¦ Click XPath: ${selector}`);
           return true;
         }
       } else {
         // CSS selector
         await page.waitForSelector(selector, { timeout: 2000 });
         await page.click(selector);
-        console.log(`âœ… Click CSS: ${selector}`);
+        console.log(`Ã¢Å“â€¦ Click CSS: ${selector}`);
         return true;
       }
     } catch (e) {
@@ -624,7 +624,7 @@ async function clickFirst(page, selectorsOrXpaths) {
 }
 
 /**
- * Detectar si la pÃ¡gina indica "sin registros"
+ * Detectar si la pÃƒÂ¡gina indica "sin registros"
  */
 async function detectNoRecords(page) {
   const resultado = await page.evaluate(() => {
@@ -638,8 +638,8 @@ async function detectNoRecords(page) {
       '0 resultados',
       'no tiene registros',
       'no se encontraron datos',
-      'sin informaciÃ³n',
-      'no hay informaciÃ³n'
+      'sin informaciÃƒÂ³n',
+      'no hay informaciÃƒÂ³n'
     ];
 
     // Buscar en texto del body
@@ -648,7 +648,7 @@ async function detectNoRecords(page) {
     // Buscar en elementos comunes de mensaje
     const mensajeEls = document.querySelectorAll('.mensaje, .alert, .error, #mensaje, [class*="mensaje" i], [id*="mensaje" i]');
     let mensajeEncontrado = '';
-    
+
     for (const el of mensajeEls) {
       const texto = el.innerText.toLowerCase();
       if (frasesNoEncontrado.some(frase => texto.includes(frase))) {
@@ -667,12 +667,12 @@ async function detectNoRecords(page) {
 }
 
 /**
- * Configurar pÃ¡gina con anti-detecciÃ³n
+ * Configurar pÃƒÂ¡gina con anti-detecciÃƒÂ³n
  */
 async function setupAntiDetection(page) {
   await page.setViewport({ width: 1920, height: 1080 });
   await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-  
+
   // Ocultar webdriver
   await page.evaluateOnNewDocument(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
@@ -694,14 +694,14 @@ function normalizeTimeouts(endpoint) {
   const captchaEndpoints = ['lima', 'impuesto'];
   if (captchaEndpoints.includes(endpoint)) {
     return {
-      navigation: 90000,  // 90s para navegación en VPS
-      selector: 20000,    // 20s para selectores dinámicos
+      navigation: 90000,  // 90s para navegaciÃ³n en VPS
+      selector: 20000,    // 20s para selectores dinÃ¡micos
       captcha: 120000,   // 120s total para captcha
       processing: 5000   // 5s para procesar resultados
     };
   }
   return {
-    navigation: 60000,   // 60s para navegación
+    navigation: 60000,   // 60s para navegaciÃ³n
     selector: 10000,     // 10s para selectores
     processing: 3000     // 3s para procesar resultados
   };
@@ -734,7 +734,7 @@ async function resolverRecaptcha(siteKey, pageUrl) {
   const captchaId = captchaStart.data.request;
   let token = null;
 
-  // Optimizado: revisar cada 2s en vez de 3s, mÃ¡ximo 20 intentos (40s en vez de 90s)
+  // Optimizado: revisar cada 2s en vez de 3s, mÃƒÂ¡ximo 20 intentos (40s en vez de 90s)
   for (let i = 0; i < 20; i++) {
     await new Promise(r => setTimeout(r, 2000));
     const check = await axios.get("http://2captcha.com/res.php", {
@@ -750,7 +750,7 @@ async function resolverRecaptcha(siteKey, pageUrl) {
       token = check.data.request;
       break;
     }
-    // Si dice que no estÃ¡ listo, continuar. Si hay otro error, esperar un poco mÃ¡s.
+    // Si dice que no estÃƒÂ¡ listo, continuar. Si hay otro error, esperar un poco mÃƒÂ¡s.
     if (check.data.request !== "CAPCHA_NOT_READY") {
       console.log(`Captcha intento ${i+1}: ${check.data.request}`);
     }
@@ -763,7 +763,7 @@ async function resolverRecaptcha(siteKey, pageUrl) {
 /**
  * Resolver reCAPTCHA v2 con 2Captcha
  * @param {string} siteKey - Site key del reCAPTCHA
- * @param {string} pageUrl - URL de la pÃ¡gina donde estÃ¡ el captcha
+ * @param {string} pageUrl - URL de la pÃƒÂ¡gina donde estÃƒÂ¡ el captcha
  * @returns {Promise<string>} - Token de respuesta del reCAPTCHA
  */
 async function resolverReCaptchaV2(siteKey, pageUrl) {
@@ -792,7 +792,7 @@ async function resolverReCaptchaV2(siteKey, pageUrl) {
   const captchaId = captchaStart.data.request;
   console.log(`[2Captcha] Captcha ID: ${captchaId}`);
 
-  // Esperar soluciÃ³n (mÃ¡ximo 2 minutos)
+  // Esperar soluciÃƒÂ³n (mÃƒÂ¡ximo 2 minutos)
   const maxAttempts = 60;
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -808,7 +808,7 @@ async function resolverReCaptchaV2(siteKey, pageUrl) {
     });
 
     if (captchaResult.data.status === 1) {
-      console.log(`[2Captcha] âœ… reCAPTCHA resuelto`);
+      console.log(`[2Captcha] Ã¢Å“â€¦ reCAPTCHA resuelto`);
       return captchaResult.data.request;
     }
 
@@ -817,7 +817,7 @@ async function resolverReCaptchaV2(siteKey, pageUrl) {
     }
   }
 
-  throw new Error("Timeout esperando soluciÃ³n del reCAPTCHA");
+  throw new Error("Timeout esperando soluciÃƒÂ³n del reCAPTCHA");
 }
 
 /**
@@ -850,9 +850,9 @@ async function resolverCaptchaImagen(base64Image) {
   }
 
   const captchaId = captchaStart.data.request;
-  console.log(`[2CAPTCHA] Captcha ID: ${captchaId}, esperando resoluciÃ³n...`);
+  console.log(`[2CAPTCHA] Captcha ID: ${captchaId}, esperando resoluciÃƒÂ³n...`);
 
-  // Esperar resoluciÃ³n: revisar cada 2s, mÃ¡ximo 20 intentos (40s)
+  // Esperar resoluciÃƒÂ³n: revisar cada 2s, mÃƒÂ¡ximo 20 intentos (40s)
   for (let i = 0; i < 20; i++) {
     await new Promise(r => setTimeout(r, 2000));
     const check = await axios.get("http://2captcha.com/res.php", {
@@ -867,7 +867,7 @@ async function resolverCaptchaImagen(base64Image) {
 
     if (check.data.status === 1) {
       const solution = check.data.request;
-      console.log(`[2CAPTCHA] âœ… Captcha resuelto: ${solution}`);
+      console.log(`[2CAPTCHA] Ã¢Å“â€¦ Captcha resuelto: ${solution}`);
       return solution;
     }
 
@@ -892,22 +892,22 @@ try {
   console.log("MercadoPago no configurado");
 }
 
-// Modo prueba para desarrollo (solo se activa explícitamente)
+// Modo prueba para desarrollo (solo se activa explÃ­citamente)
 // Para activar: agregar MODO_PRUEBA=true en .env o establecer NODE_ENV=development
-// También se activa automáticamente si no hay ACCESS_TOKEN configurado
+// TambiÃ©n se activa automÃ¡ticamente si no hay ACCESS_TOKEN configurado
 const MODO_PRUEBA = process.env.MODO_PRUEBA === 'true' || !ACCESS_TOKEN;
 
 app.post("/crear-preferencia", async (req, res) => {
-  // MODO PRUEBA: Solo si está explícitamente activado o si no hay ACCESS_TOKEN, redirigir directamente a result.html
-  // En producción normal, siempre debe pasar por el proceso de pago
+  // MODO PRUEBA: Solo si estÃ¡ explÃ­citamente activado o si no hay ACCESS_TOKEN, redirigir directamente a result.html
+  // En producciÃ³n normal, siempre debe pasar por el proceso de pago
   if (MODO_PRUEBA) {
     if (!ACCESS_TOKEN) {
       console.log('[MODO PRUEBA] ACCESS_TOKEN no configurado - activando bypass de pago');
     } else {
-      console.log('[MODO PRUEBA] Bypass de pago activado explícitamente');
+      console.log('[MODO PRUEBA] Bypass de pago activado explÃ­citamente');
     }
-    return res.json({ 
-      id: 'TEST_MODE', 
+    return res.json({
+      id: 'TEST_MODE',
       test_mode: true,
       redirect_url: '/result.html'
     });
@@ -917,7 +917,7 @@ app.post("/crear-preferencia", async (req, res) => {
     return respond(res, { ok: false, source: "mercadopago", status: "error", message: "MercadoPago no configurado. Configure ACCESS_TOKEN en el archivo .env" }, 500);
   }
   try {
-    // Base URL público (Railway/cPanel/producción)
+    // Base URL pÃºblico (Railway/cPanel/producciÃ³n)
     // Recomendado: definir PUBLIC_BASE_URL en .env (ej: https://tu-dominio.com o https://tuapp.up.railway.app)
     const host = req.get('host') || 'localhost:3000';
     const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
@@ -925,19 +925,19 @@ app.post("/crear-preferencia", async (req, res) => {
     const baseUrl = envBaseUrl
       ? envBaseUrl.replace(/\/+$/, '')
       : (isLocalhost ? `http://${host}` : `https://${host}`);
-    
-    // Validar que baseUrl no esté vacío
+
+    // Validar que baseUrl no estÃ© vacÃ­o
     if (!baseUrl || !baseUrl.startsWith('http')) {
-      throw new Error(`URL base inválida: ${baseUrl}`);
+      throw new Error(`URL base invÃ¡lida: ${baseUrl}`);
     }
-    
+
     // Construir objeto de preferencia
     const preferenceBody = {
-      items: [{ 
-        title: "Consulta vehicular", 
-        quantity: 1, 
-        unit_price: 15, 
-        currency_id: "PEN" 
+      items: [{
+        title: "Consulta vehicular",
+        quantity: 1,
+        unit_price: 15,
+        currency_id: "PEN"
       }],
       back_urls: {
         success: `${baseUrl}/result.html`,
@@ -945,31 +945,31 @@ app.post("/crear-preferencia", async (req, res) => {
         pending: `${baseUrl}/pendiente`
       }
     };
-    
+
     // Solo agregar auto_return si no es localhost (MercadoPago puede rechazar localhost con auto_return)
     if (!isLocalhost) {
       preferenceBody.auto_return = "approved";
     }
-    
-    // Validar que success URL esté definida
+
+    // Validar que success URL estÃ© definida
     if (!preferenceBody.back_urls.success) {
-      throw new Error('back_urls.success no está definido');
+      throw new Error('back_urls.success no estÃ¡ definido');
     }
-    
+
     console.log(`[MercadoPago] Creando preferencia con URLs:`, preferenceBody.back_urls);
     if (preferenceBody.auto_return) {
       console.log(`[MercadoPago] Auto-return activado: ${preferenceBody.auto_return}`);
     }
-    
+
     const preference = await new mercadopago.Preference(mercadopago.config).create({
       body: preferenceBody
     });
-    
-    console.log(`[MercadoPago] ✅ Preferencia creada: ${preference.id}`);
-    console.log(`[MercadoPago] URL de éxito: ${preferenceBody.back_urls.success}`);
+
+    console.log(`[MercadoPago] âœ… Preferencia creada: ${preference.id}`);
+    console.log(`[MercadoPago] URL de Ã©xito: ${preferenceBody.back_urls.success}`);
     res.json({ id: preference.id });
   } catch (error) {
-    console.error(`[MercadoPago] ❌ Error al crear preferencia:`, error);
+    console.error(`[MercadoPago] âŒ Error al crear preferencia:`, error);
     console.error(`[MercadoPago] Detalles del error:`, error.response?.data || error.message);
     respond(res, { ok: false, source: "mercadopago", status: "error", message: error.message }, 500);
   }
@@ -1000,7 +1000,7 @@ app.post("/api/soat", async (req, res) => {
 
     // Usar Promise.race para timeout de 6 minutos (aumentado para asegurar resultados)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Timeout: La consulta tardó más de 6 minutos')), 360000);
+      setTimeout(() => reject(new Error('Timeout: La consulta tardÃ³ mÃ¡s de 6 minutos')), 360000);
     });
 
     const consultaPromise = scraper.consultarPlaca(placa);
@@ -1030,12 +1030,12 @@ app.post("/api/soat", async (req, res) => {
     }
 
     // Formatear respuesta al formato esperado por el frontend
-    // Si hay pólizas, mostrar la vigente primero y luego todas en un array
+    // Si hay pÃ³lizas, mostrar la vigente primero y luego todas en un array
     const polizaVigente = resultado.poliza_vigente || resultado.polizas[0] || null;
-    
+
     const data = {
       placa: resultado.placa,
-      // Campos principales (de la póliza vigente o la primera)
+      // Campos principales (de la pÃ³liza vigente o la primera)
       compania_aseguradora: polizaVigente?.compania_aseguradora || '',
       clase_vehiculo: polizaVigente?.clase_vehiculo || '',
       uso_vehiculo: polizaVigente?.uso_vehiculo || '',
@@ -1046,7 +1046,7 @@ app.post("/api/soat", async (req, res) => {
       fin_vigencia: polizaVigente?.fin_vigencia || '',
       estado: polizaVigente?.estado || '',
       comentario: polizaVigente?.comentario || '',
-      // Array de todas las pólizas para mostrar en tabla
+      // Array de todas las pÃ³lizas para mostrar en tabla
       polizas: resultado.polizas || []
     };
 
@@ -1058,20 +1058,20 @@ app.post("/api/soat", async (req, res) => {
     });
   } catch (error) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.error(`[SOAT-APESEG] Error después de ${elapsed}s:`, error.message);
+    console.error(`[SOAT-APESEG] Error despuÃ©s de ${elapsed}s:`, error.message);
 
     const msg = String(error?.message || '');
     let publicMessage = msg || "Error al consultar SOAT";
     let statusCode = 500;
 
     if (msg.includes('APESEG_TRANSIENT_ERROR')) {
-      publicMessage = "APESEG está bloqueando temporalmente la consulta. Reintenta en 1-2 minutos.";
+      publicMessage = "APESEG estÃ¡ bloqueando temporalmente la consulta. Reintenta en 1-2 minutos.";
       statusCode = 503;
     } else if (msg.includes('APESEG_CAPTCHA_INVALID')) {
       publicMessage = "El captcha de APESEG fue rechazado. Reintenta nuevamente.";
       statusCode = 503;
     } else if (msg.includes('APESEG_NO_CONFIRMATION')) {
-      publicMessage = "APESEG no confirmó resultados en este intento. Reintenta en unos segundos.";
+      publicMessage = "APESEG no confirmÃ³ resultados en este intento. Reintenta en unos segundos.";
       statusCode = 503;
     }
 
@@ -1093,7 +1093,7 @@ app.post("/api/lima", async (req, res) => {
 
   const timeouts = normalizeTimeouts('lima');
   let browser;
-  
+
   try {
     console.log(`[SAT LIMA] Iniciando consulta (con captcha) para placa: ${placa}`);
     browser = await launchBrowser();
@@ -1125,7 +1125,7 @@ app.post("/api/lima", async (req, res) => {
     }
 
     if (!frame) {
-      console.log(`[SAT LIMA] âŒ Iframe no encontrado`);
+      console.log(`[SAT LIMA] Ã¢ÂÅ’ Iframe no encontrado`);
       await browser.close();
       return respond(res, { ok: false, source: "lima", status: "error", message: "No se pudo cargar el formulario" });
     }
@@ -1166,7 +1166,7 @@ app.post("/api/lima", async (req, res) => {
     });
 
     if (mensaje.includes("no se encontraron") || mensaje.includes("sin registros")) {
-      console.log(`[SAT LIMA] âœ… Sin registros encontrados`);
+      console.log(`[SAT LIMA] Ã¢Å“â€¦ Sin registros encontrados`);
       await browser.close();
       return respond(res, { ok: true, source: "lima", status: "empty", data: [], message: "No se encontraron papeletas" });
     }
@@ -1191,11 +1191,11 @@ app.post("/api/lima", async (req, res) => {
     });
 
     await browser.close();
-    console.log(`[SAT LIMA] âœ… Consulta exitosa: ${tabla.length} registros`);
+    console.log(`[SAT LIMA] Ã¢Å“â€¦ Consulta exitosa: ${tabla.length} registros`);
     respond(res, { ok: true, source: "lima", status: tabla.length > 0 ? "warn" : "empty", data: tabla });
 
   } catch (error) {
-    console.error(`[SAT LIMA] âŒ Error:`, error.message);
+    console.error(`[SAT LIMA] Ã¢ÂÅ’ Error:`, error.message);
     if (browser) await browser.close().catch(() => {});
     respond(res, { ok: false, source: "lima", status: "error", message: sanitizeError(error) }, 500);
   }
@@ -1203,11 +1203,11 @@ app.post("/api/lima", async (req, res) => {
 
 // ============================================
 // API: SAT CALLAO - ELIMINADO (reemplazado por CallaoPapeletasScraper)
-// El endpoint correcto está más abajo usando CallaoPapeletasScraper
+// El endpoint correcto estÃ¡ mÃ¡s abajo usando CallaoPapeletasScraper
 // ============================================
 
 // ============================================
-// API: REVISIÃ“N TÃ‰CNICA (MTC CITV) - HTTP ADAPTER
+// API: REVISIÃƒâ€œN TÃƒâ€°CNICA (MTC CITV) - HTTP ADAPTER
 // ============================================
 // Endpoint para obtener captcha
 app.get("/api/revision/captcha", async (req, res) => {
@@ -1221,7 +1221,18 @@ app.get("/api/revision/captcha", async (req, res) => {
       data: { captchaImage: captcha.imageDataUrl }
     });
   } catch (error) {
-    console.error(`[MTC] âŒ Error obteniendo captcha:`, error.message);
+    console.error(`[MTC] Ã¢ÂÅ’ Error obteniendo captcha:`, error.message);
+        // Bloqueo WAF/Cloudflare: salir rÃƒÂ¡pido y SIN 2Captcha
+        if (error && (error.code === 'MTC_BLOCKED' || (error.message && error.message.includes('MTC_BLOCKED')))) {
+          console.log('[MTC] Ã°Å¸Å¡Â« Bloqueo WAF/Cloudflare detectado (auto) - devolviendo status blocked');
+          return respond(res, {
+            ok: true,
+            source: 'revision',
+            status: 'blocked',
+            message: 'MTC estÃƒÂ¡ bloqueando consultas desde esta IP/servidor. Para obtener 200 con datos reales se requiere proxy residencial (MTC_PROXY_URL).',
+            data: []
+          }, 200);
+        }
     respond(res, {
       ok: false,
       source: "revision",
@@ -1237,14 +1248,14 @@ app.post("/api/revision", async (req, res) => {
   if (!placa) return respond(res, { ok: false, source: "revision", status: "error", message: "Placa requerida" }, 400);
 
   // ============================================
-  // NUEVO: Usar scraper final si estÃ¡ disponible
+  // NUEVO: Usar scraper final si estÃƒÂ¡ disponible
   // ============================================
   if (CAPTCHA_API_KEY) {
     try {
-      console.log(`[MTC] Usando scraper final con CAPTCHA automático para: ${placa}`);
+      console.log(`[MTC] Usando scraper final con CAPTCHA automÃ¡tico para: ${placa}`);
       const scraper = new MTCCITVScraper(CAPTCHA_API_KEY);
       const resultado = await scraper.consultarPlaca(placa, 3);
-      
+
       // Convertir formato del scraper al formato esperado por el frontend
       const records = resultado.registros.map(reg => ({
         placa: reg.placa || placa,
@@ -1260,121 +1271,132 @@ app.post("/api/revision", async (req, res) => {
         tipo_documento: reg.tipo_documento || '',
         observacion: reg.observaciones || ''
       }));
-      
+
       return respond(res, {
         ok: true,
         source: "revision",
         status: records.length > 0 ? "success" : "empty",
         data: records,
-        message: `Se encontraron ${records.length} certificado(s) de inspecciÃ³n tÃ©cnica`
+        message: `Se encontraron ${records.length} certificado(s) de inspecciÃƒÂ³n tÃƒÂ©cnica`
       });
-      
+
     } catch (scraperError) {
-      console.error(`[MTC] âŒ Error con scraper final:`, scraperError.message);
-      console.log(`[MTC] âš ï¸ Fallback a mÃ©todo anterior...`);
-      // Continuar con el mÃ©todo anterior como fallback
+      console.error(`[MTC] Ã¢ÂÅ’ Error con scraper final:`, scraperError.message);
+      if (scraperError && (scraperError.code === 'MTC_BLOCKED' || (scraperError.message && scraperError.message.includes('MTC_BLOCKED')))) {
+        console.log(`[MTC] ðŸš« Bloqueo WAF/Cloudflare detectado (scraper final) - devolviendo status blocked sin fallback`);
+        return respond(res, {
+          ok: true,
+          source: 'revision',
+          status: 'blocked',
+          message: 'MTC estÃ¡ bloqueando consultas desde esta IP/servidor (WAF/Cloudflare). Para obtener datos reales se requiere proxy residencial (MTC_PROXY_URL).',
+          data: [],
+          meta: { hint: 'Configura MTC_PROXY_URL (proxy residencial, formato http://user:pass@host:port)' }
+        }, 200);
+      }
+      console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Fallback a mÃƒÂ©todo anterior...`);
+      // Continuar con el mÃƒÂ©todo anterior como fallback
     }
   }
 
-  // Si no hay captcha, intentar resolver automÃ¡ticamente con 2Captcha si estÃ¡ configurado
+  // Si no hay captcha, intentar resolver automÃƒÂ¡ticamente con 2Captcha si estÃƒÂ¡ configurado
   if (!captcha) {
-    // Intentar hasta 3 veces con resoluciÃ³n automÃ¡tica de captcha
+    // Intentar hasta 3 veces con resoluciÃƒÂ³n automÃƒÂ¡tica de captcha
     const maxAutoAttempts = CAPTCHA_API_KEY ? 3 : 1;
-    
+
     for (let attempt = 1; attempt <= maxAutoAttempts; attempt++) {
       try {
         console.log(`[MTC] Intento ${attempt}/${maxAutoAttempts}: Obteniendo captcha...`);
-        
+
         // Intentar obtener captcha con HTTP adapter primero, luego Playwright avanzado
         let captchaData;
         try {
           captchaData = await getCitvCaptcha();
         } catch (httpError) {
-          console.log(`[MTC] âš ï¸ Error HTTP obteniendo captcha, intentando con Playwright...`);
+          console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Error HTTP obteniendo captcha, intentando con Playwright...`);
           try {
             captchaData = await getCitvCaptchaPlaywright();
           } catch (playwrightError) {
-            console.log(`[MTC] âš ï¸ Error Playwright bÃ¡sico, intentando Playwright Avanzado...`);
+            console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Error Playwright bÃƒÂ¡sico, intentando Playwright Avanzado...`);
             try {
               captchaData = await getCitvCaptchaAdvanced();
             } catch (advancedError) {
-              console.error(`[MTC] âŒ Error Playwright Avanzado obteniendo captcha:`, advancedError.message);
+              console.error(`[MTC] Ã¢ÂÅ’ Error Playwright Avanzado obteniendo captcha:`, advancedError.message);
               if (attempt === maxAutoAttempts) {
-                throw new Error("No se pudo obtener el captcha despuÃ©s de mÃºltiples intentos");
+                throw new Error("No se pudo obtener el captcha despuÃƒÂ©s de mÃƒÂºltiples intentos");
               }
               await new Promise(resolve => setTimeout(resolve, 2000));
               continue;
             }
           }
         }
-        
-        // Si hay 2Captcha configurado, resolver automÃ¡ticamente
+
+        // Si hay 2Captcha configurado, resolver automÃƒÂ¡ticamente
         if (CAPTCHA_API_KEY) {
           try {
-            console.log(`[MTC] Resolviendo captcha automÃ¡ticamente con 2Captcha (intento ${attempt})...`);
+            console.log(`[MTC] Resolviendo captcha automÃƒÂ¡ticamente con 2Captcha (intento ${attempt})...`);
             // Extraer base64 sin prefijo
             const base64Image = captchaData.imageDataUrl.replace(/^data:image\/[a-z]+;base64,/, '');
             const captchaResuelto = await resolverCaptchaImagen(base64Image);
-            
-            console.log(`[MTC] âœ… Captcha resuelto automÃ¡ticamente: ${captchaResuelto}`);
-            console.log(`[MTC] Usando captcha inmediatamente para evitar expiraciÃ³n...`);
-            
+
+            console.log(`[MTC] Ã¢Å“â€¦ Captcha resuelto automÃƒÂ¡ticamente: ${captchaResuelto}`);
+            console.log(`[MTC] Usando captcha inmediatamente para evitar expiraciÃƒÂ³n...`);
+
             // Consultar INMEDIATAMENTE con el captcha resuelto (intentar HTTP primero, luego Playwright)
             // No esperar entre resolver y usar para evitar que expire
             let resultado;
             let captchaInvalido = false;
-            
+
             try {
               resultado = await consultCitvByPlaca(placa, captchaResuelto);
             } catch (httpError) {
-              console.log(`[MTC] âš ï¸ Error HTTP consultando: ${httpError.message}`);
-              
-              // Verificar si es error de captcha invÃ¡lido
+              console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Error HTTP consultando: ${httpError.message}`);
+
+              // Verificar si es error de captcha invÃƒÂ¡lido
               if (httpError.message && httpError.message.includes('CAPTCHA_INVALID')) {
                 captchaInvalido = true;
-                console.log(`[MTC] âš ï¸ Captcha invÃ¡lido en intento ${attempt}/${maxAutoAttempts}`);
+                console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Captcha invÃƒÂ¡lido en intento ${attempt}/${maxAutoAttempts}`);
                 if (attempt < maxAutoAttempts) {
                   console.log(`[MTC] Reintentando con nuevo captcha en 2 segundos...`);
                   await new Promise(resolve => setTimeout(resolve, 2000));
                   continue; // Reintentar con nuevo captcha
                 } else {
-                  console.log(`[MTC] âŒ Todos los intentos fallaron, solicitando captcha manual`);
+                  console.log(`[MTC] Ã¢ÂÅ’ Todos los intentos fallaron, solicitando captcha manual`);
                   return respond(res, {
                     ok: true,
                     source: "revision",
                     status: "captcha_required",
-                    message: "El captcha automÃ¡tico fallÃ³ despuÃ©s de mÃºltiples intentos. Por favor resuÃ©lvalo manualmente.",
+                    message: "El captcha automÃƒÂ¡tico fallÃƒÂ³ despuÃƒÂ©s de mÃƒÂºltiples intentos. Por favor resuÃƒÂ©lvalo manualmente.",
                     data: { captchaImage: captchaData.imageDataUrl }
                   });
                 }
               }
-              
-              // Si no es captcha invÃ¡lido, intentar con Playwright (puede ser otro tipo de error)
+
+              // Si no es captcha invÃƒÂ¡lido, intentar con Playwright (puede ser otro tipo de error)
               console.log(`[MTC] Intentando con Playwright...`);
               try {
                 resultado = await consultCitvByPlacaPlaywright(placa, captchaResuelto);
               } catch (playwrightError) {
-                // Si ambos fallan, verificar si es error de captcha invÃ¡lido
+                // Si ambos fallan, verificar si es error de captcha invÃƒÂ¡lido
                 if (playwrightError.message && playwrightError.message.includes('CAPTCHA_INVALID')) {
                   captchaInvalido = true;
-                  console.log(`[MTC] âš ï¸ Captcha invÃ¡lido en intento ${attempt}/${maxAutoAttempts}`);
+                  console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Captcha invÃƒÂ¡lido en intento ${attempt}/${maxAutoAttempts}`);
                   if (attempt < maxAutoAttempts) {
                     console.log(`[MTC] Reintentando con nuevo captcha en 2 segundos...`);
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     continue; // Reintentar con nuevo captcha
                   } else {
-                    console.log(`[MTC] âŒ Todos los intentos fallaron, solicitando captcha manual`);
+                    console.log(`[MTC] Ã¢ÂÅ’ Todos los intentos fallaron, solicitando captcha manual`);
                     return respond(res, {
                       ok: true,
                       source: "revision",
                       status: "captcha_required",
-                      message: "El captcha automÃ¡tico fallÃ³ despuÃ©s de mÃºltiples intentos. Por favor resuÃ©lvalo manualmente.",
+                      message: "El captcha automÃƒÂ¡tico fallÃƒÂ³ despuÃƒÂ©s de mÃƒÂºltiples intentos. Por favor resuÃƒÂ©lvalo manualmente.",
                       data: { captchaImage: captchaData.imageDataUrl }
                     });
                   }
                 }
                 // Si es otro error, intentar con Playwright Avanzado
-                console.log(`[MTC] Intentando con Playwright Avanzado (mÃ¡xima evasiÃ³n)...`);
+                console.log(`[MTC] Intentando con Playwright Avanzado (mÃƒÂ¡xima evasiÃƒÂ³n)...`);
                 try {
                   resultado = await consultCitvByPlacaAdvanced(placa, captchaResuelto);
                 } catch (advancedError) {
@@ -1382,40 +1404,40 @@ app.post("/api/revision", async (req, res) => {
                 }
               }
             }
-            
-            // Si captcha fue invÃ¡lido, ya se manejÃ³ arriba con continue
+
+            // Si captcha fue invÃƒÂ¡lido, ya se manejÃƒÂ³ arriba con continue
             if (captchaInvalido) {
               continue;
             }
-            
+
             // Verificar resultado (puede ser objeto con status)
             if (resultado && resultado.status === 'error') {
-              // Si el resultado tiene status error, verificar si es captcha invÃ¡lido
+              // Si el resultado tiene status error, verificar si es captcha invÃƒÂ¡lido
               if (resultado.message && resultado.message.includes('CAPTCHA_INVALID')) {
-                console.log(`[MTC] âš ï¸ Captcha invÃ¡lido en intento ${attempt}/${maxAutoAttempts}`);
+                console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Captcha invÃƒÂ¡lido en intento ${attempt}/${maxAutoAttempts}`);
                 if (attempt < maxAutoAttempts) {
                   console.log(`[MTC] Reintentando con nuevo captcha en 2 segundos...`);
                   await new Promise(resolve => setTimeout(resolve, 2000));
                   continue; // Reintentar con nuevo captcha
                 } else {
-                  console.log(`[MTC] âŒ Todos los intentos fallaron, solicitando captcha manual`);
+                  console.log(`[MTC] Ã¢ÂÅ’ Todos los intentos fallaron, solicitando captcha manual`);
                   return respond(res, {
                     ok: true,
                     source: "revision",
                     status: "captcha_required",
-                    message: "El captcha automÃ¡tico fallÃ³ despuÃ©s de mÃºltiples intentos. Por favor resuÃ©lvalo manualmente.",
+                    message: "El captcha automÃƒÂ¡tico fallÃƒÂ³ despuÃƒÂ©s de mÃƒÂºltiples intentos. Por favor resuÃƒÂ©lvalo manualmente.",
                     data: { captchaImage: captchaData.imageDataUrl }
                   });
                 }
               }
             }
-            
+
             // Procesar resultado exitoso
-            console.log(`[MTC] âœ… Consulta exitosa con captcha automÃ¡tico!`);
+            console.log(`[MTC] Ã¢Å“â€¦ Consulta exitosa con captcha automÃƒÂ¡tico!`);
             return processCitvResult(res, resultado, placa);
-            
+
           } catch (autoError) {
-            console.log(`[MTC] âš ï¸ Error en resoluciÃ³n automÃ¡tica (intento ${attempt}):`, autoError.message);
+            console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Error en resoluciÃƒÂ³n automÃƒÂ¡tica (intento ${attempt}):`, autoError.message);
             if (attempt < maxAutoAttempts) {
               await new Promise(resolve => setTimeout(resolve, 3000));
               continue;
@@ -1423,22 +1445,33 @@ app.post("/api/revision", async (req, res) => {
             // Si todos los intentos fallaron y no hay 2Captcha, devolver captcha manual
           }
         }
-        
-        // Si no hay 2Captcha o fallÃ³, devolver captcha para resoluciÃ³n manual (solo en Ãºltimo intento)
+
+        // Si no hay 2Captcha o fallÃƒÂ³, devolver captcha para resoluciÃƒÂ³n manual (solo en ÃƒÂºltimo intento)
         if (attempt === maxAutoAttempts) {
           return respond(res, {
             ok: true,
             source: "revision",
             status: "captcha_required",
-            message: CAPTCHA_API_KEY 
-              ? "No se pudo resolver el captcha automÃ¡ticamente. Por favor resuÃ©lvalo manualmente."
-              : "Se requiere resolver el captcha (configure CAPTCHA_API_KEY para resoluciÃ³n automÃ¡tica)",
+            message: CAPTCHA_API_KEY
+              ? "No se pudo resolver el captcha automÃƒÂ¡ticamente. Por favor resuÃƒÂ©lvalo manualmente."
+              : "Se requiere resolver el captcha (configure CAPTCHA_API_KEY para resoluciÃƒÂ³n automÃƒÂ¡tica)",
             data: { captchaImage: captchaData.imageDataUrl }
           });
         }
-        
+
       } catch (error) {
-        console.error(`[MTC] âŒ Error en intento ${attempt}:`, error.message);
+        console.error(`[MTC] Ã¢ÂÅ’ Error en intento ${attempt}:`, error.message);
+        if (error && (error.code === 'MTC_BLOCKED' || (error.message && error.message.includes('MTC_BLOCKED')))) {
+          console.log(`[MTC] Ã°Å¸Å¡Â« Bloqueo WAF/Cloudflare detectado en intento ${attempt} - devolviendo status blocked`);
+          return respond(res, {
+            ok: true,
+            source: 'revision',
+            status: 'blocked',
+            message: 'MTC estÃƒÂ¡ bloqueando consultas desde esta IP/servidor (WAF/Cloudflare). Para obtener datos reales se requiere proxy residencial (MTC_PROXY_URL).',
+            data: [],
+            meta: { hint: 'Configura MTC_PROXY_URL (proxy residencial, formato http://user:pass@host:port)' }
+          }, 200);
+        }
         if (attempt === maxAutoAttempts) {
           return respond(res, {
             ok: false,
@@ -1458,11 +1491,11 @@ app.post("/api/revision", async (req, res) => {
     try {
       resultado = await consultCitvByPlaca(placa, captcha);
     } catch (httpError) {
-      console.log(`[MTC] âš ï¸ Error HTTP, intentando con Playwright...`);
+      console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Error HTTP, intentando con Playwright...`);
       try {
         resultado = await consultCitvByPlacaPlaywright(placa, captcha);
       } catch (playwrightError) {
-        console.log(`[MTC] âš ï¸ Error Playwright bÃ¡sico, intentando Playwright Avanzado...`);
+        console.log(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Error Playwright bÃƒÂ¡sico, intentando Playwright Avanzado...`);
         resultado = await consultCitvByPlacaAdvanced(placa, captcha);
       }
     }
@@ -1470,23 +1503,23 @@ app.post("/api/revision", async (req, res) => {
     return processCitvResult(res, resultado, placa);
 
   } catch (error) {
-    console.error(`[MTC] âŒ Error:`, error.message);
+    console.error(`[MTC] Ã¢ÂÅ’ Error:`, error.message);
     console.error(`[MTC] Stack:`, error.stack);
-    
+
     // Detectar errores de parseo JSON (HTML en lugar de JSON)
-    if (error.message.includes('Unexpected token') || 
+    if (error.message.includes('Unexpected token') ||
         error.message.includes('is not valid JSON') ||
         error.message.includes('JSON') && error.message.includes('parse')) {
-      console.error(`[MTC] âš ï¸ Error de parseo JSON detectado - El servidor MTC puede estar bloqueando o devolviendo HTML`);
+      console.error(`[MTC] Ã¢Å¡Â Ã¯Â¸Â Error de parseo JSON detectado - El servidor MTC puede estar bloqueando o devolviendo HTML`);
       return respond(res, {
         ok: false,
         source: "revision",
         status: "error",
-        message: "El servicio MTC estÃ¡ devolviendo una respuesta inesperada. Puede estar bloqueando consultas automatizadas o experimentando problemas tÃ©cnicos. Por favor intente mÃ¡s tarde."
+        message: "El servicio MTC estÃƒÂ¡ devolviendo una respuesta inesperada. Puede estar bloqueando consultas automatizadas o experimentando problemas tÃƒÂ©cnicos. Por favor intente mÃƒÂ¡s tarde."
       }, 503);
     }
-    
-    // Si el error es captcha invÃ¡lido, devolver nuevo captcha
+
+    // Si el error es captcha invÃƒÂ¡lido, devolver nuevo captcha
     if (error.message.includes('CAPTCHA_INVALID')) {
       try {
         const captchaData = await getCitvCaptcha();
@@ -1494,7 +1527,7 @@ app.post("/api/revision", async (req, res) => {
           ok: true,
           source: "revision",
           status: "captcha_required",
-          message: "El captcha ingresado es invÃ¡lido. Por favor intente nuevamente.",
+          message: "El captcha ingresado es invÃƒÂ¡lido. Por favor intente nuevamente.",
           data: { captchaImage: captchaData.imageDataUrl }
         });
       } catch (captchaError) {
@@ -1517,14 +1550,16 @@ app.post("/api/revision", async (req, res) => {
     }
 
     // Detectar bloqueo WAF/Cloudflare (desde Contabo datacenter IPs)
-    if (error.code === 'MTC_BLOCKED' || error.message.includes('MTC_BLOCKED')) {
-      console.log(`[MTC] 🚫 Bloqueo WAF/Cloudflare detectado - IP datacenter bloqueada`);
+    if (error.code === 'MTC_BLOCKED' || (error.message && error.message.includes('MTC_BLOCKED'))) {
+      console.log(`[MTC] Ã°Å¸Å¡Â« Bloqueo WAF/Cloudflare detectado - IP/servidor bloqueado`);
       return respond(res, {
-        ok: false,
+        ok: true,
         source: "revision",
         status: "blocked",
-        message: "El servicio MTC está bloqueando consultas desde este servidor. Esto es temporal y se debe a medidas de seguridad del portal oficial."
-      }, 403);
+        message: "MTC estÃƒÂ¡ bloqueando consultas desde esta IP/servidor (WAF/Cloudflare). Para obtener datos reales se requiere proxy residencial.",
+        data: [],
+        meta: { hint: "Configura MTC_PROXY_URL (proxy residencial, formato http://user:pass@host:port)" }
+      }, 200);
     }
 
     if (error.message.includes('MTC_SERVICE_ERROR') || error.message.includes('MTC_ERROR: -2')) {
@@ -1532,7 +1567,7 @@ app.post("/api/revision", async (req, res) => {
         ok: false,
         source: "revision",
         status: "error",
-        message: "El servicio MTC no estÃ¡ disponible temporalmente. Por favor intente mÃ¡s tarde."
+        message: "El servicio MTC no estÃƒÂ¡ disponible temporalmente. Por favor intente mÃƒÂ¡s tarde."
       }, 503);
     }
 
@@ -1542,7 +1577,7 @@ app.post("/api/revision", async (req, res) => {
         ok: false,
         source: "revision",
         status: "error",
-        message: "El servicio MTC no estÃ¡ disponible temporalmente. Por favor intente mÃ¡s tarde."
+        message: "El servicio MTC no estÃƒÂ¡ disponible temporalmente. Por favor intente mÃƒÂ¡s tarde."
       }, 503);
     }
 
@@ -1565,7 +1600,7 @@ function processCitvResult(res, resultado, placa) {
       source: "revision",
       status: "empty",
       data: null,
-      message: "No se encontraron certificados de inspecciÃ³n tÃ©cnica"
+      message: "No se encontraron certificados de inspecciÃƒÂ³n tÃƒÂ©cnica"
     });
   }
 
@@ -1589,7 +1624,7 @@ function processCitvResult(res, resultado, placa) {
   if (records.length === 1) {
     const record = records[0];
     const status = (record.resultado || '').toLowerCase().includes('aprobado') ? 'success' : 'warn';
-    console.log(`[MTC] âœ… Consulta exitosa: 1 certificado encontrado`);
+    console.log(`[MTC] Ã¢Å“â€¦ Consulta exitosa: 1 certificado encontrado`);
     return respond(res, {
       ok: true,
       source: "revision",
@@ -1598,8 +1633,8 @@ function processCitvResult(res, resultado, placa) {
     });
   }
 
-  // Si hay mÃºltiples registros, devolver como array
-  console.log(`[MTC] âœ… Consulta exitosa: ${records.length} certificados encontrados`);
+  // Si hay mÃƒÂºltiples registros, devolver como array
+  console.log(`[MTC] Ã¢Å“â€¦ Consulta exitosa: ${records.length} certificados encontrados`);
   return respond(res, {
     ok: true,
     source: "revision",
@@ -1609,7 +1644,7 @@ function processCitvResult(res, resultado, placa) {
 }
 
 // ============================================
-// API: SINIESTROS (SBS) - PUPPETEER (MÃS CONFIABLE)
+// API: SINIESTROS (SBS) - PUPPETEER (MÃƒÂS CONFIABLE)
 // ============================================
 app.post("/api/siniestro", async (req, res) => {
   const { placa, useManual = false } = req.body;
@@ -1618,32 +1653,32 @@ app.post("/api/siniestro", async (req, res) => {
   // Usar scraper optimizado (similar a MTC) para velocidad
   try {
     console.log(`[SINIESTRO] Consulta optimizada para placa: ${placa}`);
-    
-    // Intentar primero con scraper optimizado (rÃ¡pido como MTC)
+
+    // Intentar primero con scraper optimizado (rÃƒÂ¡pido como MTC)
     try {
       const SBSSOATScraper = require('./sbs-scraper-final');
-      const scraper = new SBSSOATScraper(CAPTCHA_API_KEY); // Pasar API key de 2Captcha si está configurada
+      const scraper = new SBSSOATScraper(CAPTCHA_API_KEY); // Pasar API key de 2Captcha si estÃ¡ configurada
       const resultado = await Promise.race([
-        scraper.consultarPlaca(placa, 5), // 5 intentos mÃ¡ximo para mayor confiabilidad
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Timeout: La consulta tardÃ³ mÃ¡s de 300 segundos")), 300000)
+        scraper.consultarPlaca(placa, 5), // 5 intentos mÃƒÂ¡ximo para mayor confiabilidad
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout: La consulta tardÃƒÂ³ mÃƒÂ¡s de 300 segundos")), 300000)
         )
       ]);
-      
+
       console.log(`[SINIESTRO] Resultado del scraper:`, JSON.stringify(resultado, null, 2).substring(0, 500));
-      
+
       // El scraper devuelve { success: true, placa, polizas, accidentes_ultimos_5_anios, ... }
       if (!resultado || !resultado.success) {
-        throw new Error('Scraper no devolviÃ³ resultado exitoso');
+        throw new Error('Scraper no devolviÃƒÂ³ resultado exitoso');
       }
-      
+
       // Adaptar respuesta al formato esperado por el frontend
       const accidentes = resultado.accidentes_ultimos_5_anios || 0;
       const status = accidentes > 0 ? "warn" : "success";
 
-      // Si no hay pÃ³lizas, verificar si es porque no hay registros o por error
+      // Si no hay pÃƒÂ³lizas, verificar si es porque no hay registros o por error
       if (!resultado.polizas || resultado.polizas.length === 0) {
-        // Si el resultado tiene un mensaje de "Sin registros", es válido
+        // Si el resultado tiene un mensaje de "Sin registros", es vÃ¡lido
         if (resultado.message === 'Sin registros') {
           console.log(`[SINIESTRO] Sin registros confirmado, devolviendo empty`);
           return respond(res, {
@@ -1654,9 +1689,9 @@ app.post("/api/siniestro", async (req, res) => {
             message: "No se encontraron registros de SOAT para esta placa"
           });
         }
-        
+
         // Si no hay mensaje, puede ser un error o realmente no hay registros
-        console.log(`[SINIESTRO] No hay pÃ³lizas sin mensaje de confirmación, devolviendo empty`);
+        console.log(`[SINIESTRO] No hay pÃƒÂ³lizas sin mensaje de confirmaciÃ³n, devolviendo empty`);
         return respond(res, {
           ok: true,
           source: "siniestro",
@@ -1675,18 +1710,18 @@ app.post("/api/siniestro", async (req, res) => {
         polizas: resultado.polizas || []
       };
 
-      console.log(`[SINIESTRO] âœ… Consulta exitosa (scraper optimizado): ${accidentes} accidentes, ${resultado.polizas.length} pÃ³lizas`);
-      console.log(`[SINIESTRO] ðŸ“¤ Enviando respuesta al frontend...`);
+      console.log(`[SINIESTRO] Ã¢Å“â€¦ Consulta exitosa (scraper optimizado): ${accidentes} accidentes, ${resultado.polizas.length} pÃƒÂ³lizas`);
+      console.log(`[SINIESTRO] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend...`);
       return respond(res, { ok: true, source: "siniestro", status, data });
-      
+
     } catch (scraperError) {
-      console.error(`[SINIESTRO] âš ï¸ Scraper optimizado fallÃ³:`, scraperError.message);
-      console.error(`[SINIESTRO] âš ï¸ Stack:`, scraperError.stack);
-      console.log(`[SINIESTRO] âš ï¸ Fallback a mÃ©todo HTTP...`);
-      // Continuar con mÃ©todo HTTP como fallback
+      console.error(`[SINIESTRO] Ã¢Å¡Â Ã¯Â¸Â Scraper optimizado fallÃƒÂ³:`, scraperError.message);
+      console.error(`[SINIESTRO] Ã¢Å¡Â Ã¯Â¸Â Stack:`, scraperError.stack);
+      console.log(`[SINIESTRO] Ã¢Å¡Â Ã¯Â¸Â Fallback a mÃƒÂ©todo HTTP...`);
+      // Continuar con mÃƒÂ©todo HTTP como fallback
     }
-    
-    // Fallback: usar HTTP (mÃ¡s rÃ¡pido) - configuraciÃ³n original que funcionaba
+
+    // Fallback: usar HTTP (mÃƒÂ¡s rÃƒÂ¡pido) - configuraciÃƒÂ³n original que funcionaba
     console.log(`[SINIESTRO] Consulta HTTP para placa: ${placa}`);
     const resultado = await consultSbsSoat(placa);
 
@@ -1694,7 +1729,7 @@ app.post("/api/siniestro", async (req, res) => {
     const accidentes = resultado.accidentes_ultimos_5_anios || 0;
     const status = accidentes > 0 ? "warn" : "success";
 
-    // Si no hay pÃ³lizas, devolver empty
+    // Si no hay pÃƒÂ³lizas, devolver empty
     if (!resultado.polizas || resultado.polizas.length === 0) {
       return respond(res, {
         ok: true,
@@ -1714,15 +1749,15 @@ app.post("/api/siniestro", async (req, res) => {
       polizas: resultado.polizas
     };
 
-    console.log(`[SINIESTRO] âœ… Consulta exitosa: ${accidentes} accidentes, ${resultado.polizas.length} pÃ³lizas`);
+    console.log(`[SINIESTRO] Ã¢Å“â€¦ Consulta exitosa: ${accidentes} accidentes, ${resultado.polizas.length} pÃƒÂ³lizas`);
     return respond(res, { ok: true, source: "siniestro", status, data });
 
   } catch (error) {
-    console.error(`[SINIESTRO] âŒ Error:`, error.message);
-    
+    console.error(`[SINIESTRO] Ã¢ÂÅ’ Error:`, error.message);
+
     // Mensaje de error claro
-    let errorMessage = "Error al consultar el servicio SBS. Por favor intente mÃ¡s tarde.";
-    
+    let errorMessage = "Error al consultar el servicio SBS. Por favor intente mÃƒÂ¡s tarde.";
+
     // Si el error es porque no se encontraron registros, devolver empty en lugar de error
     if (error.message && (error.message.includes('Sin registros') || error.message.includes('No se encontraron registros'))) {
       return respond(res, {
@@ -1733,19 +1768,19 @@ app.post("/api/siniestro", async (req, res) => {
         message: "No se encontraron registros de SOAT para esta placa"
       });
     }
-    
+
     if (error.message.includes('SELECTOR_MISSING')) {
-      errorMessage = "El portal cambiÃ³ su estructura. Contacte al administrador.";
+      errorMessage = "El portal cambiÃƒÂ³ su estructura. Contacte al administrador.";
     } else if (error.message.includes('BLOCKED_OR_RATE_LIMITED')) {
       errorMessage = "El servicio bloquea consultas automatizadas temporalmente";
     } else if (error.message.includes('CAPTCHA_INVALID')) {
-      errorMessage = "Error de validaciÃ³n. Por favor intente nuevamente.";
+      errorMessage = "Error de validaciÃƒÂ³n. Por favor intente nuevamente.";
     } else if (error.message.includes('HTTP 4') || error.message.includes('HTTP 5')) {
-      errorMessage = "Error al conectar con el servicio SBS. Por favor intente mÃ¡s tarde.";
+      errorMessage = "Error al conectar con el servicio SBS. Por favor intente mÃƒÂ¡s tarde.";
     } else if (error.response) {
-      errorMessage = `Error del servicio SBS (${error.response.status}). Por favor intente mÃ¡s tarde.`;
+      errorMessage = `Error del servicio SBS (${error.response.status}). Por favor intente mÃƒÂ¡s tarde.`;
     }
-    
+
     return respond(res, {
       ok: false,
       source: "siniestro",
@@ -1757,12 +1792,12 @@ app.post("/api/siniestro", async (req, res) => {
 
 
 /**
- * Consultar SBS usando Puppeteer (permite resoluciÃ³n manual de captcha)
+ * Consultar SBS usando Puppeteer (permite resoluciÃƒÂ³n manual de captcha)
  */
 async function consultSbsWithPuppeteer(req, res, placa) {
   const timeouts = normalizeTimeouts('siniestro');
   let browser;
-  
+
   try {
     console.log(`[SINIESTRO] Iniciando consulta Puppeteer para placa: ${placa}`);
     browser = await launchBrowser();
@@ -1784,21 +1819,21 @@ async function consultSbsWithPuppeteer(req, res, placa) {
       'input[id*="txtPlaca" i]',
       'input[type="text"]'
     ];
-    
+
     try {
       await typeIntoFirst(page, inputSelectors, placa);
     } catch (e) {
-      console.log(`[SINIESTRO] No se encontrÃ³ input: ${e.message}`);
+      console.log(`[SINIESTRO] No se encontrÃƒÂ³ input: ${e.message}`);
       await browser.close();
-      return respond(res, { 
-        ok: false, 
-        source: "siniestro", 
-        status: "error", 
-        message: "No se pudo acceder al formulario" 
+      return respond(res, {
+        ok: false,
+        source: "siniestro",
+        status: "error",
+        message: "No se pudo acceder al formulario"
       });
     }
 
-    // Seleccionar opciÃ³n SOAT si hay radio buttons
+    // Seleccionar opciÃƒÂ³n SOAT si hay radio buttons
     try {
       await page.evaluate(() => {
         const radioSoat = document.querySelector('input[value="Soat"][type="radio"]');
@@ -1806,10 +1841,10 @@ async function consultSbsWithPuppeteer(req, res, placa) {
       });
       await page.waitForTimeout(500);
     } catch (e) {
-      console.log(`[SINIESTRO] No se pudo seleccionar opciÃ³n SOAT: ${e.message}`);
+      console.log(`[SINIESTRO] No se pudo seleccionar opciÃƒÂ³n SOAT: ${e.message}`);
     }
 
-    // Esperar a que reCAPTCHA v3 se ejecute automÃ¡ticamente (puede tardar 5-10s)
+    // Esperar a que reCAPTCHA v3 se ejecute automÃƒÂ¡ticamente (puede tardar 5-10s)
     console.log(`[SINIESTRO] Esperando reCAPTCHA v3 (puede tardar hasta 10s)...`);
     await page.waitForTimeout(5000);
 
@@ -1820,12 +1855,12 @@ async function consultSbsWithPuppeteer(req, res, placa) {
     });
 
     if (!recaptchaToken || recaptchaToken.length < 50) {
-      console.log(`[SINIESTRO] âš ï¸ Token reCAPTCHA v3 no encontrado o invÃ¡lido, esperando mÃ¡s tiempo...`);
+      console.log(`[SINIESTRO] Ã¢Å¡Â Ã¯Â¸Â Token reCAPTCHA v3 no encontrado o invÃƒÂ¡lido, esperando mÃƒÂ¡s tiempo...`);
       await page.waitForTimeout(5000);
     }
 
-    // Hacer click en botÃ³n Consultar
-    console.log(`[SINIESTRO] Buscando botÃ³n de consulta...`);
+    // Hacer click en botÃƒÂ³n Consultar
+    console.log(`[SINIESTRO] Buscando botÃƒÂ³n de consulta...`);
     const buttonSelectors = [
       '#ctl00_MainBodyContent_btnIngresarPla',
       'input[name="ctl00$MainBodyContent$btnIngresarPla"]',
@@ -1833,10 +1868,10 @@ async function consultSbsWithPuppeteer(req, res, placa) {
       'button[type="submit"]',
       '//input[@value="Consultar"]'
     ];
-    
+
     const clicked = await clickFirst(page, buttonSelectors);
     if (!clicked) {
-      console.log(`[SINIESTRO] BotÃ³n no encontrado, presionando Enter...`);
+      console.log(`[SINIESTRO] BotÃƒÂ³n no encontrado, presionando Enter...`);
       await page.keyboard.press('Enter');
     }
 
@@ -1844,7 +1879,7 @@ async function consultSbsWithPuppeteer(req, res, placa) {
     console.log(`[SINIESTRO] Esperando resultados...`);
     await page.waitForTimeout(timeouts.processing);
 
-    // Verificar si redirigiÃ³ a la pÃ¡gina de resultados
+    // Verificar si redirigiÃƒÂ³ a la pÃƒÂ¡gina de resultados
     const currentUrl = page.url();
     if (!currentUrl.includes('ReporteCentralRiesgo')) {
       // Esperar redirect
@@ -1859,32 +1894,32 @@ async function consultSbsWithPuppeteer(req, res, placa) {
     const noRecords = await detectNoRecords(page);
     if (noRecords.isEmpty) {
       await browser.close();
-      return respond(res, { 
-        ok: true, 
-        source: "siniestro", 
-        status: "empty", 
-        data: null, 
-        message: noRecords.message || "No se encontraron registros" 
+      return respond(res, {
+        ok: true,
+        source: "siniestro",
+        status: "empty",
+        data: null,
+        message: noRecords.message || "No se encontraron registros"
       });
     }
 
-    // Extraer datos de la pÃ¡gina de resultados
+    // Extraer datos de la pÃƒÂ¡gina de resultados
     console.log(`[SINIESTRO] Extrayendo datos...`);
     const resultado = await page.evaluate(() => {
       const data = {};
-      
+
       // Datos principales
       const placaEl = document.querySelector('#ctl00_MainBodyContent_placa');
       const fechaConsultaEl = document.querySelector('#ctl00_MainBodyContent_fecha_consulta');
       const fechaActEl = document.querySelector('#ctl00_MainBodyContent_fecha_act');
       const cantidadEl = document.querySelector('#ctl00_MainBodyContent_cantidad');
-      
+
       data.placa = placaEl ? placaEl.textContent.trim() : '';
       data.fecha_consulta = fechaConsultaEl ? fechaConsultaEl.textContent.trim() : '';
       data.fecha_actualizacion = fechaActEl ? fechaActEl.textContent.trim() : '';
       data.accidentes_ultimos_5_anios = cantidadEl ? parseInt(cantidadEl.textContent.trim() || '0', 10) : 0;
-      
-      // Tabla de pÃ³lizas
+
+      // Tabla de pÃƒÂ³lizas
       data.polizas = [];
       const tabla = document.querySelector('#listSoatPlacaVeh tbody');
       if (tabla) {
@@ -1906,17 +1941,17 @@ async function consultSbsWithPuppeteer(req, res, placa) {
           }
         });
       }
-      
+
       return data;
     });
 
     await browser.close();
 
     if (!resultado.polizas || resultado.polizas.length === 0) {
-      return respond(res, { 
-        ok: true, 
-        source: "siniestro", 
-        status: "empty", 
+      return respond(res, {
+        ok: true,
+        source: "siniestro",
+        status: "empty",
         data: null,
         message: "No se encontraron registros de SOAT"
       });
@@ -1958,11 +1993,11 @@ async function consultSbsWithPuppeteer(req, res, placa) {
       }))
     };
 
-    console.log(`[SINIESTRO] âœ… Consulta exitosa (Puppeteer): ${accidentes} accidentes, ${resultado.polizas.length} pÃ³lizas`);
+    console.log(`[SINIESTRO] Ã¢Å“â€¦ Consulta exitosa (Puppeteer): ${accidentes} accidentes, ${resultado.polizas.length} pÃƒÂ³lizas`);
     respond(res, { ok: true, source: "siniestro", status, data });
 
   } catch (error) {
-    console.error(`[SINIESTRO] âŒ Error Puppeteer:`, error.message);
+    console.error(`[SINIESTRO] Ã¢ÂÅ’ Error Puppeteer:`, error.message);
     if (browser) await browser.close().catch(() => {});
     respond(res, {
       ok: false,
@@ -1980,8 +2015,8 @@ app.post("/api/orden-captura", async (req, res) => {
   const { placa } = req.body;
   if (!placa) return respond(res, { ok: false, source: "orden-captura", status: "error", message: "Placa requerida" }, 400);
 
-  // Placeholder - implementar segÃºn lÃ³gica original
-  respond(res, { ok: true, source: "orden-captura", status: "empty", data: null, message: "Sin Ã³rdenes de captura registradas" });
+  // Placeholder - implementar segÃƒÂºn lÃƒÂ³gica original
+  respond(res, { ok: true, source: "orden-captura", status: "empty", data: null, message: "Sin ÃƒÂ³rdenes de captura registradas" });
 });
 
 // ============================================
@@ -2041,18 +2076,18 @@ app.post("/api/impuesto-vehicular", async (req, res) => {
   try {
     if (debug === true) {
       process.env.SCRAPER_DEBUG = 'true';
-      console.log('[IMPUESTO VEHICULAR] 🧩 SCRAPER_DEBUG habilitado (se guardarán dumps en /screenshots)');
+      console.log('[IMPUESTO VEHICULAR] ðŸ§© SCRAPER_DEBUG habilitado (se guardarÃ¡n dumps en /screenshots)');
     }
 
     const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
     if (!CAPTCHA_API_KEY) {
-      console.log('[IMPUESTO VEHICULAR] ⚠️ API Key de 2Captcha no configurada');
+      console.log('[IMPUESTO VEHICULAR] âš ï¸ API Key de 2Captcha no configurada');
     }
 
     const scraper = new ImpuestoVehicularScraper(CAPTCHA_API_KEY, { debug: debug === true });
     const resultado = await scraper.consultarPlaca(placa, 2);
 
-    console.log(`[IMPUESTO VEHICULAR] ✅ Resultado obtenido:`);
+    console.log(`[IMPUESTO VEHICULAR] âœ… Resultado obtenido:`);
     console.log(`[IMPUESTO VEHICULAR]    Success: ${resultado.success}`);
     console.log(`[IMPUESTO VEHICULAR]    Encontrado: ${resultado.encontrado}`);
     console.log(`[IMPUESTO VEHICULAR]    Datos: ${resultado.datos?.length || 0} registros`);
@@ -2065,9 +2100,9 @@ app.post("/api/impuesto-vehicular", async (req, res) => {
         data: {
           placa: placa,
           encontrado: false,
-          mensaje: resultado.mensaje || "No se encontró información"
+          mensaje: resultado.mensaje || "No se encontrÃ³ informaciÃ³n"
         },
-        message: resultado.mensaje || "No se encontró información"
+        message: resultado.mensaje || "No se encontrÃ³ informaciÃ³n"
       });
     }
 
@@ -2079,9 +2114,9 @@ app.post("/api/impuesto-vehicular", async (req, res) => {
         data: {
           placa: placa,
           encontrado: false,
-          mensaje: resultado.mensaje || "Se encontraron 0 coincidencias para su búsqueda."
+          mensaje: resultado.mensaje || "Se encontraron 0 coincidencias para su bÃºsqueda."
         },
-        message: resultado.mensaje || "Se encontraron 0 coincidencias para su búsqueda."
+        message: resultado.mensaje || "Se encontraron 0 coincidencias para su bÃºsqueda."
       });
     }
 
@@ -2096,11 +2131,11 @@ app.post("/api/impuesto-vehicular", async (req, res) => {
         detalle: resultado.detalle || [],
         mensaje: "Consulta exitosa"
       },
-      message: "Información de impuesto vehicular obtenida correctamente"
+      message: "InformaciÃ³n de impuesto vehicular obtenida correctamente"
     });
 
   } catch (error) {
-    console.error('[IMPUESTO VEHICULAR] ❌ Error:', error);
+    console.error('[IMPUESTO VEHICULAR] âŒ Error:', error);
     return respond(res, {
       ok: true,
       source: "impuesto-vehicular",
@@ -2161,7 +2196,7 @@ app.post("/api/pit-foto", async (req, res) => {
         total: papeletas.length,
         mensaje
       },
-      message: "Información PIT obtenida correctamente"
+      message: "InformaciÃ³n PIT obtenida correctamente"
     });
   } catch (error) {
     console.error('[PIT-FOTO] Error en endpoint:', error);
@@ -2225,7 +2260,7 @@ app.post("/api/puno", async (req, res) => {
       message: resultado.mensaje || "Consulta exitosa"
     }, 200);
   } catch (error) {
-    console.error('[PUNO] ❌ Error:', error);
+    console.error('[PUNO] âŒ Error:', error);
     return respond(res, {
       ok: true,
       source: "puno",
@@ -2255,15 +2290,15 @@ app.post("/api/placas-pe", async (req, res) => {
   try {
     const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
     if (!CAPTCHA_API_KEY) {
-      console.log('[PLACAS.PE] ⚠️ API Key de 2Captcha no configurada');
+      console.log('[PLACAS.PE] âš ï¸ API Key de 2Captcha no configurada');
     }
 
-    // Usar directamente el scraper de Node.js (más rápido y confiable)
-    console.log('[PLACAS.PE] 🚀 Usando scraper Node.js...');
+    // Usar directamente el scraper de Node.js (mÃ¡s rÃ¡pido y confiable)
+    console.log('[PLACAS.PE] ðŸš€ Usando scraper Node.js...');
     const scraper = new PlacasPeScraper(CAPTCHA_API_KEY);
     const resultado = await scraper.consultarPlaca(placa, 2);
 
-    console.log(`[PLACAS.PE] ✅ Resultado obtenido:`);
+    console.log(`[PLACAS.PE] âœ… Resultado obtenido:`);
     console.log(`[PLACAS.PE]    Success: ${resultado.success}`);
     console.log(`[PLACAS.PE]    Encontrado: ${resultado.encontrado}`);
     console.log(`[PLACAS.PE]    StatusDescription: ${resultado.statusDescription || 'null'}`);
@@ -2287,9 +2322,9 @@ app.post("/api/placas-pe", async (req, res) => {
         data: {
           placa: placa,
           encontrado: false,
-          mensaje: resultado.mensaje || "No se encontró información"
+          mensaje: resultado.mensaje || "No se encontrÃ³ informaciÃ³n"
         },
-        message: resultado.mensaje || "No se encontró información"
+        message: resultado.mensaje || "No se encontrÃ³ informaciÃ³n"
       });
     }
 
@@ -2301,9 +2336,9 @@ app.post("/api/placas-pe", async (req, res) => {
         data: {
           placa: placa,
           encontrado: false,
-          mensaje: resultado.mensaje || "No se encontró información para esta placa"
+          mensaje: resultado.mensaje || "No se encontrÃ³ informaciÃ³n para esta placa"
         },
-        message: resultado.mensaje || "No se encontró información para esta placa"
+        message: resultado.mensaje || "No se encontrÃ³ informaciÃ³n para esta placa"
       });
     }
 
@@ -2327,11 +2362,11 @@ app.post("/api/placas-pe", async (req, res) => {
         status: resultado.status || null,
         mensaje: "Consulta exitosa"
       },
-      message: "Información de estado de placa obtenida correctamente"
+      message: "InformaciÃ³n de estado de placa obtenida correctamente"
     });
 
   } catch (error) {
-    console.error('[PLACAS.PE] ❌ Error:', error);
+    console.error('[PLACAS.PE] âŒ Error:', error);
     return respond(res, {
       ok: true,
       source: "placas-pe",
@@ -2347,7 +2382,7 @@ app.post("/api/placas-pe", async (req, res) => {
 });
 
   // ============================================
-  // API: INFOGAS - MEJORADO (DESHABILITADO - USAR EL NUEVO ENDPOINT MÁS ABAJO)
+  // API: INFOGAS - MEJORADO (DESHABILITADO - USAR EL NUEVO ENDPOINT MÃS ABAJO)
   // ============================================
   /*
   app.post("/api/infogas-old", async (req, res) => {
@@ -2356,7 +2391,7 @@ app.post("/api/placas-pe", async (req, res) => {
 
   const timeouts = normalizeTimeouts('infogas');
   let browser;
-  
+
   try {
     console.log(`[INFOGAS] Iniciando consulta para placa: ${placa}`);
     browser = await launchBrowser();
@@ -2382,7 +2417,7 @@ app.post("/api/placas-pe", async (req, res) => {
       return respond(res, { ok: true, source: "infogas", status: "empty", data: null });
     }
 
-    // Buscar botÃ³n
+    // Buscar botÃƒÂ³n
     const buttonSelectors = ['#btnConsultar', 'button[type="submit"]', '//button[contains(text(), "Consultar")]'];
     const clicked = await clickFirst(page, buttonSelectors);
     if (!clicked) {
@@ -2410,7 +2445,7 @@ app.post("/api/placas-pe", async (req, res) => {
         }
         return "-";
       };
-      
+
       return {
         tipoCombustible: document.querySelector("#tipoCombustible")?.innerText.trim() || getDataByLabel('tipo') || "-",
         habilitado: document.querySelector("#habilitado")?.innerText.trim() || getDataByLabel('habilitado') || "-",
@@ -2419,11 +2454,11 @@ app.post("/api/placas-pe", async (req, res) => {
     });
 
     await browser.close();
-    console.log(`[INFOGAS] âœ… Consulta exitosa`);
+    console.log(`[INFOGAS] Ã¢Å“â€¦ Consulta exitosa`);
     respond(res, { ok: true, source: "infogas", status: "success", data: resultado });
 
   } catch (error) {
-    console.error(`[INFOGAS] âŒ Error:`, error.message);
+    console.error(`[INFOGAS] Ã¢ÂÅ’ Error:`, error.message);
     if (browser) await browser.close().catch(() => {});
     respond(res, { ok: false, source: "infogas", status: "error", message: sanitizeError(error) }, 500);
   }
@@ -2439,7 +2474,7 @@ app.post("/api/atu", async (req, res) => {
 
   const timeouts = normalizeTimeouts('atu');
   let browser;
-  
+
   try {
     console.log(`[ATU] Iniciando consulta para placa: ${placa}`);
     browser = await launchBrowser();
@@ -2465,7 +2500,7 @@ app.post("/api/atu", async (req, res) => {
       return respond(res, { ok: true, source: "atu", status: "empty", data: null });
     }
 
-    // Buscar botÃ³n
+    // Buscar botÃƒÂ³n
     const buttonSelectors = ['#btnBuscar', 'button[type="submit"]', '//button[contains(text(), "Buscar")]'];
     const clicked = await clickFirst(page, buttonSelectors);
     if (!clicked) {
@@ -2495,91 +2530,91 @@ app.post("/api/atu", async (req, res) => {
       return respond(res, { ok: true, source: "atu", status: "empty", data: null, message: "Placa no registrada en ATU" });
     }
 
-    console.log(`[ATU] âœ… Consulta exitosa`);
+    console.log(`[ATU] Ã¢Å“â€¦ Consulta exitosa`);
     respond(res, { ok: true, source: "atu", status: "success", data: registrado });
 
   } catch (error) {
-    console.error(`[ATU] âŒ Error:`, error.message);
+    console.error(`[ATU] Ã¢ÂÅ’ Error:`, error.message);
     if (browser) await browser.close().catch(() => {});
     respond(res, { ok: false, source: "atu", status: "error", message: sanitizeError(error) }, 500);
   }
 });
 
 // ============================================
-// API: AREQUIPA - PAPELETAS (VERSIÃ“N MEJORADA)
-// SIGUIENDO EL PATRÃ“N DE SAT Y SUTRAN
+// API: AREQUIPA - PAPELETAS (VERSIÃƒâ€œN MEJORADA)
+// SIGUIENDO EL PATRÃƒâ€œN DE SAT Y SUTRAN
 // ============================================
 app.post("/api/arequipa", async (req, res) => {
   console.log("\n" + "=".repeat(60));
-  console.log("[AREQUIPA] ========== NUEVA PETICIÃ“N ==========");
+  console.log("[AREQUIPA] ========== NUEVA PETICIÃƒâ€œN ==========");
   console.log("[AREQUIPA] Body recibido:", JSON.stringify(req.body, null, 2));
   console.log("=".repeat(60) + "\n");
-  
+
   const { placa } = req.body;
-  
+
   if (!placa) {
-    console.log("[AREQUIPA] âŒ Placa no proporcionada en body");
+    console.log("[AREQUIPA] Ã¢ÂÅ’ Placa no proporcionada en body");
     return respond(res, { ok: false, source: "arequipa", status: "error", message: "Placa requerida" }, 400);
   }
 
   try {
-    console.log(`[AREQUIPA] âœ… Placa recibida: ${placa}`);
+    console.log(`[AREQUIPA] Ã¢Å“â€¦ Placa recibida: ${placa}`);
     console.log(`[AREQUIPA] Iniciando consulta...`);
-    
+
     let resultado = null;
-    
+
     try {
       let ArequipaScraper;
       try {
         ArequipaScraper = require('./arequipa-scraper');
-        console.log(`[AREQUIPA] âœ… MÃ³dulo cargado correctamente`);
+        console.log(`[AREQUIPA] Ã¢Å“â€¦ MÃƒÂ³dulo cargado correctamente`);
       } catch (requireError) {
-        console.error(`[AREQUIPA] âŒ Error cargando mÃ³dulo:`, requireError.message);
+        console.error(`[AREQUIPA] Ã¢ÂÅ’ Error cargando mÃƒÂ³dulo:`, requireError.message);
         resultado = {
           success: true,
           placa: placa,
           papeletas: [],
-          mensaje: "Error cargando mÃ³dulo"
+          mensaje: "Error cargando mÃƒÂ³dulo"
         };
       }
-      
+
       if (!resultado && ArequipaScraper) {
         try {
-          console.log(`[AREQUIPA] ðŸ”§ Creando instancia del scraper...`);
+          console.log(`[AREQUIPA] Ã°Å¸â€Â§ Creando instancia del scraper...`);
           const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
           if (CAPTCHA_API_KEY) {
-            console.log(`[AREQUIPA] âœ… API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
+            console.log(`[AREQUIPA] Ã¢Å“â€¦ API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
           } else {
-            console.log(`[AREQUIPA] âš ï¸ API Key de 2Captcha no configurada - CAPTCHA no se resolverÃ¡ automÃ¡ticamente`);
+            console.log(`[AREQUIPA] Ã¢Å¡Â Ã¯Â¸Â API Key de 2Captcha no configurada - CAPTCHA no se resolverÃƒÂ¡ automÃƒÂ¡ticamente`);
           }
           const scraper = new ArequipaScraper(CAPTCHA_API_KEY);
-          console.log(`[AREQUIPA] âœ… Instancia creada, ejecutando consulta...`);
-          
+          console.log(`[AREQUIPA] Ã¢Å“â€¦ Instancia creada, ejecutando consulta...`);
+
           const scraperPromise = scraper.consultarPlaca(placa, 2);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: La consulta tomó más de 3 minutos')), 180000)
+            setTimeout(() => reject(new Error('Timeout: La consulta tomÃ³ mÃ¡s de 3 minutos')), 180000)
           );
-          
-          console.log(`[AREQUIPA] â³ Esperando resultado del scraper...`);
+
+          console.log(`[AREQUIPA] Ã¢ÂÂ³ Esperando resultado del scraper...`);
           resultado = await Promise.race([scraperPromise, timeoutPromise]);
-          console.log(`[AREQUIPA] âœ… Resultado recibido del scraper`);
+          console.log(`[AREQUIPA] Ã¢Å“â€¦ Resultado recibido del scraper`);
           console.log(`\n[AREQUIPA] ========== RESULTADO DEL SCRAPER ==========`);
-          console.log(`[AREQUIPA] ðŸ“Š Success: ${resultado?.success}`);
-          console.log(`[AREQUIPA] ðŸ“Š Placa: ${resultado?.placa || 'N/A'}`);
-          console.log(`[AREQUIPA] ðŸ“Š Papeletas: ${resultado?.papeletas?.length || 0}`);
-          console.log(`[AREQUIPA] ðŸ“Š Tipo de papeletas: ${Array.isArray(resultado?.papeletas) ? 'Array' : typeof resultado?.papeletas}`);
+          console.log(`[AREQUIPA] Ã°Å¸â€œÅ  Success: ${resultado?.success}`);
+          console.log(`[AREQUIPA] Ã°Å¸â€œÅ  Placa: ${resultado?.placa || 'N/A'}`);
+          console.log(`[AREQUIPA] Ã°Å¸â€œÅ  Papeletas: ${resultado?.papeletas?.length || 0}`);
+          console.log(`[AREQUIPA] Ã°Å¸â€œÅ  Tipo de papeletas: ${Array.isArray(resultado?.papeletas) ? 'Array' : typeof resultado?.papeletas}`);
           if (resultado?.papeletas && resultado.papeletas.length > 0) {
-            console.log(`[AREQUIPA] ðŸ“Š Detalle de papeletas:`);
+            console.log(`[AREQUIPA] Ã°Å¸â€œÅ  Detalle de papeletas:`);
             resultado.papeletas.forEach((pap, idx) => {
               console.log(`[AREQUIPA]    ${idx + 1}. ${pap.numero || 'N/A'} - ${pap.fecha || 'N/A'} - ${pap.infraccion || 'N/A'}`);
             });
           }
-          console.log(`[AREQUIPA] ðŸ“Š Resultado completo:`, JSON.stringify(resultado, null, 2));
+          console.log(`[AREQUIPA] Ã°Å¸â€œÅ  Resultado completo:`, JSON.stringify(resultado, null, 2));
           console.log(`[AREQUIPA] ==============================================\n`);
         } catch (scraperError) {
           console.error(`\n[AREQUIPA] ========== ERROR EN SCRAPER ==========`);
-          console.error(`[AREQUIPA] âŒ Error ejecutando scraper:`, scraperError.message);
-          console.error(`[AREQUIPA] âŒ Stack del scraper:`, scraperError.stack);
+          console.error(`[AREQUIPA] Ã¢ÂÅ’ Error ejecutando scraper:`, scraperError.message);
+          console.error(`[AREQUIPA] Ã¢ÂÅ’ Stack del scraper:`, scraperError.stack);
           resultado = {
             success: true,
             placa: placa,
@@ -2589,7 +2624,7 @@ app.post("/api/arequipa", async (req, res) => {
         }
       }
     } catch (error) {
-      console.error(`[AREQUIPA] âŒ Error en bloque try principal:`, error.message);
+      console.error(`[AREQUIPA] Ã¢ÂÅ’ Error en bloque try principal:`, error.message);
       resultado = {
         success: true,
         placa: placa,
@@ -2597,34 +2632,34 @@ app.post("/api/arequipa", async (req, res) => {
         mensaje: "Error en consulta"
       };
     }
-    
+
     if (!resultado) {
-      console.log(`[AREQUIPA] âš ï¸ Resultado es null, usando resultado vacÃ­o por defecto`);
+      console.log(`[AREQUIPA] Ã¢Å¡Â Ã¯Â¸Â Resultado es null, usando resultado vacÃƒÂ­o por defecto`);
       resultado = {
         success: true,
         placa: placa,
         papeletas: [],
-        mensaje: "Este vehÃ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
+        mensaje: "Este vehÃƒÂ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
       };
     }
-    
+
     try {
       console.log(`\n[AREQUIPA] ========== PROCESANDO RESULTADO ==========`);
-      console.log(`[AREQUIPA] ðŸ“Š Tipo de resultado: ${typeof resultado}`);
-      console.log(`[AREQUIPA] ðŸ“Š resultado.papeletas existe: ${!!resultado?.papeletas}`);
-      console.log(`[AREQUIPA] ðŸ“Š resultado.papeletas es array: ${Array.isArray(resultado?.papeletas)}`);
-      console.log(`[AREQUIPA] ðŸ“Š resultado.papeletas.length: ${resultado?.papeletas?.length || 0}`);
-      
+      console.log(`[AREQUIPA] Ã°Å¸â€œÅ  Tipo de resultado: ${typeof resultado}`);
+      console.log(`[AREQUIPA] Ã°Å¸â€œÅ  resultado.papeletas existe: ${!!resultado?.papeletas}`);
+      console.log(`[AREQUIPA] Ã°Å¸â€œÅ  resultado.papeletas es array: ${Array.isArray(resultado?.papeletas)}`);
+      console.log(`[AREQUIPA] Ã°Å¸â€œÅ  resultado.papeletas.length: ${resultado?.papeletas?.length || 0}`);
+
       let papeletas = [];
-      
+
       if (resultado?.papeletas && Array.isArray(resultado.papeletas)) {
         papeletas = resultado.papeletas;
-        console.log(`[AREQUIPA] âœ… Papeletas encontradas en resultado.papeletas: ${papeletas.length}`);
+        console.log(`[AREQUIPA] Ã¢Å“â€¦ Papeletas encontradas en resultado.papeletas: ${papeletas.length}`);
       } else if (resultado?.data && Array.isArray(resultado.data)) {
         papeletas = resultado.data;
-        console.log(`[AREQUIPA] âœ… Papeletas encontradas en resultado.data: ${papeletas.length}`);
+        console.log(`[AREQUIPA] Ã¢Å“â€¦ Papeletas encontradas en resultado.data: ${papeletas.length}`);
       }
-      
+
       // Validar que las papeletas tengan estructura correcta
       if (papeletas.length > 0) {
         const validPapeletas = papeletas.filter(pap =>
@@ -2632,20 +2667,20 @@ app.post("/api/arequipa", async (req, res) => {
           (pap.numero || pap.fecha || pap.infraccion)
         );
         if (validPapeletas.length !== papeletas.length) {
-          console.log(`[AREQUIPA] âš ï¸ Algunas papeletas no tienen estructura vÃ¡lida, filtrando...`);
+          console.log(`[AREQUIPA] Ã¢Å¡Â Ã¯Â¸Â Algunas papeletas no tienen estructura vÃƒÂ¡lida, filtrando...`);
           papeletas = validPapeletas;
         }
       }
-      
-      console.log(`[AREQUIPA] ðŸ“Š papeletas procesadas (final): ${papeletas.length}`);
-      
+
+      console.log(`[AREQUIPA] Ã°Å¸â€œÅ  papeletas procesadas (final): ${papeletas.length}`);
+
       if (papeletas.length === 0) {
-        console.log(`[AREQUIPA] âš ï¸ No hay papeletas, devolviendo mensaje informativo`);
-        console.log(`[AREQUIPA] ðŸ“¤ Enviando respuesta al frontend:`);
-        console.log(`[AREQUIPA]    Status Code: 200 âœ…`);
+        console.log(`[AREQUIPA] Ã¢Å¡Â Ã¯Â¸Â No hay papeletas, devolviendo mensaje informativo`);
+        console.log(`[AREQUIPA] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+        console.log(`[AREQUIPA]    Status Code: 200 Ã¢Å“â€¦`);
         console.log(`[AREQUIPA]    Status: empty`);
-        console.log(`[AREQUIPA]    Mensaje: ${resultado?.mensaje || "Este vehÃ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"}`);
-        
+        console.log(`[AREQUIPA]    Mensaje: ${resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"}`);
+
         return respond(res, {
           ok: true,
           source: "arequipa",
@@ -2654,13 +2689,13 @@ app.post("/api/arequipa", async (req, res) => {
             placa: resultado?.placa || placa,
             papeletas: [],
             total: 0,
-            mensaje: resultado?.mensaje || "Este vehÃ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
+            mensaje: resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
           },
-          message: resultado?.mensaje || "Este vehÃ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
+          message: resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
         });
       }
-      
-      // Formatear papeletas para mejor presentaciÃ³n
+
+      // Formatear papeletas para mejor presentaciÃƒÂ³n
       const papeletasFormateadas = papeletas.map(pap => ({
         numero: pap.numero || 'N/A',
         fecha: pap.fecha || 'N/A',
@@ -2669,23 +2704,23 @@ app.post("/api/arequipa", async (req, res) => {
         estado: pap.estado || 'N/A',
         observaciones: pap.observaciones || ''
       }));
-      
-      console.log(`[AREQUIPA] âœ…âœ…âœ… CONSULTA EXITOSA: ${papeletas.length} papeleta(s) encontrada(s)`);
-      console.log(`[AREQUIPA] ðŸ“Š Primera papeleta:`, JSON.stringify(papeletas[0], null, 2));
+
+      console.log(`[AREQUIPA] Ã¢Å“â€¦Ã¢Å“â€¦Ã¢Å“â€¦ CONSULTA EXITOSA: ${papeletas.length} papeleta(s) encontrada(s)`);
+      console.log(`[AREQUIPA] Ã°Å¸â€œÅ  Primera papeleta:`, JSON.stringify(papeletas[0], null, 2));
       console.log(`[AREQUIPA] ===========================================\n`);
-      
+
       const responseData = {
         placa: resultado?.placa || placa,
         papeletas: papeletasFormateadas,
         total: papeletas.length
       };
-      
-      console.log(`[AREQUIPA] ðŸ“¤ Enviando respuesta al frontend:`);
-      console.log(`[AREQUIPA]    Status Code: 200 âœ…`);
-      console.log(`[AREQUIPA]    Status: success âœ…`);
-      console.log(`[AREQUIPA]    Papeletas: ${papeletas.length} âœ…`);
-      console.log(`[AREQUIPA]    Placa: ${responseData.placa} âœ…`);
-      
+
+      console.log(`[AREQUIPA] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+      console.log(`[AREQUIPA]    Status Code: 200 Ã¢Å“â€¦`);
+      console.log(`[AREQUIPA]    Status: success Ã¢Å“â€¦`);
+      console.log(`[AREQUIPA]    Papeletas: ${papeletas.length} Ã¢Å“â€¦`);
+      console.log(`[AREQUIPA]    Placa: ${responseData.placa} Ã¢Å“â€¦`);
+
       return respond(res, {
         ok: true,
         source: "arequipa",
@@ -2693,9 +2728,9 @@ app.post("/api/arequipa", async (req, res) => {
         data: responseData,
         message: `Se encontraron ${papeletas.length} papeleta(s) registrada(s)`
       });
-      
+
     } catch (processError) {
-      console.error(`[AREQUIPA] âŒ Error procesando resultado:`, processError.message);
+      console.error(`[AREQUIPA] Ã¢ÂÅ’ Error procesando resultado:`, processError.message);
       return respond(res, {
         ok: true,
         source: "arequipa",
@@ -2704,19 +2739,19 @@ app.post("/api/arequipa", async (req, res) => {
           placa: placa,
           papeletas: [],
           total: 0,
-          mensaje: "Este vehÃ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
+          mensaje: "Este vehÃƒÂ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
         },
-        message: "Este vehÃ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
+        message: "Este vehÃƒÂ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
       });
     }
   } catch (error) {
     console.error("\n" + "=".repeat(60));
-    console.error("[AREQUIPA] âŒ ERROR GLOBAL CAPTURADO");
-    console.error("[AREQUIPA] âŒ Mensaje:", error.message);
-    console.error("[AREQUIPA] âŒ Stack completo:");
+    console.error("[AREQUIPA] Ã¢ÂÅ’ ERROR GLOBAL CAPTURADO");
+    console.error("[AREQUIPA] Ã¢ÂÅ’ Mensaje:", error.message);
+    console.error("[AREQUIPA] Ã¢ÂÅ’ Stack completo:");
     console.error(error.stack);
     console.error("=".repeat(60) + "\n");
-    
+
     try {
       return respond(res, {
         ok: true,
@@ -2726,9 +2761,9 @@ app.post("/api/arequipa", async (req, res) => {
           placa: placa || '',
           papeletas: [],
           total: 0,
-          mensaje: "Este vehÃ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
+          mensaje: "Este vehÃƒÂ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
         },
-        message: "Este vehÃ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
+        message: "Este vehÃƒÂ­culo no cuenta con papeletas registradas en la Municipalidad de Arequipa"
       });
     } catch (respondError) {
       return res.status(200).send(JSON.stringify({ ok: true, source: "arequipa", status: "empty", message: "Error interno" }));
@@ -2737,80 +2772,80 @@ app.post("/api/arequipa", async (req, res) => {
 });
 
 // ============================================
-// API: PIURA - MULTAS DE TRÃNSITO
-// SIGUIENDO EL PATRÃ“N DE AREQUIPA
+// API: PIURA - MULTAS DE TRÃƒÂNSITO
+// SIGUIENDO EL PATRÃƒâ€œN DE AREQUIPA
 // ============================================
 app.post("/api/piura", async (req, res) => {
   console.log("\n" + "=".repeat(60));
-  console.log("[PIURA] ========== NUEVA PETICIÃ“N ==========");
+  console.log("[PIURA] ========== NUEVA PETICIÃƒâ€œN ==========");
   console.log("[PIURA] Body recibido:", JSON.stringify(req.body, null, 2));
   console.log("=".repeat(60) + "\n");
-  
+
   const { placa } = req.body;
-  
+
   if (!placa) {
-    console.log("[PIURA] âŒ Placa no proporcionada en body");
+    console.log("[PIURA] Ã¢ÂÅ’ Placa no proporcionada en body");
     return respond(res, { ok: false, source: "piura", status: "error", message: "Placa requerida" }, 400);
   }
 
   try {
-    console.log(`[PIURA] âœ… Placa recibida: ${placa}`);
+    console.log(`[PIURA] Ã¢Å“â€¦ Placa recibida: ${placa}`);
     console.log(`[PIURA] Iniciando consulta...`);
-    
+
     let resultado = null;
-    
+
     try {
       let PiuraScraper;
       try {
         PiuraScraper = require('./piura-scraper');
-        console.log(`[PIURA] âœ… MÃ³dulo cargado correctamente`);
+        console.log(`[PIURA] Ã¢Å“â€¦ MÃƒÂ³dulo cargado correctamente`);
       } catch (requireError) {
-        console.error(`[PIURA] âŒ Error cargando mÃ³dulo:`, requireError.message);
+        console.error(`[PIURA] Ã¢ÂÅ’ Error cargando mÃƒÂ³dulo:`, requireError.message);
         resultado = {
           success: true,
           placa: placa,
           multas: [],
-          mensaje: "Error cargando mÃ³dulo"
+          mensaje: "Error cargando mÃƒÂ³dulo"
         };
       }
-      
+
       if (!resultado && PiuraScraper) {
         try {
-          console.log(`[PIURA] ðŸ”§ Creando instancia del scraper...`);
+          console.log(`[PIURA] Ã°Å¸â€Â§ Creando instancia del scraper...`);
           const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
           if (CAPTCHA_API_KEY) {
-            console.log(`[PIURA] âœ… API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
+            console.log(`[PIURA] Ã¢Å“â€¦ API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
           } else {
-            console.log(`[PIURA] âš ï¸ API Key de 2Captcha no configurada - CAPTCHA no se resolverÃ¡ automÃ¡ticamente`);
+            console.log(`[PIURA] Ã¢Å¡Â Ã¯Â¸Â API Key de 2Captcha no configurada - CAPTCHA no se resolverÃƒÂ¡ automÃƒÂ¡ticamente`);
           }
           const scraper = new PiuraScraper(CAPTCHA_API_KEY);
-          console.log(`[PIURA] âœ… Instancia creada, ejecutando consulta...`);
-          
+          console.log(`[PIURA] Ã¢Å“â€¦ Instancia creada, ejecutando consulta...`);
+
           const scraperPromise = scraper.consultarPlaca(placa, 2);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: La consulta tomó más de 3 minutos')), 180000)
+            setTimeout(() => reject(new Error('Timeout: La consulta tomÃ³ mÃ¡s de 3 minutos')), 180000)
           );
-          
-          console.log(`[PIURA] â³ Esperando resultado del scraper...`);
+
+          console.log(`[PIURA] Ã¢ÂÂ³ Esperando resultado del scraper...`);
           resultado = await Promise.race([scraperPromise, timeoutPromise]);
-          console.log(`[PIURA] âœ… Resultado recibido del scraper`);
+          console.log(`[PIURA] Ã¢Å“â€¦ Resultado recibido del scraper`);
           console.log(`\n[PIURA] ========== RESULTADO DEL SCRAPER ==========`);
-          console.log(`[PIURA] ðŸ“Š Success: ${resultado?.success}`);
-          console.log(`[PIURA] ðŸ“Š Placa: ${resultado?.placa || 'N/A'}`);
-          console.log(`[PIURA] ðŸ“Š Multas: ${resultado?.multas?.length || 0}`);
-          console.log(`[PIURA] ðŸ“Š Tipo de multas: ${Array.isArray(resultado?.multas) ? 'Array' : typeof resultado?.multas}`);
+          console.log(`[PIURA] Ã°Å¸â€œÅ  Success: ${resultado?.success}`);
+          console.log(`[PIURA] Ã°Å¸â€œÅ  Placa: ${resultado?.placa || 'N/A'}`);
+          console.log(`[PIURA] Ã°Å¸â€œÅ  Multas: ${resultado?.multas?.length || 0}`);
+          console.log(`[PIURA] Ã°Å¸â€œÅ  Tipo de multas: ${Array.isArray(resultado?.multas) ? 'Array' : typeof resultado?.multas}`);
           if (resultado?.multas && resultado.multas.length > 0) {
-            console.log(`[PIURA] ðŸ“Š Detalle de multas:`);
+            console.log(`[PIURA] Ã°Å¸â€œÅ  Detalle de multas:`);
             resultado.multas.forEach((mult, idx) => {
               console.log(`[PIURA]    ${idx + 1}. ${mult.numero || 'N/A'} - ${mult.fecha || 'N/A'} - ${mult.infraccion || 'N/A'}`);
             });
           }
-          console.log(`[PIURA] ðŸ“Š Resultado completo:`, JSON.stringify(resultado, null, 2));
+          console.log(`[PIURA] Ã°Å¸â€œÅ  Resultado completo:`, JSON.stringify(resultado, null, 2));
           console.log(`[PIURA] ==============================================\n`);
         } catch (scraperError) {
           console.error(`\n[PIURA] ========== ERROR EN SCRAPER ==========`);
-          console.error(`[PIURA] âŒ Error ejecutando scraper:`, scraperError.message);
-          console.error(`[PIURA] âŒ Stack del scraper:`, scraperError.stack);
+          console.error(`[PIURA] Ã¢ÂÅ’ Error ejecutando scraper:`, scraperError.message);
+          console.error(`[PIURA] Ã¢ÂÅ’ Stack del scraper:`, scraperError.stack);
           resultado = {
             success: true,
             placa: placa,
@@ -2820,7 +2855,7 @@ app.post("/api/piura", async (req, res) => {
         }
       }
     } catch (error) {
-      console.error(`[PIURA] âŒ Error en bloque try principal:`, error.message);
+      console.error(`[PIURA] Ã¢ÂÅ’ Error en bloque try principal:`, error.message);
       resultado = {
         success: true,
         placa: placa,
@@ -2828,34 +2863,34 @@ app.post("/api/piura", async (req, res) => {
         mensaje: "Error en consulta"
       };
     }
-    
+
     if (!resultado) {
-      console.log(`[PIURA] âš ï¸ Resultado es null, usando resultado vacÃ­o por defecto`);
+      console.log(`[PIURA] Ã¢Å¡Â Ã¯Â¸Â Resultado es null, usando resultado vacÃƒÂ­o por defecto`);
       resultado = {
         success: true,
         placa: placa,
         multas: [],
-        mensaje: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Piura"
+        mensaje: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Piura"
       };
     }
-    
+
     try {
       console.log(`\n[PIURA] ========== PROCESANDO RESULTADO ==========`);
-      console.log(`[PIURA] ðŸ“Š Tipo de resultado: ${typeof resultado}`);
-      console.log(`[PIURA] ðŸ“Š resultado.multas existe: ${!!resultado?.multas}`);
-      console.log(`[PIURA] ðŸ“Š resultado.multas es array: ${Array.isArray(resultado?.multas)}`);
-      console.log(`[PIURA] ðŸ“Š resultado.multas.length: ${resultado?.multas?.length || 0}`);
-      
+      console.log(`[PIURA] Ã°Å¸â€œÅ  Tipo de resultado: ${typeof resultado}`);
+      console.log(`[PIURA] Ã°Å¸â€œÅ  resultado.multas existe: ${!!resultado?.multas}`);
+      console.log(`[PIURA] Ã°Å¸â€œÅ  resultado.multas es array: ${Array.isArray(resultado?.multas)}`);
+      console.log(`[PIURA] Ã°Å¸â€œÅ  resultado.multas.length: ${resultado?.multas?.length || 0}`);
+
       let multas = [];
-      
+
       if (resultado?.multas && Array.isArray(resultado.multas)) {
         multas = resultado.multas;
-        console.log(`[PIURA] âœ… Multas encontradas en resultado.multas: ${multas.length}`);
+        console.log(`[PIURA] Ã¢Å“â€¦ Multas encontradas en resultado.multas: ${multas.length}`);
       } else if (resultado?.data && Array.isArray(resultado.data)) {
         multas = resultado.data;
-        console.log(`[PIURA] âœ… Multas encontradas en resultado.data: ${multas.length}`);
+        console.log(`[PIURA] Ã¢Å“â€¦ Multas encontradas en resultado.data: ${multas.length}`);
       }
-      
+
       // Validar que las multas tengan estructura correcta
       if (multas.length > 0) {
         const validMultas = multas.filter(mult =>
@@ -2863,20 +2898,20 @@ app.post("/api/piura", async (req, res) => {
           (mult.numero || mult.fecha || mult.infraccion || mult.monto)
         );
         if (validMultas.length !== multas.length) {
-          console.log(`[PIURA] âš ï¸ Algunas multas no tienen estructura vÃ¡lida, filtrando...`);
+          console.log(`[PIURA] Ã¢Å¡Â Ã¯Â¸Â Algunas multas no tienen estructura vÃƒÂ¡lida, filtrando...`);
           multas = validMultas;
         }
       }
-      
-      console.log(`[PIURA] ðŸ“Š multas procesadas (final): ${multas.length}`);
-      
+
+      console.log(`[PIURA] Ã°Å¸â€œÅ  multas procesadas (final): ${multas.length}`);
+
       if (multas.length === 0) {
-        console.log(`[PIURA] âš ï¸ No hay multas, devolviendo mensaje informativo`);
-        console.log(`[PIURA] ðŸ“¤ Enviando respuesta al frontend:`);
-        console.log(`[PIURA]    Status Code: 200 âœ…`);
+        console.log(`[PIURA] Ã¢Å¡Â Ã¯Â¸Â No hay multas, devolviendo mensaje informativo`);
+        console.log(`[PIURA] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+        console.log(`[PIURA]    Status Code: 200 Ã¢Å“â€¦`);
         console.log(`[PIURA]    Status: empty`);
-        console.log(`[PIURA]    Mensaje: ${resultado?.mensaje || "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Piura"}`);
-        
+        console.log(`[PIURA]    Mensaje: ${resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Piura"}`);
+
         return respond(res, {
           ok: true,
           source: "piura",
@@ -2885,13 +2920,13 @@ app.post("/api/piura", async (req, res) => {
             placa: resultado?.placa || placa,
             multas: [],
             total: 0,
-            mensaje: resultado?.mensaje || "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Piura"
+            mensaje: resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Piura"
           },
-          message: resultado?.mensaje || "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Piura"
+          message: resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Piura"
         });
       }
-      
-      // Formatear multas para mejor presentaciÃ³n
+
+      // Formatear multas para mejor presentaciÃƒÂ³n
       const multasFormateadas = multas.map(mult => ({
         numero: mult.numero || 'N/A',
         fecha: mult.fecha || 'N/A',
@@ -2900,23 +2935,23 @@ app.post("/api/piura", async (req, res) => {
         estado: mult.estado || 'N/A',
         observaciones: mult.observaciones || ''
       }));
-      
-      console.log(`[PIURA] âœ…âœ…âœ… CONSULTA EXITOSA: ${multas.length} multa(s) encontrada(s)`);
-      console.log(`[PIURA] ðŸ“Š Primera multa:`, JSON.stringify(multas[0], null, 2));
+
+      console.log(`[PIURA] Ã¢Å“â€¦Ã¢Å“â€¦Ã¢Å“â€¦ CONSULTA EXITOSA: ${multas.length} multa(s) encontrada(s)`);
+      console.log(`[PIURA] Ã°Å¸â€œÅ  Primera multa:`, JSON.stringify(multas[0], null, 2));
       console.log(`[PIURA] ===========================================\n`);
-      
+
       const responseData = {
         placa: resultado?.placa || placa,
         multas: multasFormateadas,
         total: multas.length
       };
-      
-      console.log(`[PIURA] ðŸ“¤ Enviando respuesta al frontend:`);
-      console.log(`[PIURA]    Status Code: 200 âœ…`);
-      console.log(`[PIURA]    Status: success âœ…`);
-      console.log(`[PIURA]    Multas: ${multas.length} âœ…`);
-      console.log(`[PIURA]    Placa: ${responseData.placa} âœ…`);
-      
+
+      console.log(`[PIURA] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+      console.log(`[PIURA]    Status Code: 200 Ã¢Å“â€¦`);
+      console.log(`[PIURA]    Status: success Ã¢Å“â€¦`);
+      console.log(`[PIURA]    Multas: ${multas.length} Ã¢Å“â€¦`);
+      console.log(`[PIURA]    Placa: ${responseData.placa} Ã¢Å“â€¦`);
+
       return respond(res, {
         ok: true,
         source: "piura",
@@ -2924,9 +2959,9 @@ app.post("/api/piura", async (req, res) => {
         data: responseData,
         message: `Se encontraron ${multas.length} multa(s) registrada(s)`
       });
-      
+
     } catch (processError) {
-      console.error(`[PIURA] âŒ Error procesando resultado:`, processError.message);
+      console.error(`[PIURA] Ã¢ÂÅ’ Error procesando resultado:`, processError.message);
       return respond(res, {
         ok: true,
         source: "piura",
@@ -2935,19 +2970,19 @@ app.post("/api/piura", async (req, res) => {
           placa: placa,
           multas: [],
           total: 0,
-          mensaje: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Piura"
+          mensaje: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Piura"
         },
-        message: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Piura"
+        message: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Piura"
       });
     }
   } catch (error) {
     console.error("\n" + "=".repeat(60));
-    console.error("[PIURA] âŒ ERROR GLOBAL CAPTURADO");
-    console.error("[PIURA] âŒ Mensaje:", error.message);
-    console.error("[PIURA] âŒ Stack completo:");
+    console.error("[PIURA] Ã¢ÂÅ’ ERROR GLOBAL CAPTURADO");
+    console.error("[PIURA] Ã¢ÂÅ’ Mensaje:", error.message);
+    console.error("[PIURA] Ã¢ÂÅ’ Stack completo:");
     console.error(error.stack);
     console.error("=".repeat(60) + "\n");
-    
+
     try {
       return respond(res, {
         ok: true,
@@ -2957,9 +2992,9 @@ app.post("/api/piura", async (req, res) => {
           placa: placa || '',
           multas: [],
           total: 0,
-          mensaje: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Piura"
+          mensaje: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Piura"
         },
-        message: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Piura"
+        message: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Piura"
       });
     } catch (respondError) {
       return res.status(200).send(JSON.stringify({ ok: true, source: "piura", status: "empty", message: "Error interno" }));
@@ -2968,80 +3003,80 @@ app.post("/api/piura", async (req, res) => {
 });
 
 // ============================================
-// API: TARAPOTO - MULTAS DE TRÃNSITO
-// SIGUIENDO EL PATRÃ“N DE PIURA
+// API: TARAPOTO - MULTAS DE TRÃƒÂNSITO
+// SIGUIENDO EL PATRÃƒâ€œN DE PIURA
 // ============================================
 app.post("/api/tarapoto", async (req, res) => {
   console.log("\n" + "=".repeat(60));
-  console.log("[TARAPOTO] ========== NUEVA PETICIÃ“N ==========");
+  console.log("[TARAPOTO] ========== NUEVA PETICIÃƒâ€œN ==========");
   console.log("[TARAPOTO] Body recibido:", JSON.stringify(req.body, null, 2));
   console.log("=".repeat(60) + "\n");
-  
+
   const { placa } = req.body;
-  
+
   if (!placa) {
-    console.log("[TARAPOTO] âŒ Placa no proporcionada en body");
+    console.log("[TARAPOTO] Ã¢ÂÅ’ Placa no proporcionada en body");
     return respond(res, { ok: false, source: "tarapoto", status: "error", message: "Placa requerida" }, 400);
   }
 
   try {
-    console.log(`[TARAPOTO] âœ… Placa recibida: ${placa}`);
+    console.log(`[TARAPOTO] Ã¢Å“â€¦ Placa recibida: ${placa}`);
     console.log(`[TARAPOTO] Iniciando consulta...`);
-    
+
     let resultado = null;
-    
+
     try {
       let TarapotoScraper;
       try {
         TarapotoScraper = require('./tarapoto-scraper');
-        console.log(`[TARAPOTO] âœ… MÃ³dulo cargado correctamente`);
+        console.log(`[TARAPOTO] Ã¢Å“â€¦ MÃƒÂ³dulo cargado correctamente`);
       } catch (requireError) {
-        console.error(`[TARAPOTO] âŒ Error cargando mÃ³dulo:`, requireError.message);
+        console.error(`[TARAPOTO] Ã¢ÂÅ’ Error cargando mÃƒÂ³dulo:`, requireError.message);
         resultado = {
           success: true,
           placa: placa,
           multas: [],
-          mensaje: "Error cargando mÃ³dulo"
+          mensaje: "Error cargando mÃƒÂ³dulo"
         };
       }
-      
+
       if (!resultado && TarapotoScraper) {
         try {
-          console.log(`[TARAPOTO] ðŸ”§ Creando instancia del scraper...`);
+          console.log(`[TARAPOTO] Ã°Å¸â€Â§ Creando instancia del scraper...`);
           const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
           if (CAPTCHA_API_KEY) {
-            console.log(`[TARAPOTO] âœ… API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
+            console.log(`[TARAPOTO] Ã¢Å“â€¦ API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
           } else {
-            console.log(`[TARAPOTO] âš ï¸ API Key de 2Captcha no configurada - CAPTCHA no se resolverÃ¡ automÃ¡ticamente`);
+            console.log(`[TARAPOTO] Ã¢Å¡Â Ã¯Â¸Â API Key de 2Captcha no configurada - CAPTCHA no se resolverÃƒÂ¡ automÃƒÂ¡ticamente`);
           }
           const scraper = new TarapotoScraper(CAPTCHA_API_KEY);
-          console.log(`[TARAPOTO] âœ… Instancia creada, ejecutando consulta...`);
-          
+          console.log(`[TARAPOTO] Ã¢Å“â€¦ Instancia creada, ejecutando consulta...`);
+
           const scraperPromise = scraper.consultarPlaca(placa, 2);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: La consulta tomÃ³ mÃ¡s de 2 minutos')), 120000)
+            setTimeout(() => reject(new Error('Timeout: La consulta tomÃƒÂ³ mÃƒÂ¡s de 2 minutos')), 120000)
           );
-          
-          console.log(`[TARAPOTO] â³ Esperando resultado del scraper...`);
+
+          console.log(`[TARAPOTO] Ã¢ÂÂ³ Esperando resultado del scraper...`);
           resultado = await Promise.race([scraperPromise, timeoutPromise]);
-          console.log(`[TARAPOTO] âœ… Resultado recibido del scraper`);
+          console.log(`[TARAPOTO] Ã¢Å“â€¦ Resultado recibido del scraper`);
           console.log(`\n[TARAPOTO] ========== RESULTADO DEL SCRAPER ==========`);
-          console.log(`[TARAPOTO] ðŸ“Š Success: ${resultado?.success}`);
-          console.log(`[TARAPOTO] ðŸ“Š Placa: ${resultado?.placa || 'N/A'}`);
-          console.log(`[TARAPOTO] ðŸ“Š Multas: ${resultado?.multas?.length || 0}`);
-          console.log(`[TARAPOTO] ðŸ“Š Tipo de multas: ${Array.isArray(resultado?.multas) ? 'Array' : typeof resultado?.multas}`);
+          console.log(`[TARAPOTO] Ã°Å¸â€œÅ  Success: ${resultado?.success}`);
+          console.log(`[TARAPOTO] Ã°Å¸â€œÅ  Placa: ${resultado?.placa || 'N/A'}`);
+          console.log(`[TARAPOTO] Ã°Å¸â€œÅ  Multas: ${resultado?.multas?.length || 0}`);
+          console.log(`[TARAPOTO] Ã°Å¸â€œÅ  Tipo de multas: ${Array.isArray(resultado?.multas) ? 'Array' : typeof resultado?.multas}`);
           if (resultado?.multas && resultado.multas.length > 0) {
-            console.log(`[TARAPOTO] ðŸ“Š Detalle de multas:`);
+            console.log(`[TARAPOTO] Ã°Å¸â€œÅ  Detalle de multas:`);
             resultado.multas.forEach((mult, idx) => {
               console.log(`[TARAPOTO]    ${idx + 1}. ${mult.numero || 'N/A'} - ${mult.fecha || 'N/A'} - ${mult.infraccion || 'N/A'}`);
             });
           }
-          console.log(`[TARAPOTO] ðŸ“Š Resultado completo:`, JSON.stringify(resultado, null, 2));
+          console.log(`[TARAPOTO] Ã°Å¸â€œÅ  Resultado completo:`, JSON.stringify(resultado, null, 2));
           console.log(`[TARAPOTO] ==============================================\n`);
         } catch (scraperError) {
           console.error(`\n[TARAPOTO] ========== ERROR EN SCRAPER ==========`);
-          console.error(`[TARAPOTO] âŒ Error ejecutando scraper:`, scraperError.message);
-          console.error(`[TARAPOTO] âŒ Stack del scraper:`, scraperError.stack);
+          console.error(`[TARAPOTO] Ã¢ÂÅ’ Error ejecutando scraper:`, scraperError.message);
+          console.error(`[TARAPOTO] Ã¢ÂÅ’ Stack del scraper:`, scraperError.stack);
           resultado = {
             success: true,
             placa: placa,
@@ -3051,7 +3086,7 @@ app.post("/api/tarapoto", async (req, res) => {
         }
       }
     } catch (error) {
-      console.error(`[TARAPOTO] âŒ Error en bloque try principal:`, error.message);
+      console.error(`[TARAPOTO] Ã¢ÂÅ’ Error en bloque try principal:`, error.message);
       resultado = {
         success: true,
         placa: placa,
@@ -3059,34 +3094,34 @@ app.post("/api/tarapoto", async (req, res) => {
         mensaje: "Error en consulta"
       };
     }
-    
+
     if (!resultado) {
-      console.log(`[TARAPOTO] âš ï¸ Resultado es null, usando resultado vacÃ­o por defecto`);
+      console.log(`[TARAPOTO] Ã¢Å¡Â Ã¯Â¸Â Resultado es null, usando resultado vacÃƒÂ­o por defecto`);
       resultado = {
         success: true,
         placa: placa,
         multas: [],
-        mensaje: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
+        mensaje: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
       };
     }
-    
+
     try {
       console.log(`\n[TARAPOTO] ========== PROCESANDO RESULTADO ==========`);
-      console.log(`[TARAPOTO] ðŸ“Š Tipo de resultado: ${typeof resultado}`);
-      console.log(`[TARAPOTO] ðŸ“Š resultado.multas existe: ${!!resultado?.multas}`);
-      console.log(`[TARAPOTO] ðŸ“Š resultado.multas es array: ${Array.isArray(resultado?.multas)}`);
-      console.log(`[TARAPOTO] ðŸ“Š resultado.multas.length: ${resultado?.multas?.length || 0}`);
-      
+      console.log(`[TARAPOTO] Ã°Å¸â€œÅ  Tipo de resultado: ${typeof resultado}`);
+      console.log(`[TARAPOTO] Ã°Å¸â€œÅ  resultado.multas existe: ${!!resultado?.multas}`);
+      console.log(`[TARAPOTO] Ã°Å¸â€œÅ  resultado.multas es array: ${Array.isArray(resultado?.multas)}`);
+      console.log(`[TARAPOTO] Ã°Å¸â€œÅ  resultado.multas.length: ${resultado?.multas?.length || 0}`);
+
       let multas = [];
-      
+
       if (resultado?.multas && Array.isArray(resultado.multas)) {
         multas = resultado.multas;
-        console.log(`[TARAPOTO] âœ… Multas encontradas en resultado.multas: ${multas.length}`);
+        console.log(`[TARAPOTO] Ã¢Å“â€¦ Multas encontradas en resultado.multas: ${multas.length}`);
       } else if (resultado?.data && Array.isArray(resultado.data)) {
         multas = resultado.data;
-        console.log(`[TARAPOTO] âœ… Multas encontradas en resultado.data: ${multas.length}`);
+        console.log(`[TARAPOTO] Ã¢Å“â€¦ Multas encontradas en resultado.data: ${multas.length}`);
       }
-      
+
       // Validar que las multas tengan estructura correcta
       if (multas.length > 0) {
         const validMultas = multas.filter(mult =>
@@ -3094,20 +3129,20 @@ app.post("/api/tarapoto", async (req, res) => {
           (mult.numero || mult.fecha || mult.infraccion || mult.monto)
         );
         if (validMultas.length !== multas.length) {
-          console.log(`[TARAPOTO] âš ï¸ Algunas multas no tienen estructura vÃ¡lida, filtrando...`);
+          console.log(`[TARAPOTO] Ã¢Å¡Â Ã¯Â¸Â Algunas multas no tienen estructura vÃƒÂ¡lida, filtrando...`);
           multas = validMultas;
         }
       }
-      
-      console.log(`[TARAPOTO] ðŸ“Š multas procesadas (final): ${multas.length}`);
-      
+
+      console.log(`[TARAPOTO] Ã°Å¸â€œÅ  multas procesadas (final): ${multas.length}`);
+
       if (multas.length === 0) {
-        console.log(`[TARAPOTO] âš ï¸ No hay multas, devolviendo mensaje informativo`);
-        console.log(`[TARAPOTO] ðŸ“¤ Enviando respuesta al frontend:`);
-        console.log(`[TARAPOTO]    Status Code: 200 âœ…`);
+        console.log(`[TARAPOTO] Ã¢Å¡Â Ã¯Â¸Â No hay multas, devolviendo mensaje informativo`);
+        console.log(`[TARAPOTO] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+        console.log(`[TARAPOTO]    Status Code: 200 Ã¢Å“â€¦`);
         console.log(`[TARAPOTO]    Status: empty`);
-        console.log(`[TARAPOTO]    Mensaje: ${resultado?.mensaje || "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"}`);
-        
+        console.log(`[TARAPOTO]    Mensaje: ${resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"}`);
+
         return respond(res, {
           ok: true,
           source: "tarapoto",
@@ -3116,13 +3151,13 @@ app.post("/api/tarapoto", async (req, res) => {
             placa: resultado?.placa || placa,
             multas: [],
             total: 0,
-            mensaje: resultado?.mensaje || "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
+            mensaje: resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
           },
-          message: resultado?.mensaje || "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
+          message: resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
         });
       }
-      
-      // Formatear multas para mejor presentaciÃ³n
+
+      // Formatear multas para mejor presentaciÃƒÂ³n
       const multasFormateadas = multas.map(mult => ({
         numero: mult.numero || 'N/A',
         fecha: mult.fecha || 'N/A',
@@ -3131,23 +3166,23 @@ app.post("/api/tarapoto", async (req, res) => {
         estado: mult.estado || 'N/A',
         observaciones: mult.observaciones || ''
       }));
-      
-      console.log(`[TARAPOTO] âœ…âœ…âœ… CONSULTA EXITOSA: ${multas.length} multa(s) encontrada(s)`);
-      console.log(`[TARAPOTO] ðŸ“Š Primera multa:`, JSON.stringify(multas[0], null, 2));
+
+      console.log(`[TARAPOTO] Ã¢Å“â€¦Ã¢Å“â€¦Ã¢Å“â€¦ CONSULTA EXITOSA: ${multas.length} multa(s) encontrada(s)`);
+      console.log(`[TARAPOTO] Ã°Å¸â€œÅ  Primera multa:`, JSON.stringify(multas[0], null, 2));
       console.log(`[TARAPOTO] ===========================================\n`);
-      
+
       const responseData = {
         placa: resultado?.placa || placa,
         multas: multasFormateadas,
         total: multas.length
       };
-      
-      console.log(`[TARAPOTO] ðŸ“¤ Enviando respuesta al frontend:`);
-      console.log(`[TARAPOTO]    Status Code: 200 âœ…`);
-      console.log(`[TARAPOTO]    Status: success âœ…`);
-      console.log(`[TARAPOTO]    Multas: ${multas.length} âœ…`);
-      console.log(`[TARAPOTO]    Placa: ${responseData.placa} âœ…`);
-      
+
+      console.log(`[TARAPOTO] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+      console.log(`[TARAPOTO]    Status Code: 200 Ã¢Å“â€¦`);
+      console.log(`[TARAPOTO]    Status: success Ã¢Å“â€¦`);
+      console.log(`[TARAPOTO]    Multas: ${multas.length} Ã¢Å“â€¦`);
+      console.log(`[TARAPOTO]    Placa: ${responseData.placa} Ã¢Å“â€¦`);
+
       return respond(res, {
         ok: true,
         source: "tarapoto",
@@ -3155,9 +3190,9 @@ app.post("/api/tarapoto", async (req, res) => {
         data: responseData,
         message: `Se encontraron ${multas.length} multa(s) registrada(s)`
       });
-      
+
     } catch (processError) {
-      console.error(`[TARAPOTO] âŒ Error procesando resultado:`, processError.message);
+      console.error(`[TARAPOTO] Ã¢ÂÅ’ Error procesando resultado:`, processError.message);
       return respond(res, {
         ok: true,
         source: "tarapoto",
@@ -3166,19 +3201,19 @@ app.post("/api/tarapoto", async (req, res) => {
           placa: placa,
           multas: [],
           total: 0,
-          mensaje: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
+          mensaje: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
         },
-        message: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
+        message: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
       });
     }
   } catch (error) {
     console.error("\n" + "=".repeat(60));
-    console.error("[TARAPOTO] âŒ ERROR GLOBAL CAPTURADO");
-    console.error("[TARAPOTO] âŒ Mensaje:", error.message);
-    console.error("[TARAPOTO] âŒ Stack completo:");
+    console.error("[TARAPOTO] Ã¢ÂÅ’ ERROR GLOBAL CAPTURADO");
+    console.error("[TARAPOTO] Ã¢ÂÅ’ Mensaje:", error.message);
+    console.error("[TARAPOTO] Ã¢ÂÅ’ Stack completo:");
     console.error(error.stack);
     console.error("=".repeat(60) + "\n");
-    
+
     try {
       return respond(res, {
         ok: true,
@@ -3188,9 +3223,9 @@ app.post("/api/tarapoto", async (req, res) => {
           placa: placa || '',
           multas: [],
           total: 0,
-          mensaje: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
+          mensaje: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
         },
-        message: "Este vehÃ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
+        message: "Este vehÃƒÂ­culo no cuenta con multas registradas en la Municipalidad de Tarapoto"
       });
     } catch (respondError) {
       return res.status(200).send(JSON.stringify({ ok: true, source: "tarapoto", status: "empty", message: "Error interno" }));
@@ -3200,79 +3235,79 @@ app.post("/api/tarapoto", async (req, res) => {
 
 // ============================================
 // API: CHICLAYO - RECORD DE INFRACCIONES
-// SIGUIENDO EL PATRÃ“N DE TARAPOTO
+// SIGUIENDO EL PATRÃƒâ€œN DE TARAPOTO
 // ============================================
 app.post("/api/chiclayo", async (req, res) => {
   console.log("\n" + "=".repeat(60));
-  console.log("[CHICLAYO] ========== NUEVA PETICIÃ“N ==========");
+  console.log("[CHICLAYO] ========== NUEVA PETICIÃƒâ€œN ==========");
   console.log("[CHICLAYO] Body recibido:", JSON.stringify(req.body, null, 2));
   console.log("=".repeat(60) + "\n");
-  
+
   const { placa } = req.body;
-  
+
   if (!placa) {
-    console.log("[CHICLAYO] âŒ Placa no proporcionada en body");
+    console.log("[CHICLAYO] Ã¢ÂÅ’ Placa no proporcionada en body");
     return respond(res, { ok: false, source: "chiclayo", status: "error", message: "Placa requerida" }, 400);
   }
 
   try {
-    console.log(`[CHICLAYO] âœ… Placa recibida: ${placa}`);
+    console.log(`[CHICLAYO] Ã¢Å“â€¦ Placa recibida: ${placa}`);
     console.log(`[CHICLAYO] Iniciando consulta...`);
-    
+
     let resultado = null;
-    
+
     try {
       let ChiclayoScraper;
       try {
         ChiclayoScraper = require('./chiclayo-scraper');
-        console.log(`[CHICLAYO] âœ… MÃ³dulo cargado correctamente`);
+        console.log(`[CHICLAYO] Ã¢Å“â€¦ MÃƒÂ³dulo cargado correctamente`);
       } catch (requireError) {
-        console.error(`[CHICLAYO] âŒ Error cargando mÃ³dulo:`, requireError.message);
+        console.error(`[CHICLAYO] Ã¢ÂÅ’ Error cargando mÃƒÂ³dulo:`, requireError.message);
         resultado = {
           success: true,
           placa: placa,
           infracciones: [],
-          mensaje: "Error cargando mÃ³dulo"
+          mensaje: "Error cargando mÃƒÂ³dulo"
         };
       }
-      
+
       if (!resultado && ChiclayoScraper) {
         try {
-          console.log(`[CHICLAYO] ðŸ”§ Creando instancia del scraper...`);
+          console.log(`[CHICLAYO] Ã°Å¸â€Â§ Creando instancia del scraper...`);
           const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
           if (CAPTCHA_API_KEY) {
-            console.log(`[CHICLAYO] âœ… API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
+            console.log(`[CHICLAYO] Ã¢Å“â€¦ API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
           } else {
-            console.log(`[CHICLAYO] âš ï¸ API Key de 2Captcha no configurada - CAPTCHA no se resolverÃ¡ automÃ¡ticamente`);
+            console.log(`[CHICLAYO] Ã¢Å¡Â Ã¯Â¸Â API Key de 2Captcha no configurada - CAPTCHA no se resolverÃƒÂ¡ automÃƒÂ¡ticamente`);
           }
           const scraper = new ChiclayoScraper(CAPTCHA_API_KEY);
-          console.log(`[CHICLAYO] âœ… Instancia creada, ejecutando consulta...`);
-          
+          console.log(`[CHICLAYO] Ã¢Å“â€¦ Instancia creada, ejecutando consulta...`);
+
           const scraperPromise = scraper.consultarPlaca(placa, 2);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: La consulta tomÃ³ mÃ¡s de 2 minutos')), 120000)
+            setTimeout(() => reject(new Error('Timeout: La consulta tomÃƒÂ³ mÃƒÂ¡s de 2 minutos')), 120000)
           );
-          
-          console.log(`[CHICLAYO] â³ Esperando resultado del scraper...`);
+
+          console.log(`[CHICLAYO] Ã¢ÂÂ³ Esperando resultado del scraper...`);
           resultado = await Promise.race([scraperPromise, timeoutPromise]);
-          console.log(`[CHICLAYO] âœ… Resultado recibido del scraper`);
+          console.log(`[CHICLAYO] Ã¢Å“â€¦ Resultado recibido del scraper`);
           console.log(`\n[CHICLAYO] ========== RESULTADO DEL SCRAPER ==========`);
-          console.log(`[CHICLAYO] ðŸ“Š Success: ${resultado?.success}`);
-          console.log(`[CHICLAYO] ðŸ“Š Placa: ${resultado?.placa || 'N/A'}`);
-          console.log(`[CHICLAYO] ðŸ“Š Infracciones: ${resultado?.infracciones?.length || 0}`);
-          console.log(`[CHICLAYO] ðŸ“Š Tipo de infracciones: ${Array.isArray(resultado?.infracciones) ? 'Array' : typeof resultado?.infracciones}`);
+          console.log(`[CHICLAYO] Ã°Å¸â€œÅ  Success: ${resultado?.success}`);
+          console.log(`[CHICLAYO] Ã°Å¸â€œÅ  Placa: ${resultado?.placa || 'N/A'}`);
+          console.log(`[CHICLAYO] Ã°Å¸â€œÅ  Infracciones: ${resultado?.infracciones?.length || 0}`);
+          console.log(`[CHICLAYO] Ã°Å¸â€œÅ  Tipo de infracciones: ${Array.isArray(resultado?.infracciones) ? 'Array' : typeof resultado?.infracciones}`);
           if (resultado?.infracciones && resultado.infracciones.length > 0) {
-            console.log(`[CHICLAYO] ðŸ“Š Detalle de infracciones:`);
+            console.log(`[CHICLAYO] Ã°Å¸â€œÅ  Detalle de infracciones:`);
             resultado.infracciones.forEach((inf, idx) => {
               console.log(`[CHICLAYO]    ${idx + 1}. ${inf.numero || 'N/A'} - ${inf.fecha || 'N/A'} - ${inf.infraccion || 'N/A'}`);
             });
           }
-          console.log(`[CHICLAYO] ðŸ“Š Resultado completo:`, JSON.stringify(resultado, null, 2));
+          console.log(`[CHICLAYO] Ã°Å¸â€œÅ  Resultado completo:`, JSON.stringify(resultado, null, 2));
           console.log(`[CHICLAYO] ==============================================\n`);
         } catch (scraperError) {
           console.error(`\n[CHICLAYO] ========== ERROR EN SCRAPER ==========`);
-          console.error(`[CHICLAYO] âŒ Error ejecutando scraper:`, scraperError.message);
-          console.error(`[CHICLAYO] âŒ Stack del scraper:`, scraperError.stack);
+          console.error(`[CHICLAYO] Ã¢ÂÅ’ Error ejecutando scraper:`, scraperError.message);
+          console.error(`[CHICLAYO] Ã¢ÂÅ’ Stack del scraper:`, scraperError.stack);
           resultado = {
             success: true,
             placa: placa,
@@ -3282,7 +3317,7 @@ app.post("/api/chiclayo", async (req, res) => {
         }
       }
     } catch (error) {
-      console.error(`[CHICLAYO] âŒ Error en bloque try principal:`, error.message);
+      console.error(`[CHICLAYO] Ã¢ÂÅ’ Error en bloque try principal:`, error.message);
       resultado = {
         success: true,
         placa: placa,
@@ -3290,34 +3325,34 @@ app.post("/api/chiclayo", async (req, res) => {
         mensaje: "Error en consulta"
       };
     }
-    
+
     if (!resultado) {
-      console.log(`[CHICLAYO] âš ï¸ Resultado es null, usando resultado vacÃ­o por defecto`);
+      console.log(`[CHICLAYO] Ã¢Å¡Â Ã¯Â¸Â Resultado es null, usando resultado vacÃƒÂ­o por defecto`);
       resultado = {
         success: true,
         placa: placa,
         infracciones: [],
-        mensaje: "Este vehÃ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
+        mensaje: "Este vehÃƒÂ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
       };
     }
-    
+
     try {
       console.log(`\n[CHICLAYO] ========== PROCESANDO RESULTADO ==========`);
-      console.log(`[CHICLAYO] ðŸ“Š Tipo de resultado: ${typeof resultado}`);
-      console.log(`[CHICLAYO] ðŸ“Š resultado.infracciones existe: ${!!resultado?.infracciones}`);
-      console.log(`[CHICLAYO] ðŸ“Š resultado.infracciones es array: ${Array.isArray(resultado?.infracciones)}`);
-      console.log(`[CHICLAYO] ðŸ“Š resultado.infracciones.length: ${resultado?.infracciones?.length || 0}`);
-      
+      console.log(`[CHICLAYO] Ã°Å¸â€œÅ  Tipo de resultado: ${typeof resultado}`);
+      console.log(`[CHICLAYO] Ã°Å¸â€œÅ  resultado.infracciones existe: ${!!resultado?.infracciones}`);
+      console.log(`[CHICLAYO] Ã°Å¸â€œÅ  resultado.infracciones es array: ${Array.isArray(resultado?.infracciones)}`);
+      console.log(`[CHICLAYO] Ã°Å¸â€œÅ  resultado.infracciones.length: ${resultado?.infracciones?.length || 0}`);
+
       let infracciones = [];
-      
+
       if (resultado?.infracciones && Array.isArray(resultado.infracciones)) {
         infracciones = resultado.infracciones;
-        console.log(`[CHICLAYO] âœ… Infracciones encontradas en resultado.infracciones: ${infracciones.length}`);
+        console.log(`[CHICLAYO] Ã¢Å“â€¦ Infracciones encontradas en resultado.infracciones: ${infracciones.length}`);
       } else if (resultado?.data && Array.isArray(resultado.data)) {
         infracciones = resultado.data;
-        console.log(`[CHICLAYO] âœ… Infracciones encontradas en resultado.data: ${infracciones.length}`);
+        console.log(`[CHICLAYO] Ã¢Å“â€¦ Infracciones encontradas en resultado.data: ${infracciones.length}`);
       }
-      
+
       // Validar que las infracciones tengan estructura correcta
       if (infracciones.length > 0) {
         const validInfracciones = infracciones.filter(inf =>
@@ -3325,20 +3360,20 @@ app.post("/api/chiclayo", async (req, res) => {
           (inf.numero || inf.fecha || inf.infraccion || inf.monto)
         );
         if (validInfracciones.length !== infracciones.length) {
-          console.log(`[CHICLAYO] âš ï¸ Algunas infracciones no tienen estructura vÃ¡lida, filtrando...`);
+          console.log(`[CHICLAYO] Ã¢Å¡Â Ã¯Â¸Â Algunas infracciones no tienen estructura vÃƒÂ¡lida, filtrando...`);
           infracciones = validInfracciones;
         }
       }
-      
-      console.log(`[CHICLAYO] ðŸ“Š infracciones procesadas (final): ${infracciones.length}`);
-      
+
+      console.log(`[CHICLAYO] Ã°Å¸â€œÅ  infracciones procesadas (final): ${infracciones.length}`);
+
       if (infracciones.length === 0) {
-        console.log(`[CHICLAYO] âš ï¸ No hay infracciones, devolviendo mensaje informativo`);
-        console.log(`[CHICLAYO] ðŸ“¤ Enviando respuesta al frontend:`);
-        console.log(`[CHICLAYO]    Status Code: 200 âœ…`);
+        console.log(`[CHICLAYO] Ã¢Å¡Â Ã¯Â¸Â No hay infracciones, devolviendo mensaje informativo`);
+        console.log(`[CHICLAYO] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+        console.log(`[CHICLAYO]    Status Code: 200 Ã¢Å“â€¦`);
         console.log(`[CHICLAYO]    Status: empty`);
-        console.log(`[CHICLAYO]    Mensaje: ${resultado?.mensaje || "Este vehÃ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"}`);
-        
+        console.log(`[CHICLAYO]    Mensaje: ${resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"}`);
+
         return respond(res, {
           ok: true,
           source: "chiclayo",
@@ -3347,13 +3382,13 @@ app.post("/api/chiclayo", async (req, res) => {
             placa: resultado?.placa || placa,
             infracciones: [],
             total: 0,
-            mensaje: resultado?.mensaje || "Este vehÃ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
+            mensaje: resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
           },
-          message: resultado?.mensaje || "Este vehÃ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
+          message: resultado?.mensaje || "Este vehÃƒÂ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
         });
       }
-      
-      // Formatear infracciones para mejor presentaciÃ³n
+
+      // Formatear infracciones para mejor presentaciÃƒÂ³n
       const infraccionesFormateadas = infracciones.map(inf => ({
         numero: inf.numero || 'N/A',
         fecha: inf.fecha || 'N/A',
@@ -3362,33 +3397,33 @@ app.post("/api/chiclayo", async (req, res) => {
         estado: inf.estado || 'N/A',
         observaciones: inf.observaciones || ''
       }));
-      
-      console.log(`[CHICLAYO] âœ…âœ…âœ… CONSULTA EXITOSA: ${infracciones.length} infracciÃ³n(es) encontrada(s)`);
-      console.log(`[CHICLAYO] ðŸ“Š Primera infracciÃ³n:`, JSON.stringify(infracciones[0], null, 2));
+
+      console.log(`[CHICLAYO] Ã¢Å“â€¦Ã¢Å“â€¦Ã¢Å“â€¦ CONSULTA EXITOSA: ${infracciones.length} infracciÃƒÂ³n(es) encontrada(s)`);
+      console.log(`[CHICLAYO] Ã°Å¸â€œÅ  Primera infracciÃƒÂ³n:`, JSON.stringify(infracciones[0], null, 2));
       console.log(`[CHICLAYO] ===========================================\n`);
-      
+
       const responseData = {
         placa: resultado?.placa || placa,
         infracciones: infraccionesFormateadas,
         total: infracciones.length
       };
-      
-      console.log(`[CHICLAYO] ðŸ“¤ Enviando respuesta al frontend:`);
-      console.log(`[CHICLAYO]    Status Code: 200 âœ…`);
-      console.log(`[CHICLAYO]    Status: success âœ…`);
-      console.log(`[CHICLAYO]    Infracciones: ${infracciones.length} âœ…`);
-      console.log(`[CHICLAYO]    Placa: ${responseData.placa} âœ…`);
-      
+
+      console.log(`[CHICLAYO] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+      console.log(`[CHICLAYO]    Status Code: 200 Ã¢Å“â€¦`);
+      console.log(`[CHICLAYO]    Status: success Ã¢Å“â€¦`);
+      console.log(`[CHICLAYO]    Infracciones: ${infracciones.length} Ã¢Å“â€¦`);
+      console.log(`[CHICLAYO]    Placa: ${responseData.placa} Ã¢Å“â€¦`);
+
       return respond(res, {
         ok: true,
         source: "chiclayo",
         status: "success",
         data: responseData,
-        message: `Se encontraron ${infracciones.length} infracciÃ³n(es) registrada(s)`
+        message: `Se encontraron ${infracciones.length} infracciÃƒÂ³n(es) registrada(s)`
       });
-      
+
     } catch (processError) {
-      console.error(`[CHICLAYO] âŒ Error procesando resultado:`, processError.message);
+      console.error(`[CHICLAYO] Ã¢ÂÅ’ Error procesando resultado:`, processError.message);
       return respond(res, {
         ok: true,
         source: "chiclayo",
@@ -3397,19 +3432,19 @@ app.post("/api/chiclayo", async (req, res) => {
           placa: placa,
           infracciones: [],
           total: 0,
-          mensaje: "Este vehÃ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
+          mensaje: "Este vehÃƒÂ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
         },
-        message: "Este vehÃ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
+        message: "Este vehÃƒÂ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
       });
     }
   } catch (error) {
     console.error("\n" + "=".repeat(60));
-    console.error("[CHICLAYO] âŒ ERROR GLOBAL CAPTURADO");
-    console.error("[CHICLAYO] âŒ Mensaje:", error.message);
-    console.error("[CHICLAYO] âŒ Stack completo:");
+    console.error("[CHICLAYO] Ã¢ÂÅ’ ERROR GLOBAL CAPTURADO");
+    console.error("[CHICLAYO] Ã¢ÂÅ’ Mensaje:", error.message);
+    console.error("[CHICLAYO] Ã¢ÂÅ’ Stack completo:");
     console.error(error.stack);
     console.error("=".repeat(60) + "\n");
-    
+
     try {
       return respond(res, {
         ok: true,
@@ -3419,9 +3454,9 @@ app.post("/api/chiclayo", async (req, res) => {
           placa: placa || '',
           infracciones: [],
           total: 0,
-          mensaje: "Este vehÃ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
+          mensaje: "Este vehÃƒÂ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
         },
-        message: "Este vehÃ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
+        message: "Este vehÃƒÂ­culo no cuenta con infracciones registradas en la Municipalidad de Chiclayo"
       });
     } catch (respondError) {
       return res.status(200).send(JSON.stringify({ ok: true, source: "chiclayo", status: "empty", message: "Error interno" }));
@@ -3443,16 +3478,16 @@ provincias.forEach(ciudad => {
     try {
       console.log(`[${ciudad.toUpperCase()}] Consultando placa: ${placa}`);
       const datos = await consultarPapeletasMunicipio(urlsProvincias[ciudad], placa);
-      
+
       if (datos && datos.length > 0) {
-        console.log(`[${ciudad.toUpperCase()}] âœ… ${datos.length} registros encontrados`);
+        console.log(`[${ciudad.toUpperCase()}] Ã¢Å“â€¦ ${datos.length} registros encontrados`);
         respond(res, { ok: true, source: ciudad, status: "warn", data: datos });
       } else {
-        console.log(`[${ciudad.toUpperCase()}] âœ… Sin registros`);
+        console.log(`[${ciudad.toUpperCase()}] Ã¢Å“â€¦ Sin registros`);
         respond(res, { ok: true, source: ciudad, status: "empty", data: null, message: "No se encontraron registros" });
       }
     } catch (error) {
-      console.error(`[${ciudad.toUpperCase()}] âŒ Error:`, error.message);
+      console.error(`[${ciudad.toUpperCase()}] Ã¢ÂÅ’ Error:`, error.message);
       respond(res, { ok: true, source: ciudad, status: "empty", data: null, message: "Servicio no disponible" });
     }
   });
@@ -3486,8 +3521,8 @@ app.post("/api/especial", async (req, res) => {
     const inputSelectors = ['#placa', 'input[name*="placa" i]', 'input[type="text"]'];
     try {
       await typeIntoFirst(page, inputSelectors, placa);
-      
-      // Buscar botÃ³n
+
+      // Buscar botÃƒÂ³n
       const btnClicked = await clickFirst(page, [
         'button[type="submit"]',
         '#buscar',
@@ -3496,7 +3531,7 @@ app.post("/api/especial", async (req, res) => {
       if (!btnClicked) {
         await page.keyboard.press('Enter');
       }
-      
+
       await page.waitForTimeout(3000);
 
       // Verificar "sin datos"
@@ -3539,13 +3574,13 @@ app.post("/api/especial", async (req, res) => {
     const inputSelectors = ['input[name*="placa" i]', '#placa', 'input[placeholder*="placa" i]'];
     try {
       await typeIntoFirst(page, inputSelectors, placa);
-      
+
       const buttonSelectors = ['button[type="submit"]', '#consultar', '//button[contains(text(), "Consultar")]'];
       const clicked = await clickFirst(page, buttonSelectors);
       if (!clicked) {
         await page.keyboard.press('Enter');
       }
-      
+
       await page.waitForTimeout(3000);
 
       // Verificar "sin datos"
@@ -3590,7 +3625,7 @@ app.post("/api/asientos", async (req, res) => {
     return respond(res, { ok: false, source: "asientos", status: "error", message: "Placa y ciudad requeridos" }, 400);
   }
 
-  // Placeholder - implementar segÃºn lÃ³gica original
+  // Placeholder - implementar segÃƒÂºn lÃƒÂ³gica original
   respond(res, { ok: false, source: "asientos", status: "error", message: "Servicio en mantenimiento" }, 503);
 });
 
@@ -3606,8 +3641,8 @@ app.get("/api/debug/browser", async (req, res) => {
     await page.goto("https://www.google.com", { waitUntil: "domcontentloaded", timeout: 10000 });
     const title = await page.title();
     await browser.close();
-    
-    console.log("[DEBUG] âœ… Browser funciona correctamente");
+
+    console.log("[DEBUG] Ã¢Å“â€¦ Browser funciona correctamente");
     respond(res, {
       ok: true,
       source: "debug",
@@ -3617,7 +3652,7 @@ app.get("/api/debug/browser", async (req, res) => {
     });
   } catch (error) {
     if (browser) await browser.close().catch(() => {});
-    console.error("[DEBUG] âŒ Error:", error.message);
+    console.error("[DEBUG] Ã¢ÂÅ’ Error:", error.message);
     respond(res, {
       ok: false,
       source: "debug",
@@ -3629,7 +3664,7 @@ app.get("/api/debug/browser", async (req, res) => {
 });
 
 // ============================================
-// API: CERTIFICADO DE VEHÃCULO
+// API: CERTIFICADO DE VEHÃƒÂCULO
 // ============================================
 app.post("/api/certificado-vehiculo", async (req, res) => {
   const { placa } = req.body;
@@ -3637,12 +3672,12 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
 
   try {
     console.log(`[CERT-VEHICULO] Consultando certificado para placa: ${placa}`);
-    
+
     // Usar scraper optimizado (similar a MTC)
     try {
       const VehiculoCertificadoScraper = require('./vehiculo-certificado-scraper');
-      
-      // Limpiar y validar API key (mismo mÃ©todo que MTC)
+
+      // Limpiar y validar API key (mismo mÃƒÂ©todo que MTC)
       let cleanApiKey = CAPTCHA_API_KEY;
       if (cleanApiKey) {
         cleanApiKey = cleanApiKey.trim();
@@ -3651,22 +3686,22 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
           cleanApiKey = match[1];
         }
       }
-      
+
       const scraper = new VehiculoCertificadoScraper(cleanApiKey);
-      
-      // Configurar URL base si estÃ¡ en variables de entorno
+
+      // Configurar URL base si estÃƒÂ¡ en variables de entorno
       if (process.env.VEHICULO_CERT_URL) {
         scraper.baseURL = process.env.VEHICULO_CERT_URL;
       }
-      
-      const resultado = await scraper.consultarPlaca(placa, 2); // 2 intentos mÃ¡ximo
-      
-      console.log(`[CERT-VEHICULO] ðŸ“Š Resultado del scraper:`, JSON.stringify(resultado, null, 2));
-      
+
+      const resultado = await scraper.consultarPlaca(placa, 2); // 2 intentos mÃƒÂ¡ximo
+
+      console.log(`[CERT-VEHICULO] Ã°Å¸â€œÅ  Resultado del scraper:`, JSON.stringify(resultado, null, 2));
+
       if (!resultado || !resultado.success) {
-        throw new Error('Scraper no devolviÃ³ resultado exitoso');
+        throw new Error('Scraper no devolviÃƒÂ³ resultado exitoso');
       }
-      
+
       // Formatear datos para el frontend
       const data = {
         placa: resultado.placa || placa,
@@ -3680,14 +3715,14 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
         nro_certificado: resultado.nro_certificado || '',
         serie: resultado.serie || ''
       };
-      
-      console.log(`[CERT-VEHICULO] ðŸ“‹ Datos formateados:`, JSON.stringify(data, null, 2));
-      
+
+      console.log(`[CERT-VEHICULO] Ã°Å¸â€œâ€¹ Datos formateados:`, JSON.stringify(data, null, 2));
+
       // Verificar si hay datos
       const hasData = data.marca || data.modelo || data.nro_certificado;
-      
+
       if (!hasData) {
-        console.log(`[CERT-VEHICULO] âš ï¸ No hay datos para placa ${placa}, devolviendo mensaje informativo`);
+        console.log(`[CERT-VEHICULO] Ã¢Å¡Â Ã¯Â¸Â No hay datos para placa ${placa}, devolviendo mensaje informativo`);
         return respond(res, {
           ok: true,
           source: "certificado-vehiculo",
@@ -3699,26 +3734,26 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
           message: "No cuenta con certificado de polarizados"
         });
       }
-      
-      console.log(`[CERT-VEHICULO] âœ… Consulta exitosa: ${data.marca} ${data.modelo}`);
-      console.log(`[CERT-VEHICULO] ðŸ“¤ Enviando respuesta JSON al frontend...`);
-      
-      const response = { 
-        ok: true, 
-        source: "certificado-vehiculo", 
-        status: "success", 
-        data 
+
+      console.log(`[CERT-VEHICULO] Ã¢Å“â€¦ Consulta exitosa: ${data.marca} ${data.modelo}`);
+      console.log(`[CERT-VEHICULO] Ã°Å¸â€œÂ¤ Enviando respuesta JSON al frontend...`);
+
+      const response = {
+        ok: true,
+        source: "certificado-vehiculo",
+        status: "success",
+        data
       };
-      
-      console.log(`[CERT-VEHICULO] ðŸ“¤ Respuesta completa:`, JSON.stringify(response, null, 2));
-      
+
+      console.log(`[CERT-VEHICULO] Ã°Å¸â€œÂ¤ Respuesta completa:`, JSON.stringify(response, null, 2));
+
       return respond(res, response);
-      
+
     } catch (scraperError) {
-      console.error(`[CERT-VEHICULO] âŒ Error con scraper:`, scraperError.message);
-      
+      console.error(`[CERT-VEHICULO] Ã¢ÂÅ’ Error con scraper:`, scraperError.message);
+
       // Si el error es que no se encontraron datos, devolver mensaje amigable
-      if (scraperError.message.includes('No se encontraron') || 
+      if (scraperError.message.includes('No se encontraron') ||
           scraperError.message.includes('empty') ||
           scraperError.message.includes('sin registros') ||
           scraperError.message.includes('No cuenta con')) {
@@ -3733,25 +3768,25 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
           message: "No cuenta con certificado de polarizados"
         });
       }
-      
+
       throw scraperError;
     }
-    
+
   } catch (error) {
-    console.error(`[CERT-VEHICULO] âŒ Error:`, error.message);
-    console.error(`[CERT-VEHICULO] âŒ Stack:`, error.stack);
-    
-    // Asegurar que siempre se devuelva JSON vÃ¡lido
+    console.error(`[CERT-VEHICULO] Ã¢ÂÅ’ Error:`, error.message);
+    console.error(`[CERT-VEHICULO] Ã¢ÂÅ’ Stack:`, error.stack);
+
+    // Asegurar que siempre se devuelva JSON vÃƒÂ¡lido
     try {
       return respond(res, {
         ok: false,
         source: "certificado-vehiculo",
         status: "error",
-        message: error.message || "Error al consultar el certificado de vehÃ­culo"
+        message: error.message || "Error al consultar el certificado de vehÃƒÂ­culo"
       }, 500);
     } catch (respondError) {
-      // Si hay error al responder, devolver JSON bÃ¡sico
-      console.error(`[CERT-VEHICULO] âŒ Error al responder:`, respondError.message);
+      // Si hay error al responder, devolver JSON bÃƒÂ¡sico
+      console.error(`[CERT-VEHICULO] Ã¢ÂÅ’ Error al responder:`, respondError.message);
       return res.status(500).json({
         ok: false,
         source: "certificado-vehiculo",
@@ -3764,105 +3799,105 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
 
 // ============================================
 // API: SUTRAN - RECORD DE INFRACCIONES
-// SIGUIENDO EL PATRÃ“N DE MTC PERO GARANTIZANDO ok: true SIEMPRE
+// SIGUIENDO EL PATRÃƒâ€œN DE MTC PERO GARANTIZANDO ok: true SIEMPRE
 // ============================================
 app.post("/api/sutran", async (req, res) => {
   // Aumentar timeout del request a 3 minutos
   req.setTimeout(180000);
-  
+
   // LOGS DETALLADOS PARA DEBUGGING
   console.log("\n" + "=".repeat(60));
-  console.log("[SUTRAN] ========== NUEVA PETICIÃ“N ==========");
+  console.log("[SUTRAN] ========== NUEVA PETICIÃƒâ€œN ==========");
   console.log("[SUTRAN] Body recibido:", JSON.stringify(req.body, null, 2));
   console.log("[SUTRAN] Headers:", JSON.stringify(req.headers, null, 2));
   console.log("=".repeat(60) + "\n");
-  
+
   const { placa } = req.body;
-  
+
   if (!placa) {
-    console.log("[SUTRAN] âŒ Placa no proporcionada en body");
+    console.log("[SUTRAN] Ã¢ÂÅ’ Placa no proporcionada en body");
     return respond(res, { ok: false, source: "sutran", status: "error", message: "Placa requerida" }, 400);
   }
 
   // ENVOLVER TODO EN TRY-CATCH GLOBAL PARA GARANTIZAR QUE NUNCA HAYA ERROR 500
   try {
-    console.log(`[SUTRAN] âœ… Placa recibida: ${placa}`);
+    console.log(`[SUTRAN] Ã¢Å“â€¦ Placa recibida: ${placa}`);
     console.log(`[SUTRAN] Iniciando consulta...`);
-    
-    // Usar scraper optimizado (mismo patrÃ³n que MTC)
+
+    // Usar scraper optimizado (mismo patrÃƒÂ³n que MTC)
     let resultado = null;
-    
+
     try {
-      // Cargar mÃ³dulo de forma segura
+      // Cargar mÃƒÂ³dulo de forma segura
       let SUTRANScraper;
       try {
         SUTRANScraper = require('./sutran-scraper');
-        console.log(`[SUTRAN] âœ… MÃ³dulo cargado correctamente`);
+        console.log(`[SUTRAN] Ã¢Å“â€¦ MÃƒÂ³dulo cargado correctamente`);
       } catch (requireError) {
-        console.error(`[SUTRAN] âŒ Error cargando mÃ³dulo:`, requireError.message);
-        console.error(`[SUTRAN] âŒ Stack del require:`, requireError.stack);
-        console.error(`[SUTRAN] âŒ Tipo de error:`, requireError.constructor.name);
-        // NO lanzar error, continuar con resultado vacÃ­o
+        console.error(`[SUTRAN] Ã¢ÂÅ’ Error cargando mÃƒÂ³dulo:`, requireError.message);
+        console.error(`[SUTRAN] Ã¢ÂÅ’ Stack del require:`, requireError.stack);
+        console.error(`[SUTRAN] Ã¢ÂÅ’ Tipo de error:`, requireError.constructor.name);
+        // NO lanzar error, continuar con resultado vacÃƒÂ­o
         resultado = {
           success: true,
           placa: placa,
           infracciones: [],
-          mensaje: "Error cargando mÃ³dulo"
+          mensaje: "Error cargando mÃƒÂ³dulo"
         };
       }
-      
+
       if (!resultado && SUTRANScraper) {
         try {
-          console.log(`[SUTRAN] ðŸ”§ Creando instancia del scraper...`);
+          console.log(`[SUTRAN] Ã°Å¸â€Â§ Creando instancia del scraper...`);
           // Obtener API key de 2Captcha desde .env
           const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
           if (CAPTCHA_API_KEY) {
-            console.log(`[SUTRAN] âœ… API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
+            console.log(`[SUTRAN] Ã¢Å“â€¦ API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
           } else {
-            console.log(`[SUTRAN] âš ï¸ API Key de 2Captcha no configurada - CAPTCHA no se resolverÃ¡ automÃ¡ticamente`);
+            console.log(`[SUTRAN] Ã¢Å¡Â Ã¯Â¸Â API Key de 2Captcha no configurada - CAPTCHA no se resolverÃƒÂ¡ automÃƒÂ¡ticamente`);
           }
           const scraper = new SUTRANScraper(CAPTCHA_API_KEY);
-          console.log(`[SUTRAN] âœ… Instancia creada, ejecutando consulta...`);
-          
+          console.log(`[SUTRAN] Ã¢Å“â€¦ Instancia creada, ejecutando consulta...`);
+
           // Envolver en Promise con timeout para evitar que se quede colgado
-          console.log(`[SUTRAN] ðŸš€ Ejecutando scraper.consultarPlaca('${placa}', 2)...`);
+          console.log(`[SUTRAN] Ã°Å¸Å¡â‚¬ Ejecutando scraper.consultarPlaca('${placa}', 2)...`);
           const scraperPromise = scraper.consultarPlaca(placa, 2);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout: La consulta tomÃ³ mÃ¡s de 2 minutos')), 120000)
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout: La consulta tomÃƒÂ³ mÃƒÂ¡s de 2 minutos')), 120000)
           );
-          
-          console.log(`[SUTRAN] â³ Esperando resultado del scraper...`);
+
+          console.log(`[SUTRAN] Ã¢ÂÂ³ Esperando resultado del scraper...`);
           try {
             resultado = await Promise.race([scraperPromise, timeoutPromise]);
-            console.log(`[SUTRAN] âœ… Resultado recibido del scraper`);
+            console.log(`[SUTRAN] Ã¢Å“â€¦ Resultado recibido del scraper`);
             console.log(`\n[SUTRAN] ========== RESULTADO DEL SCRAPER ==========`);
-            console.log(`[SUTRAN] ðŸ“Š Success: ${resultado?.success}`);
-            console.log(`[SUTRAN] ðŸ“Š Placa: ${resultado?.placa || 'N/A'}`);
-            console.log(`[SUTRAN] ðŸ“Š Infracciones: ${resultado?.infracciones?.length || 0}`);
-            console.log(`[SUTRAN] ðŸ“Š Tipo de infracciones: ${Array.isArray(resultado?.infracciones) ? 'Array' : typeof resultado?.infracciones}`);
+            console.log(`[SUTRAN] Ã°Å¸â€œÅ  Success: ${resultado?.success}`);
+            console.log(`[SUTRAN] Ã°Å¸â€œÅ  Placa: ${resultado?.placa || 'N/A'}`);
+            console.log(`[SUTRAN] Ã°Å¸â€œÅ  Infracciones: ${resultado?.infracciones?.length || 0}`);
+            console.log(`[SUTRAN] Ã°Å¸â€œÅ  Tipo de infracciones: ${Array.isArray(resultado?.infracciones) ? 'Array' : typeof resultado?.infracciones}`);
             if (resultado?.infracciones && resultado.infracciones.length > 0) {
-              console.log(`[SUTRAN] ðŸ“Š Detalle de infracciones:`);
+              console.log(`[SUTRAN] Ã°Å¸â€œÅ  Detalle de infracciones:`);
               resultado.infracciones.forEach((inf, idx) => {
                 console.log(`[SUTRAN]    ${idx + 1}. ${inf.numeroDocumento || 'N/A'} - ${inf.tipoDocumento || 'N/A'} - ${inf.fechaDocumento || 'N/A'}`);
               });
             }
-            console.log(`[SUTRAN] ðŸ“Š Resultado completo:`, JSON.stringify(resultado, null, 2));
+            console.log(`[SUTRAN] Ã°Å¸â€œÅ  Resultado completo:`, JSON.stringify(resultado, null, 2));
             console.log(`[SUTRAN] ==============================================\n`);
           } catch (raceError) {
-            console.error(`[SUTRAN] âŒ Error en Promise.race:`, raceError.message);
+            console.error(`[SUTRAN] Ã¢ÂÅ’ Error en Promise.race:`, raceError.message);
             throw raceError;
           }
         } catch (scraperError) {
           console.error(`\n[SUTRAN] ========== ERROR EN SCRAPER ==========`);
-          console.error(`[SUTRAN] âŒ Error ejecutando scraper:`, scraperError.message);
-          console.error(`[SUTRAN] âŒ Stack del scraper:`, scraperError.stack);
-          console.error(`[SUTRAN] âŒ Tipo de error:`, scraperError.constructor.name);
-          console.error(`[SUTRAN] âŒ Nombre del error:`, scraperError.name);
+          console.error(`[SUTRAN] Ã¢ÂÅ’ Error ejecutando scraper:`, scraperError.message);
+          console.error(`[SUTRAN] Ã¢ÂÅ’ Stack del scraper:`, scraperError.stack);
+          console.error(`[SUTRAN] Ã¢ÂÅ’ Tipo de error:`, scraperError.constructor.name);
+          console.error(`[SUTRAN] Ã¢ÂÅ’ Nombre del error:`, scraperError.name);
           console.error(`[SUTRAN] =========================================\n`);
-          
-          // Si el error es un timeout o un error de red, intentar devolver resultado vacÃ­o
+
+          // Si el error es un timeout o un error de red, intentar devolver resultado vacÃƒÂ­o
           // Pero si es otro tipo de error, puede que el scraper haya funcionado parcialmente
-          if (scraperError.message.includes('Timeout') || 
+          if (scraperError.message.includes('Timeout') ||
               scraperError.message.includes('ECONNREFUSED') ||
               scraperError.message.includes('ENOTFOUND')) {
             resultado = {
@@ -3873,7 +3908,7 @@ app.post("/api/sutran", async (req, res) => {
             };
           } else {
             // Para otros errores, puede que haya datos parciales, intentar continuar
-            console.error(`[SUTRAN] âš ï¸ Error no es de timeout/red, puede haber datos parciales`);
+            console.error(`[SUTRAN] Ã¢Å¡Â Ã¯Â¸Â Error no es de timeout/red, puede haber datos parciales`);
             resultado = {
               success: true,
               placa: placa,
@@ -3883,11 +3918,11 @@ app.post("/api/sutran", async (req, res) => {
           }
         }
       }
-      
+
     } catch (error) {
-      console.error(`[SUTRAN] âŒ Error en bloque try principal:`, error.message);
-      console.error(`[SUTRAN] âŒ Stack:`, error.stack);
-      // NO lanzar error, usar resultado vacÃ­o
+      console.error(`[SUTRAN] Ã¢ÂÅ’ Error en bloque try principal:`, error.message);
+      console.error(`[SUTRAN] Ã¢ÂÅ’ Stack:`, error.stack);
+      // NO lanzar error, usar resultado vacÃƒÂ­o
       resultado = {
         success: true,
         placa: placa,
@@ -3895,11 +3930,11 @@ app.post("/api/sutran", async (req, res) => {
         mensaje: "Error en consulta"
       };
     }
-    
+
     // Procesar resultado (siempre exitoso, incluso si es null)
     // Asegurar que resultado nunca sea null
     if (!resultado) {
-      console.log(`[SUTRAN] âš ï¸ Resultado es null, usando resultado vacÃ­o por defecto`);
+      console.log(`[SUTRAN] Ã¢Å¡Â Ã¯Â¸Â Resultado es null, usando resultado vacÃƒÂ­o por defecto`);
       resultado = {
         success: true,
         placa: placa,
@@ -3907,56 +3942,56 @@ app.post("/api/sutran", async (req, res) => {
         mensaje: "No se encontraron infracciones registradas"
       };
     }
-    
+
     try {
-      // Formatear datos para el frontend (mismo patrÃ³n que MTC)
+      // Formatear datos para el frontend (mismo patrÃƒÂ³n que MTC)
       console.log(`\n[SUTRAN] ========== PROCESANDO RESULTADO ==========`);
-      console.log(`[SUTRAN] ðŸ“Š Tipo de resultado: ${typeof resultado}`);
-      console.log(`[SUTRAN] ðŸ“Š resultado.success: ${resultado?.success}`);
-      console.log(`[SUTRAN] ðŸ“Š resultado.infracciones existe: ${!!resultado?.infracciones}`);
-      console.log(`[SUTRAN] ðŸ“Š resultado.infracciones es array: ${Array.isArray(resultado?.infracciones)}`);
-      console.log(`[SUTRAN] ðŸ“Š resultado.infracciones.length: ${resultado?.infracciones?.length || 0}`);
-      
-      // Extraer infracciones del resultado - SOLUCIÃ“N ROBUSTA
+      console.log(`[SUTRAN] Ã°Å¸â€œÅ  Tipo de resultado: ${typeof resultado}`);
+      console.log(`[SUTRAN] Ã°Å¸â€œÅ  resultado.success: ${resultado?.success}`);
+      console.log(`[SUTRAN] Ã°Å¸â€œÅ  resultado.infracciones existe: ${!!resultado?.infracciones}`);
+      console.log(`[SUTRAN] Ã°Å¸â€œÅ  resultado.infracciones es array: ${Array.isArray(resultado?.infracciones)}`);
+      console.log(`[SUTRAN] Ã°Å¸â€œÅ  resultado.infracciones.length: ${resultado?.infracciones?.length || 0}`);
+
+      // Extraer infracciones del resultado - SOLUCIÃƒâ€œN ROBUSTA
       let infracciones = [];
-      
-      // Verificar mÃºltiples formas en que pueden venir las infracciones
+
+      // Verificar mÃƒÂºltiples formas en que pueden venir las infracciones
       if (resultado?.infracciones && Array.isArray(resultado.infracciones)) {
         infracciones = resultado.infracciones;
-        console.log(`[SUTRAN] âœ… Infracciones encontradas en resultado.infracciones: ${infracciones.length}`);
+        console.log(`[SUTRAN] Ã¢Å“â€¦ Infracciones encontradas en resultado.infracciones: ${infracciones.length}`);
       } else if (resultado?.data && Array.isArray(resultado.data)) {
         infracciones = resultado.data;
-        console.log(`[SUTRAN] âœ… Infracciones encontradas en resultado.data: ${infracciones.length}`);
+        console.log(`[SUTRAN] Ã¢Å“â€¦ Infracciones encontradas en resultado.data: ${infracciones.length}`);
       } else if (resultado?.records && Array.isArray(resultado.records)) {
         infracciones = resultado.records;
-        console.log(`[SUTRAN] âœ… Infracciones encontradas en resultado.records: ${infracciones.length}`);
+        console.log(`[SUTRAN] Ã¢Å“â€¦ Infracciones encontradas en resultado.records: ${infracciones.length}`);
       }
-      
+
       // Validar que las infracciones tengan la estructura correcta
       if (infracciones.length > 0) {
-        const validInfracciones = infracciones.filter(inf => 
-          inf && typeof inf === 'object' && 
+        const validInfracciones = infracciones.filter(inf =>
+          inf && typeof inf === 'object' &&
           (inf.numeroDocumento || inf.tipoDocumento || inf.codigoInfraccion)
         );
         if (validInfracciones.length !== infracciones.length) {
-          console.log(`[SUTRAN] âš ï¸ Algunas infracciones no tienen estructura vÃ¡lida, filtrando...`);
+          console.log(`[SUTRAN] Ã¢Å¡Â Ã¯Â¸Â Algunas infracciones no tienen estructura vÃƒÂ¡lida, filtrando...`);
           infracciones = validInfracciones;
         }
       }
-      
-      console.log(`[SUTRAN] ðŸ“Š infracciones procesadas (final): ${infracciones.length}`);
-      
+
+      console.log(`[SUTRAN] Ã°Å¸â€œÅ  infracciones procesadas (final): ${infracciones.length}`);
+
       // Log detallado del resultado completo para debugging
-      console.log(`[SUTRAN] ðŸ“Š Keys del resultado:`, Object.keys(resultado || {}));
+      console.log(`[SUTRAN] Ã°Å¸â€œÅ  Keys del resultado:`, Object.keys(resultado || {}));
       if (infracciones.length > 0) {
-        console.log(`[SUTRAN] ðŸ“Š Primera infracciÃ³n:`, JSON.stringify(infracciones[0], null, 2));
+        console.log(`[SUTRAN] Ã°Å¸â€œÅ  Primera infracciÃƒÂ³n:`, JSON.stringify(infracciones[0], null, 2));
       }
-      
-      // DECISIÃ“N CRÃTICA: Â¿Hay infracciones?
+
+      // DECISIÃƒâ€œN CRÃƒÂTICA: Ã‚Â¿Hay infracciones?
       if (infracciones.length === 0) {
-        console.log(`[SUTRAN] âš ï¸ No hay infracciones, devolviendo mensaje informativo`);
-        console.log(`[SUTRAN] âš ï¸ resultado.mensaje: ${resultado?.mensaje || 'N/A'}`);
-        console.log(`[SUTRAN] âš ï¸ resultado completo para debugging:`, JSON.stringify(resultado, null, 2));
+        console.log(`[SUTRAN] Ã¢Å¡Â Ã¯Â¸Â No hay infracciones, devolviendo mensaje informativo`);
+        console.log(`[SUTRAN] Ã¢Å¡Â Ã¯Â¸Â resultado.mensaje: ${resultado?.mensaje || 'N/A'}`);
+        console.log(`[SUTRAN] Ã¢Å¡Â Ã¯Â¸Â resultado completo para debugging:`, JSON.stringify(resultado, null, 2));
         return respond(res, {
           ok: true,
           source: "sutran",
@@ -3969,41 +4004,41 @@ app.post("/api/sutran", async (req, res) => {
           message: resultado?.mensaje || "No se encontraron infracciones registradas"
         });
       }
-      
+
       // HAY INFRACCIONES - DEVOLVER STATUS SUCCESS
-      console.log(`[SUTRAN] âœ…âœ…âœ… CONSULTA EXITOSA: ${infracciones.length} infracciÃ³n(es) encontrada(s)`);
-      console.log(`[SUTRAN] ðŸ“Š Primera infracciÃ³n:`, JSON.stringify(infracciones[0], null, 2));
+      console.log(`[SUTRAN] Ã¢Å“â€¦Ã¢Å“â€¦Ã¢Å“â€¦ CONSULTA EXITOSA: ${infracciones.length} infracciÃƒÂ³n(es) encontrada(s)`);
+      console.log(`[SUTRAN] Ã°Å¸â€œÅ  Primera infracciÃƒÂ³n:`, JSON.stringify(infracciones[0], null, 2));
       console.log(`[SUTRAN] ===========================================\n`);
-      
-      // Formatear datos para el frontend - asegurar que infracciones estÃ© en el nivel correcto
+
+      // Formatear datos para el frontend - asegurar que infracciones estÃƒÂ© en el nivel correcto
       const responseData = {
         placa: resultado?.placa || placa,
         infracciones: infracciones
       };
-      
+
       // Si hay monto total, agregarlo
       if (resultado?.montoTotal) {
         responseData.montoTotal = resultado.montoTotal;
       }
-      
-      console.log(`[SUTRAN] ðŸ“¤ Enviando respuesta al frontend:`);
-      console.log(`[SUTRAN]    Status: success âœ…`);
-      console.log(`[SUTRAN]    Infracciones: ${infracciones.length} âœ…`);
+
+      console.log(`[SUTRAN] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+      console.log(`[SUTRAN]    Status: success Ã¢Å“â€¦`);
+      console.log(`[SUTRAN]    Infracciones: ${infracciones.length} Ã¢Å“â€¦`);
       console.log(`[SUTRAN]    Data keys:`, Object.keys(responseData));
       console.log(`[SUTRAN]    Response data completo:`, JSON.stringify(responseData, null, 2));
-      
+
       return respond(res, {
         ok: true,
         source: "sutran",
-        status: "success", // CRÃTICO: status debe ser "success" cuando hay infracciones
+        status: "success", // CRÃƒÂTICO: status debe ser "success" cuando hay infracciones
         data: responseData,
-        message: `Se encontraron ${infracciones.length} infracciÃ³n(es)`
+        message: `Se encontraron ${infracciones.length} infracciÃƒÂ³n(es)`
       });
-      
+
     } catch (processError) {
-      console.error(`[SUTRAN] âŒ Error procesando resultado:`, processError.message);
-      console.error(`[SUTRAN] âŒ Stack:`, processError.stack);
-      // Si hay error procesando, devolver resultado vacÃ­o
+      console.error(`[SUTRAN] Ã¢ÂÅ’ Error procesando resultado:`, processError.message);
+      console.error(`[SUTRAN] Ã¢ÂÅ’ Stack:`, processError.stack);
+      // Si hay error procesando, devolver resultado vacÃƒÂ­o
       return respond(res, {
         ok: true,
         source: "sutran",
@@ -4016,18 +4051,18 @@ app.post("/api/sutran", async (req, res) => {
         message: "No se encontraron infracciones registradas"
       });
     }
-    
+
   } catch (error) {
     // CATCH GLOBAL: Cualquier error que no se haya capturado antes
     console.error("\n" + "=".repeat(60));
-    console.error("[SUTRAN] âŒ ERROR GLOBAL CAPTURADO");
-    console.error("[SUTRAN] âŒ Mensaje:", error.message);
-    console.error("[SUTRAN] âŒ Nombre:", error.name);
-    console.error("[SUTRAN] âŒ Stack completo:");
+    console.error("[SUTRAN] Ã¢ÂÅ’ ERROR GLOBAL CAPTURADO");
+    console.error("[SUTRAN] Ã¢ÂÅ’ Mensaje:", error.message);
+    console.error("[SUTRAN] Ã¢ÂÅ’ Nombre:", error.name);
+    console.error("[SUTRAN] Ã¢ÂÅ’ Stack completo:");
     console.error(error.stack);
     console.error("=".repeat(60) + "\n");
-    
-    // GARANTÃA ABSOLUTA: SIEMPRE devolver ok: true, NUNCA error 500
+
+    // GARANTÃƒÂA ABSOLUTA: SIEMPRE devolver ok: true, NUNCA error 500
     try {
       const errorResponse = {
         ok: true,
@@ -4036,20 +4071,20 @@ app.post("/api/sutran", async (req, res) => {
         data: {
           placa: placa || '',
           infracciones: [],
-          mensaje: "No se encontraron infracciones registradas o el servicio no estÃ¡ disponible temporalmente"
+          mensaje: "No se encontraron infracciones registradas o el servicio no estÃƒÂ¡ disponible temporalmente"
         },
         message: "No se encontraron infracciones registradas",
         error_details: process.env.NODE_ENV === 'development' ? error.message : undefined
       };
-      
-      console.log("[SUTRAN] ðŸ“¤ Devolviendo respuesta de error controlada:", JSON.stringify(errorResponse, null, 2));
+
+      console.log("[SUTRAN] Ã°Å¸â€œÂ¤ Devolviendo respuesta de error controlada:", JSON.stringify(errorResponse, null, 2));
       return respond(res, errorResponse);
-      
+
     } catch (respondError) {
       // Si incluso respond() falla, usar res.json directamente
-      console.error(`[SUTRAN] âŒ Error incluso en respond(), usando res.json directamente`);
-      console.error(`[SUTRAN] âŒ Error de respond:`, respondError.message);
-      
+      console.error(`[SUTRAN] Ã¢ÂÅ’ Error incluso en respond(), usando res.json directamente`);
+      console.error(`[SUTRAN] Ã¢ÂÅ’ Error de respond:`, respondError.message);
+
       try {
         return res.status(200).json({
           ok: true,
@@ -4064,8 +4099,8 @@ app.post("/api/sutran", async (req, res) => {
           meta: { timestamp: new Date().toISOString() }
         });
       } catch (jsonError) {
-        // Ãšltimo recurso: respuesta mÃ­nima
-        console.error(`[SUTRAN] âŒ Error incluso en res.json():`, jsonError.message);
+        // ÃƒÅ¡ltimo recurso: respuesta mÃƒÂ­nima
+        console.error(`[SUTRAN] Ã¢ÂÅ’ Error incluso en res.json():`, jsonError.message);
         return res.status(200).send(JSON.stringify({
           ok: true,
           source: "sutran",
@@ -4078,80 +4113,80 @@ app.post("/api/sutran", async (req, res) => {
 });
 
 // ============================================
-// API: SAT LIMA - CAPTURAS DE VEHÃCULOS
-// SIGUIENDO EL PATRÃ“N DE SUTRAN
+// API: SAT LIMA - CAPTURAS DE VEHÃƒÂCULOS
+// SIGUIENDO EL PATRÃƒâ€œN DE SUTRAN
 // ============================================
 app.post("/api/sat", async (req, res) => {
   console.log("\n" + "=".repeat(60));
-  console.log("[SAT] ========== NUEVA PETICIÃ“N ==========");
+  console.log("[SAT] ========== NUEVA PETICIÃƒâ€œN ==========");
   console.log("[SAT] Body recibido:", JSON.stringify(req.body, null, 2));
   console.log("=".repeat(60) + "\n");
-  
+
   const { placa } = req.body;
-  
+
   if (!placa) {
-    console.log("[SAT] âŒ Placa no proporcionada en body");
+    console.log("[SAT] Ã¢ÂÅ’ Placa no proporcionada en body");
     return respond(res, { ok: false, source: "sat", status: "error", message: "Placa requerida" }, 400);
   }
 
   try {
-    console.log(`[SAT] âœ… Placa recibida: ${placa}`);
+    console.log(`[SAT] Ã¢Å“â€¦ Placa recibida: ${placa}`);
     console.log(`[SAT] Iniciando consulta...`);
-    
+
     let resultado = null;
-    
+
     try {
       let SATScraper;
       try {
         SATScraper = require('./sat-scraper');
-        console.log(`[SAT] âœ… MÃ³dulo cargado correctamente`);
+        console.log(`[SAT] Ã¢Å“â€¦ MÃƒÂ³dulo cargado correctamente`);
       } catch (requireError) {
-        console.error(`[SAT] âŒ Error cargando mÃ³dulo:`, requireError.message);
+        console.error(`[SAT] Ã¢ÂÅ’ Error cargando mÃƒÂ³dulo:`, requireError.message);
         resultado = {
           success: true,
           placa: placa,
           capturas: [],
-          mensaje: "Error cargando mÃ³dulo"
+          mensaje: "Error cargando mÃƒÂ³dulo"
         };
       }
-      
+
       if (!resultado && SATScraper) {
         try {
-          console.log(`[SAT] ðŸ”§ Creando instancia del scraper...`);
+          console.log(`[SAT] Ã°Å¸â€Â§ Creando instancia del scraper...`);
           const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
           if (CAPTCHA_API_KEY) {
-            console.log(`[SAT] âœ… API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
+            console.log(`[SAT] Ã¢Å“â€¦ API Key de 2Captcha configurada (${CAPTCHA_API_KEY.substring(0, 8)}...)`);
           } else {
-            console.log(`[SAT] âš ï¸ API Key de 2Captcha no configurada - CAPTCHA no se resolverÃ¡ automÃ¡ticamente`);
+            console.log(`[SAT] Ã¢Å¡Â Ã¯Â¸Â API Key de 2Captcha no configurada - CAPTCHA no se resolverÃƒÂ¡ automÃƒÂ¡ticamente`);
           }
           const scraper = new SATScraper(CAPTCHA_API_KEY);
-          console.log(`[SAT] âœ… Instancia creada, ejecutando consulta...`);
-          
+          console.log(`[SAT] Ã¢Å“â€¦ Instancia creada, ejecutando consulta...`);
+
           const scraperPromise = scraper.consultarPlaca(placa, 2);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: La consulta tomÃ³ mÃ¡s de 2 minutos')), 120000)
+            setTimeout(() => reject(new Error('Timeout: La consulta tomÃƒÂ³ mÃƒÂ¡s de 2 minutos')), 120000)
           );
-          
-          console.log(`[SAT] â³ Esperando resultado del scraper...`);
+
+          console.log(`[SAT] Ã¢ÂÂ³ Esperando resultado del scraper...`);
           resultado = await Promise.race([scraperPromise, timeoutPromise]);
-          console.log(`[SAT] âœ… Resultado recibido del scraper`);
+          console.log(`[SAT] Ã¢Å“â€¦ Resultado recibido del scraper`);
           console.log(`\n[SAT] ========== RESULTADO DEL SCRAPER ==========`);
-          console.log(`[SAT] ðŸ“Š Success: ${resultado?.success}`);
-          console.log(`[SAT] ðŸ“Š Placa: ${resultado?.placa || 'N/A'}`);
-          console.log(`[SAT] ðŸ“Š Capturas: ${resultado?.capturas?.length || 0}`);
-          console.log(`[SAT] ðŸ“Š Tipo de capturas: ${Array.isArray(resultado?.capturas) ? 'Array' : typeof resultado?.capturas}`);
+          console.log(`[SAT] Ã°Å¸â€œÅ  Success: ${resultado?.success}`);
+          console.log(`[SAT] Ã°Å¸â€œÅ  Placa: ${resultado?.placa || 'N/A'}`);
+          console.log(`[SAT] Ã°Å¸â€œÅ  Capturas: ${resultado?.capturas?.length || 0}`);
+          console.log(`[SAT] Ã°Å¸â€œÅ  Tipo de capturas: ${Array.isArray(resultado?.capturas) ? 'Array' : typeof resultado?.capturas}`);
           if (resultado?.capturas && resultado.capturas.length > 0) {
-            console.log(`[SAT] ðŸ“Š Detalle de capturas:`);
+            console.log(`[SAT] Ã°Å¸â€œÅ  Detalle de capturas:`);
             resultado.capturas.forEach((cap, idx) => {
               console.log(`[SAT]    ${idx + 1}. ${cap.numero || 'N/A'} - ${cap.fecha || 'N/A'} - ${cap.tipo || 'N/A'}`);
             });
           }
-          console.log(`[SAT] ðŸ“Š Resultado completo:`, JSON.stringify(resultado, null, 2));
+          console.log(`[SAT] Ã°Å¸â€œÅ  Resultado completo:`, JSON.stringify(resultado, null, 2));
           console.log(`[SAT] ==============================================\n`);
         } catch (scraperError) {
           console.error(`\n[SAT] ========== ERROR EN SCRAPER ==========`);
-          console.error(`[SAT] âŒ Error ejecutando scraper:`, scraperError.message);
-          console.error(`[SAT] âŒ Stack del scraper:`, scraperError.stack);
+          console.error(`[SAT] Ã¢ÂÅ’ Error ejecutando scraper:`, scraperError.message);
+          console.error(`[SAT] Ã¢ÂÅ’ Stack del scraper:`, scraperError.stack);
           resultado = {
             success: true,
             placa: placa,
@@ -4161,7 +4196,7 @@ app.post("/api/sat", async (req, res) => {
         }
       }
     } catch (error) {
-      console.error(`[SAT] âŒ Error en bloque try principal:`, error.message);
+      console.error(`[SAT] Ã¢ÂÅ’ Error en bloque try principal:`, error.message);
       resultado = {
         success: true,
         placa: placa,
@@ -4169,9 +4204,9 @@ app.post("/api/sat", async (req, res) => {
         mensaje: "Error en consulta"
       };
     }
-    
+
     if (!resultado) {
-      console.log(`[SAT] âš ï¸ Resultado es null, usando resultado vacÃ­o por defecto`);
+      console.log(`[SAT] Ã¢Å¡Â Ã¯Â¸Â Resultado es null, usando resultado vacÃƒÂ­o por defecto`);
       resultado = {
         success: true,
         placa: placa,
@@ -4179,24 +4214,24 @@ app.post("/api/sat", async (req, res) => {
         mensaje: "No se encontraron capturas registradas"
       };
     }
-    
+
     try {
       console.log(`\n[SAT] ========== PROCESANDO RESULTADO ==========`);
-      console.log(`[SAT] ðŸ“Š Tipo de resultado: ${typeof resultado}`);
-      console.log(`[SAT] ðŸ“Š resultado.capturas existe: ${!!resultado?.capturas}`);
-      console.log(`[SAT] ðŸ“Š resultado.capturas es array: ${Array.isArray(resultado?.capturas)}`);
-      console.log(`[SAT] ðŸ“Š resultado.capturas.length: ${resultado?.capturas?.length || 0}`);
-      
+      console.log(`[SAT] Ã°Å¸â€œÅ  Tipo de resultado: ${typeof resultado}`);
+      console.log(`[SAT] Ã°Å¸â€œÅ  resultado.capturas existe: ${!!resultado?.capturas}`);
+      console.log(`[SAT] Ã°Å¸â€œÅ  resultado.capturas es array: ${Array.isArray(resultado?.capturas)}`);
+      console.log(`[SAT] Ã°Å¸â€œÅ  resultado.capturas.length: ${resultado?.capturas?.length || 0}`);
+
       let capturas = [];
-      
+
       if (resultado?.capturas && Array.isArray(resultado.capturas)) {
         capturas = resultado.capturas;
-        console.log(`[SAT] âœ… Capturas encontradas en resultado.capturas: ${capturas.length}`);
+        console.log(`[SAT] Ã¢Å“â€¦ Capturas encontradas en resultado.capturas: ${capturas.length}`);
       } else if (resultado?.data && Array.isArray(resultado.data)) {
         capturas = resultado.data;
-        console.log(`[SAT] âœ… Capturas encontradas en resultado.data: ${capturas.length}`);
+        console.log(`[SAT] Ã¢Å“â€¦ Capturas encontradas en resultado.data: ${capturas.length}`);
       }
-      
+
       // Validar que las capturas tengan estructura correcta (Capturas.aspx)
       if (capturas.length > 0) {
         const validCapturas = capturas.filter(cap =>
@@ -4204,20 +4239,20 @@ app.post("/api/sat", async (req, res) => {
           (cap.placa || cap.documento || cap.anio || cap.concepto || cap.montoCaptura)
         );
         if (validCapturas.length !== capturas.length) {
-          console.log(`[SAT] âš ï¸ Algunas capturas no tienen estructura vÃ¡lida, filtrando...`);
+          console.log(`[SAT] Ã¢Å¡Â Ã¯Â¸Â Algunas capturas no tienen estructura vÃƒÂ¡lida, filtrando...`);
           capturas = validCapturas;
         }
       }
-      
-      console.log(`[SAT] ðŸ“Š capturas procesadas (final): ${capturas.length}`);
-      
+
+      console.log(`[SAT] Ã°Å¸â€œÅ  capturas procesadas (final): ${capturas.length}`);
+
       if (capturas.length === 0) {
-        console.log(`[SAT] âš ï¸ No hay capturas, devolviendo mensaje informativo`);
-        console.log(`[SAT] ðŸ“¤ Enviando respuesta al frontend:`);
-        console.log(`[SAT]    Status Code: 200 âœ…`);
+        console.log(`[SAT] Ã¢Å¡Â Ã¯Â¸Â No hay capturas, devolviendo mensaje informativo`);
+        console.log(`[SAT] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+        console.log(`[SAT]    Status Code: 200 Ã¢Å“â€¦`);
         console.log(`[SAT]    Status: empty`);
         console.log(`[SAT]    Mensaje: ${resultado?.mensaje || "No se encontraron capturas registradas"}`);
-        
+
         return respond(res, {
           ok: true,
           source: "sat",
@@ -4231,11 +4266,11 @@ app.post("/api/sat", async (req, res) => {
           message: resultado?.mensaje || "No se encontraron capturas registradas"
         });
       }
-      
-      console.log(`[SAT] âœ…âœ…âœ… CONSULTA EXITOSA: ${capturas.length} captura(s) encontrada(s)`);
-      console.log(`[SAT] ðŸ“Š Primera captura:`, JSON.stringify(capturas[0], null, 2));
+
+      console.log(`[SAT] Ã¢Å“â€¦Ã¢Å“â€¦Ã¢Å“â€¦ CONSULTA EXITOSA: ${capturas.length} captura(s) encontrada(s)`);
+      console.log(`[SAT] Ã°Å¸â€œÅ  Primera captura:`, JSON.stringify(capturas[0], null, 2));
       console.log(`[SAT] ===========================================\n`);
-      
+
       // Capturas (estructura exacta de Capturas.aspx)
       const capturasFormateadas = capturas.map(cap => ({
         placa: cap.placa || 'N/A',
@@ -4246,7 +4281,7 @@ app.post("/api/sat", async (req, res) => {
         referencia: cap.referencia || '',
         montoCaptura: cap.montoCaptura || 'N/A'
       }));
-      
+
       const responseData = {
         placa: resultado?.placa || placa,
         tieneOrden: !!resultado?.tieneOrden,
@@ -4255,13 +4290,13 @@ app.post("/api/sat", async (req, res) => {
         capturas: capturasFormateadas,
         total: capturas.length
       };
-      
-      console.log(`[SAT] ðŸ“¤ Enviando respuesta al frontend:`);
-      console.log(`[SAT]    Status Code: 200 âœ…`);
-      console.log(`[SAT]    Status: success âœ…`);
-      console.log(`[SAT]    Capturas: ${capturas.length} âœ…`);
-      console.log(`[SAT]    Placa: ${responseData.placa} âœ…`);
-      
+
+      console.log(`[SAT] Ã°Å¸â€œÂ¤ Enviando respuesta al frontend:`);
+      console.log(`[SAT]    Status Code: 200 Ã¢Å“â€¦`);
+      console.log(`[SAT]    Status: success Ã¢Å“â€¦`);
+      console.log(`[SAT]    Capturas: ${capturas.length} Ã¢Å“â€¦`);
+      console.log(`[SAT]    Placa: ${responseData.placa} Ã¢Å“â€¦`);
+
       return respond(res, {
         ok: true,
         source: "sat",
@@ -4269,9 +4304,9 @@ app.post("/api/sat", async (req, res) => {
         data: responseData,
         message: responseData.mensaje || `Se encontraron ${capturas.length} captura(s) registrada(s)`
       });
-      
+
     } catch (processError) {
-      console.error(`[SAT] âŒ Error procesando resultado:`, processError.message);
+      console.error(`[SAT] Ã¢ÂÅ’ Error procesando resultado:`, processError.message);
       return respond(res, {
         ok: true,
         source: "sat",
@@ -4286,12 +4321,12 @@ app.post("/api/sat", async (req, res) => {
     }
   } catch (error) {
     console.error("\n" + "=".repeat(60));
-    console.error("[SAT] âŒ ERROR GLOBAL CAPTURADO");
-    console.error("[SAT] âŒ Mensaje:", error.message);
-    console.error("[SAT] âŒ Stack completo:");
+    console.error("[SAT] Ã¢ÂÅ’ ERROR GLOBAL CAPTURADO");
+    console.error("[SAT] Ã¢ÂÅ’ Mensaje:", error.message);
+    console.error("[SAT] Ã¢ÂÅ’ Stack completo:");
     console.error(error.stack);
     console.error("=".repeat(60) + "\n");
-    
+
     try {
       return respond(res, {
         ok: true,
@@ -4300,7 +4335,7 @@ app.post("/api/sat", async (req, res) => {
         data: {
           placa: placa || '',
           capturas: [],
-          mensaje: "No se encontraron capturas registradas o el servicio no estÃ¡ disponible temporalmente"
+          mensaje: "No se encontraron capturas registradas o el servicio no estÃƒÂ¡ disponible temporalmente"
         },
         message: "No se encontraron capturas registradas"
       });
@@ -4315,13 +4350,13 @@ app.post("/api/sat", async (req, res) => {
 // ============================================
 app.post("/api/sunarp", async (req, res) => {
   console.log("\n" + "=".repeat(60));
-  console.log("[SUNARP] ðŸ“¥ NUEVA CONSULTA RECIBIDA");
+  console.log("[SUNARP] Ã°Å¸â€œÂ¥ NUEVA CONSULTA RECIBIDA");
   console.log("[SUNARP] ===========================================");
-  
+
   const { placa } = req.body;
-  
+
   if (!placa) {
-    console.log("[SUNARP] âŒ Error: Placa no proporcionada");
+    console.log("[SUNARP] Ã¢ÂÅ’ Error: Placa no proporcionada");
     return respond(res, {
       ok: true,
       source: "sunarp",
@@ -4330,23 +4365,23 @@ app.post("/api/sunarp", async (req, res) => {
       message: "Placa no proporcionada"
     });
   }
-  
-  console.log(`[SUNARP] ðŸ“‹ Placa a consultar: ${placa}`);
-  console.log(`[SUNARP] ðŸ”‘ CAPTCHA_API_KEY: ${CAPTCHA_API_KEY ? CAPTCHA_API_KEY.substring(0, 10) + '...' : 'NO CONFIGURADA'}`);
-  
+
+  console.log(`[SUNARP] Ã°Å¸â€œâ€¹ Placa a consultar: ${placa}`);
+  console.log(`[SUNARP] Ã°Å¸â€â€˜ CAPTCHA_API_KEY: ${CAPTCHA_API_KEY ? CAPTCHA_API_KEY.substring(0, 10) + '...' : 'NO CONFIGURADA'}`);
+
   try {
     const scraper = new SUNARPVehicularScraper(CAPTCHA_API_KEY);
-    
-    console.log(`[SUNARP] ðŸš€ Iniciando consulta...`);
+
+    console.log(`[SUNARP] Ã°Å¸Å¡â‚¬ Iniciando consulta...`);
     const resultado = await Promise.race([
       scraper.consultarPlaca(placa, 2),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout: La consulta tardÃ³ mÃ¡s de 300 segundos")), 300000)
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout: La consulta tardÃƒÂ³ mÃƒÂ¡s de 300 segundos")), 300000)
       )
     ]);
-    
-    console.log(`[SUNARP] âœ… Consulta completada`);
-    console.log(`[SUNARP] ðŸ“Š Resultado completo (sin imagen para no saturar logs):`, JSON.stringify({
+
+    console.log(`[SUNARP] Ã¢Å“â€¦ Consulta completada`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  Resultado completo (sin imagen para no saturar logs):`, JSON.stringify({
       success: resultado?.success,
       placa: resultado?.placa,
       mensaje: resultado?.mensaje,
@@ -4354,47 +4389,47 @@ app.post("/api/sunarp", async (req, res) => {
       tieneImagen: !!resultado?.imagen,
       imagenLength: resultado?.imagen ? resultado.imagen.length : 0
     }, null, 2));
-    console.log(`[SUNARP] ðŸ“Š resultado.success: ${resultado?.success}`);
-    console.log(`[SUNARP] ðŸ“Š resultado.imagen existe: ${!!resultado?.imagen}`);
-    console.log(`[SUNARP] ðŸ“Š resultado.imagen tipo: ${typeof resultado?.imagen}`);
-    console.log(`[SUNARP] ðŸ“Š resultado.imagen longitud: ${resultado?.imagen ? resultado.imagen.length : 0}`);
-    console.log(`[SUNARP] ðŸ“Š resultado completo (TODOS los keys):`, Object.keys(resultado || {}));
-    console.log(`[SUNARP] ðŸ“Š resultado.imagen === undefined: ${resultado?.imagen === undefined}`);
-    console.log(`[SUNARP] ðŸ“Š resultado.imagen === null: ${resultado?.imagen === null}`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado.success: ${resultado?.success}`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado.imagen existe: ${!!resultado?.imagen}`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado.imagen tipo: ${typeof resultado?.imagen}`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado.imagen longitud: ${resultado?.imagen ? resultado.imagen.length : 0}`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado completo (TODOS los keys):`, Object.keys(resultado || {}));
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado.imagen === undefined: ${resultado?.imagen === undefined}`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado.imagen === null: ${resultado?.imagen === null}`);
     if (resultado?.imagen) {
-      console.log(`[SUNARP] ðŸ“Š resultado.imagen primeros 100 chars: ${resultado.imagen.substring(0, 100)}...`);
-      console.log(`[SUNARP] ðŸ“Š resultado.imagen empieza con 'data:': ${resultado.imagen.startsWith('data:')}`);
+      console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado.imagen primeros 100 chars: ${resultado.imagen.substring(0, 100)}...`);
+      console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado.imagen empieza con 'data:': ${resultado.imagen.startsWith('data:')}`);
     } else {
-      console.log(`[SUNARP] âš ï¸ âš ï¸ âš ï¸ NO HAY IMAGEN EN EL RESULTADO âš ï¸ âš ï¸ âš ï¸`);
-      console.log(`[SUNARP] ðŸ“Š Keys del resultado:`, Object.keys(resultado || {}));
-      console.log(`[SUNARP] ðŸ“Š resultado completo (primeros 500 chars):`, JSON.stringify(resultado).substring(0, 500));
+      console.log(`[SUNARP] Ã¢Å¡Â Ã¯Â¸Â Ã¢Å¡Â Ã¯Â¸Â Ã¢Å¡Â Ã¯Â¸Â NO HAY IMAGEN EN EL RESULTADO Ã¢Å¡Â Ã¯Â¸Â Ã¢Å¡Â Ã¯Â¸Â Ã¢Å¡Â Ã¯Â¸Â`);
+      console.log(`[SUNARP] Ã°Å¸â€œÅ  Keys del resultado:`, Object.keys(resultado || {}));
+      console.log(`[SUNARP] Ã°Å¸â€œÅ  resultado completo (primeros 500 chars):`, JSON.stringify(resultado).substring(0, 500));
     }
-    
+
     // Verificar si hay imagen (siempre incluirla si existe, incluso sin datos)
     const tieneImagen = resultado?.imagen && resultado.imagen.length > 0;
-    console.log(`[SUNARP] ðŸ“¸ Imagen incluida: ${tieneImagen ? 'SÃ­ âœ…' : 'No âŒ'}`);
-    
+    console.log(`[SUNARP] Ã°Å¸â€œÂ¸ Imagen incluida: ${tieneImagen ? 'SÃƒÂ­ Ã¢Å“â€¦' : 'No Ã¢ÂÅ’'}`);
+
     // SIEMPRE incluir el campo imagen, incluso si es null
-    // Esto es crÃ­tico para que el frontend sepa que debe mostrar el botÃ³n
+    // Esto es crÃƒÂ­tico para que el frontend sepa que debe mostrar el botÃƒÂ³n
     // IMPORTANTE: Extraer la imagen directamente del resultado, sin intermediarios
     const imagenFinal = (resultado && resultado.imagen) ? resultado.imagen : null;
-    
-    console.log(`[SUNARP] ðŸ” Verificando imagen final antes de enviar:`);
+
+    console.log(`[SUNARP] Ã°Å¸â€Â Verificando imagen final antes de enviar:`);
     console.log(`[SUNARP]    - resultado existe: ${!!resultado}`);
     console.log(`[SUNARP]    - resultado.imagen existe: ${!!(resultado && resultado.imagen)}`);
     console.log(`[SUNARP]    - imagenFinal existe: ${!!imagenFinal}`);
     console.log(`[SUNARP]    - imagenFinal longitud: ${imagenFinal ? imagenFinal.length : 0}`);
     console.log(`[SUNARP]    - imagenFinal tipo: ${typeof imagenFinal}`);
-    
+
     // Si hay imagen pero success es false, marcar como success
     if (tieneImagen && !resultado.success) {
-      console.log(`[SUNARP] âš ï¸ Hay imagen pero success es false. Marcando como success.`);
+      console.log(`[SUNARP] Ã¢Å¡Â Ã¯Â¸Â Hay imagen pero success es false. Marcando como success.`);
       resultado.success = true;
     }
-    
+
     if (!resultado.success && !tieneImagen) {
-      console.log(`[SUNARP] âš ï¸ Consulta no exitosa y sin imagen: ${resultado.mensaje || 'Error desconocido'}`);
-      
+      console.log(`[SUNARP] Ã¢Å¡Â Ã¯Â¸Â Consulta no exitosa y sin imagen: ${resultado.mensaje || 'Error desconocido'}`);
+
       const responseData = {
         placa: placa,
         datos: resultado?.datos || null,
@@ -4409,26 +4444,26 @@ app.post("/api/sunarp", async (req, res) => {
         message: resultado?.mensaje || "No se encontraron datos para esta placa en SUNARP"
       });
     }
-    
-    // Si llegamos aquÃ­, hay imagen o hay datos (o ambos)
+
+    // Si llegamos aquÃƒÂ­, hay imagen o hay datos (o ambos)
     // SIEMPRE usar resultado.imagen directamente, sin variables intermedias
     const imagenParaRespuesta = (resultado && resultado.imagen) ? resultado.imagen : null;
-    
-    console.log(`[SUNARP] ðŸ” imagenParaRespuesta existe: ${!!imagenParaRespuesta}`);
-    console.log(`[SUNARP] ðŸ” imagenParaRespuesta longitud: ${imagenParaRespuesta ? imagenParaRespuesta.length : 0}`);
-    
+
+    console.log(`[SUNARP] Ã°Å¸â€Â imagenParaRespuesta existe: ${!!imagenParaRespuesta}`);
+    console.log(`[SUNARP] Ã°Å¸â€Â imagenParaRespuesta longitud: ${imagenParaRespuesta ? imagenParaRespuesta.length : 0}`);
+
     if (!resultado.datos || Object.keys(resultado.datos).length === 0) {
-      console.log(`[SUNARP] âš ï¸ No hay datos del vehÃ­culo, pero ${imagenParaRespuesta ? 'SÃ hay imagen' : 'NO hay imagen'}`);
-      
+      console.log(`[SUNARP] Ã¢Å¡Â Ã¯Â¸Â No hay datos del vehÃƒÂ­culo, pero ${imagenParaRespuesta ? 'SÃƒÂ hay imagen' : 'NO hay imagen'}`);
+
       const responseData = {
         placa: placa,
         datos: null,
         imagen: imagenParaRespuesta, // SIEMPRE incluir, incluso si es null
         mensaje: imagenParaRespuesta ? "Consulta completada. Ver imagen para detalles." : "No se encontraron datos para esta placa en SUNARP"
       };
-      console.log(`[SUNARP] ðŸ“¤ Enviando respuesta (sin datos) con imagen: ${!!responseData.imagen}`);
+      console.log(`[SUNARP] Ã°Å¸â€œÂ¤ Enviando respuesta (sin datos) con imagen: ${!!responseData.imagen}`);
       if (responseData.imagen) {
-        console.log(`[SUNARP] ðŸ“¤ Imagen incluida en respuesta (${responseData.imagen.length} chars)`);
+        console.log(`[SUNARP] Ã°Å¸â€œÂ¤ Imagen incluida en respuesta (${responseData.imagen.length} chars)`);
       }
       return respond(res, {
         ok: true,
@@ -4438,33 +4473,33 @@ app.post("/api/sunarp", async (req, res) => {
         message: imagenParaRespuesta ? "Consulta completada. Ver imagen para detalles." : "No se encontraron datos para esta placa en SUNARP"
       });
     }
-    
-    console.log(`[SUNARP] âœ…âœ…âœ… CONSULTA EXITOSA`);
-    console.log(`[SUNARP] ðŸ“Š Campos encontrados: ${Object.keys(resultado.datos || {}).length}`);
-    console.log(`[SUNARP] ðŸ“Š Datos:`, JSON.stringify(resultado.datos, null, 2));
-    console.log(`[SUNARP] ðŸ“¸ Imagen incluida: ${imagenParaRespuesta ? 'SÃ­ âœ…' : 'No âŒ'}`);
+
+    console.log(`[SUNARP] Ã¢Å“â€¦Ã¢Å“â€¦Ã¢Å“â€¦ CONSULTA EXITOSA`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  Campos encontrados: ${Object.keys(resultado.datos || {}).length}`);
+    console.log(`[SUNARP] Ã°Å¸â€œÅ  Datos:`, JSON.stringify(resultado.datos, null, 2));
+    console.log(`[SUNARP] Ã°Å¸â€œÂ¸ Imagen incluida: ${imagenParaRespuesta ? 'SÃƒÂ­ Ã¢Å“â€¦' : 'No Ã¢ÂÅ’'}`);
     if (imagenParaRespuesta) {
-      console.log(`[SUNARP] ðŸ“¸ TamaÃ±o de imagen base64: ${(imagenParaRespuesta.length / 1024).toFixed(2)} KB`);
+      console.log(`[SUNARP] Ã°Å¸â€œÂ¸ TamaÃƒÂ±o de imagen base64: ${(imagenParaRespuesta.length / 1024).toFixed(2)} KB`);
     }
     console.log(`[SUNARP] ===========================================\n`);
-    
+
     const responseData = {
       placa: resultado?.placa || placa,
       datos: resultado?.datos || {}, // Datos opcionales
       imagen: imagenParaRespuesta, // Imagen en base64 - SIEMPRE incluida (puede ser null)
       mensaje: resultado?.mensaje || "Consulta exitosa"
     };
-    
-    console.log(`[SUNARP] ðŸ“¤ Preparando respuesta final:`);
+
+    console.log(`[SUNARP] Ã°Å¸â€œÂ¤ Preparando respuesta final:`);
     console.log(`[SUNARP]    - placa: ${responseData.placa}`);
     console.log(`[SUNARP]    - datos: ${Object.keys(responseData.datos).length} campos`);
-    console.log(`[SUNARP]    - imagen: ${responseData.imagen ? `SÃ­ (${(responseData.imagen.length / 1024).toFixed(2)} KB)` : 'No (null)'}`);
+    console.log(`[SUNARP]    - imagen: ${responseData.imagen ? `SÃƒÂ­ (${(responseData.imagen.length / 1024).toFixed(2)} KB)` : 'No (null)'}`);
     console.log(`[SUNARP]    - mensaje: ${responseData.mensaje}`);
     console.log(`[SUNARP]    - responseData completo (sin imagen para logs):`, JSON.stringify({
       ...responseData,
       imagen: responseData.imagen ? `[IMAGEN: ${responseData.imagen.length} chars]` : null
     }, null, 2));
-    
+
     return respond(res, {
       ok: true,
       source: "sunarp",
@@ -4472,15 +4507,15 @@ app.post("/api/sunarp", async (req, res) => {
       data: responseData,
       message: resultado?.mensaje || "Consulta exitosa"
     });
-    
+
   } catch (error) {
     console.error("\n" + "=".repeat(60));
-    console.error("[SUNARP] âŒ ERROR GLOBAL CAPTURADO");
-    console.error("[SUNARP] âŒ Mensaje:", error.message);
-    console.error("[SUNARP] âŒ Stack completo:");
+    console.error("[SUNARP] Ã¢ÂÅ’ ERROR GLOBAL CAPTURADO");
+    console.error("[SUNARP] Ã¢ÂÅ’ Mensaje:", error.message);
+    console.error("[SUNARP] Ã¢ÂÅ’ Stack completo:");
     console.error(error.stack);
     console.error("=".repeat(60) + "\n");
-    
+
     try {
       return respond(res, {
         ok: true,
@@ -4494,11 +4529,11 @@ app.post("/api/sunarp", async (req, res) => {
         message: "Error al consultar SUNARP. Por favor, intente nuevamente."
       });
     } catch (respondError) {
-      return res.status(200).send(JSON.stringify({ 
-        ok: true, 
-        source: "sunarp", 
-        status: "error", 
-        message: "Error interno" 
+      return res.status(200).send(JSON.stringify({
+        ok: true,
+        source: "sunarp",
+        status: "error",
+        message: "Error interno"
       }));
     }
   }
@@ -4507,20 +4542,20 @@ app.post("/api/sunarp", async (req, res) => {
 // ============================================
 // RUTAS LEGACY (compatibilidad) - Alias directos
 // ============================================
-// NOTA: El endpoint /api/soat ya está definido arriba
-// (líneas 896 y 923). Estos duplicados han sido eliminados para evitar
+// NOTA: El endpoint /api/soat ya estÃ¡ definido arriba
+// (lÃ­neas 896 y 923). Estos duplicados han sido eliminados para evitar
 // conflictos y errores 405 (Method Not Allowed).
 // ============================================
 
 
-// RevisiÃ³n - Alias para /api/consultar-revision
+// RevisiÃƒÂ³n - Alias para /api/consultar-revision
 app.post("/api/revision", async (req, res) => {
   const { placa } = req.body;
   if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
-  
+
   // Aumentar timeout del request
   req.setTimeout(300000); // 5 minutos
-  
+
   try {
     const data = await consultarRevisionTecnica(placa);
     if (data.error) {
@@ -4537,13 +4572,13 @@ app.post("/api/revision", async (req, res) => {
   }
 });
 
-// Certificado VehÃ­culo - Ya existe en lÃ­nea 3272, este es duplicado - ELIMINADO
+// Certificado VehÃƒÂ­culo - Ya existe en lÃƒÂ­nea 3272, este es duplicado - ELIMINADO
 
-// SUTRAN - Usar el cÃ³digo del endpoint /consultar directamente
+// SUTRAN - Usar el cÃƒÂ³digo del endpoint /consultar directamente
 app.post("/api/sutran", async (req, res) => {
   const { placa } = req.body;
   if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
-  
+
   try {
     const puppeteer = require('puppeteer');
     const browser = await puppeteer.launch({
@@ -4561,7 +4596,7 @@ app.post("/api/sutran", async (req, res) => {
     await iframe.waitForSelector('body > img', { timeout: 5000 });
     const captchaImage = await iframe.$('body > img');
     const captchaBase64 = await captchaImage.screenshot({ encoding: 'base64' });
-    
+
     // Usar resolverCao que ya existe
     const formData = new FormData();
     formData.append('method', 'base64');
@@ -4591,7 +4626,7 @@ app.post("/api/sutran", async (req, res) => {
       }
     }
     if (!captchaTexto) throw new Error('Captcha no resuelto a tiempo');
-    
+
     await page.type('#TxtCodImagen', captchaTexto);
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }),
@@ -4620,16 +4655,16 @@ app.post("/api/sutran", async (req, res) => {
 });
 
 // SAT Lima (endpoint duplicado eliminado)
-// NOTA: se usa el endpoint robusto definido arriba (mismo contrato JSON ÚNICO con respond()).
+// NOTA: se usa el endpoint robusto definido arriba (mismo contrato JSON ÃšNICO con respond()).
 
 // Arequipa - Alias para /consultar-arequipa
 app.post("/api/arequipa", async (req, res) => {
   const { placa } = req.body;
   if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
-  
+
   // Aumentar timeout del request
   req.setTimeout(180000); // 3 minutos
-  
+
   try {
     const browser = await puppeteer.launch({
       headless: true,
@@ -4669,16 +4704,16 @@ app.post("/api/arequipa", async (req, res) => {
 });
 
 // Piura (endpoint duplicado eliminado)
-// NOTA: se usa el endpoint robusto definido arriba (mismo contrato JSON ÚNICO con respond()).
+// NOTA: se usa el endpoint robusto definido arriba (mismo contrato JSON ÃšNICO con respond()).
 
 // Tarapoto - Extraer de /api/consultar
 app.post("/api/tarapoto", async (req, res) => {
   const { placa } = req.body;
   if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
-  
+
   // Aumentar timeout del request
   req.setTimeout(180000); // 3 minutos
-  
+
   try {
     const browser = await puppeteer.launch({
       headless: true,
@@ -4721,7 +4756,7 @@ app.post("/api/tarapoto", async (req, res) => {
   }
 });
 
-// SUNARP - Ya existe mÃ¡s arriba, este es duplicado - ELIMINADO
+// SUNARP - Ya existe mÃƒÂ¡s arriba, este es duplicado - ELIMINADO
 
 // ============================================
 // NUEVOS ENDPOINTS SAT - PROVINCIAS
@@ -4733,15 +4768,15 @@ app.post("/api/sat-huancayo", async (req, res) => {
   if (!placa) {
     return respond(res, { ok: false, source: "sat-huancayo", status: "error", message: "Placa requerida" }, 400);
   }
-  
+
   req.setTimeout(120000); // 2 minutos
-  
+
   try {
     const scraper = new HuancayoPapeletasScraper();
     const resultado = await scraper.consultarPlaca(placa);
-    
+
     const hasPapeletas = resultado.papeletas && Array.isArray(resultado.papeletas) && resultado.papeletas.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-huancayo",
@@ -4770,15 +4805,15 @@ app.post("/api/sat-huanuco", async (req, res) => {
   if (!placa && !pit) {
     return respond(res, { ok: false, source: "sat-huanuco", status: "error", message: "Placa o PIT requerido" }, 400);
   }
-  
+
   req.setTimeout(120000);
-  
+
   try {
     const scraper = new HuanucoPapeletasScraper();
     const resultado = await scraper.consultarPlaca(placa || pit);
-    
+
     const hasPapeletas = resultado.papeletas && Array.isArray(resultado.papeletas) && resultado.papeletas.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-huanuco",
@@ -4813,15 +4848,15 @@ app.post("/api/sat-ica", async (req, res) => {
   if (!placa) {
     return respond(res, { ok: false, source: "sat-ica", status: "error", message: "Placa requerida" }, 400);
   }
-  
+
   req.setTimeout(120000);
-  
+
   try {
     const scraper = new IcaPapeletasScraper();
     const resultado = await scraper.consultarPlaca(placa);
-    
+
     const hasPapeletas = resultado.papeletas && Array.isArray(resultado.papeletas) && resultado.papeletas.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-ica",
@@ -4850,15 +4885,15 @@ app.post("/api/sat-cusco", async (req, res) => {
   if (!placa && !dni && !licencia) {
     return respond(res, { ok: false, source: "sat-cusco", status: "error", message: "Placa, DNI o Licencia requerido" }, 400);
   }
-  
+
   req.setTimeout(120000);
-  
+
   try {
     const scraper = new CuscoPapeletasScraper();
     const resultado = await scraper.consultar(placa, dni, licencia);
-    
+
     const hasPapeletas = resultado.papeletas && Array.isArray(resultado.papeletas) && resultado.papeletas.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-cusco",
@@ -4871,7 +4906,7 @@ app.post("/api/sat-cusco", async (req, res) => {
         libre: resultado.libre || false,
         total: (resultado.papeletas || []).length
       },
-      message: resultado.libre ? "Vehículo libre de infracciones" : (hasPapeletas ? `Se encontraron ${resultado.papeletas.length} papeleta(s)` : "No se encontraron papeletas")
+      message: resultado.libre ? "VehÃ­culo libre de infracciones" : (hasPapeletas ? `Se encontraron ${resultado.papeletas.length} papeleta(s)` : "No se encontraron papeletas")
     });
   } catch (error) {
     return respond(res, {
@@ -4888,17 +4923,17 @@ app.post("/api/sat-cusco", async (req, res) => {
 app.post("/api/sat-chachapoyas", async (req, res) => {
   const { placa, dni, papeleta } = req.body;
   if (!placa && !dni && !papeleta) {
-    return respond(res, { ok: false, source: "sat-chachapoyas", status: "error", message: "Placa, DNI o Número de Papeleta requerido" }, 400);
+    return respond(res, { ok: false, source: "sat-chachapoyas", status: "error", message: "Placa, DNI o NÃºmero de Papeleta requerido" }, 400);
   }
-  
+
   req.setTimeout(120000);
-  
+
   try {
     const scraper = new ChachapoyasPapeletasScraper();
     const resultado = await scraper.consultar(placa, dni, papeleta);
-    
+
     const hasPapeletas = resultado.papeletas && Array.isArray(resultado.papeletas) && resultado.papeletas.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-chachapoyas",
@@ -4929,15 +4964,15 @@ app.post("/api/sat-cajamarca", async (req, res) => {
   if (!placa) {
     return respond(res, { ok: false, source: "sat-cajamarca", status: "error", message: "Placa requerida" }, 400);
   }
-  
+
   req.setTimeout(120000);
-  
+
   try {
     const scraper = new CajamarcaPapeletasScraper();
     const resultado = await scraper.consultarPlaca(placa);
-    
+
     const hasPapeletas = resultado.papeletas && Array.isArray(resultado.papeletas) && resultado.papeletas.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-cajamarca",
@@ -4966,15 +5001,15 @@ app.post("/api/sat-trujillo", async (req, res) => {
   if (!dni || !celular || !correo) {
     return respond(res, { ok: false, source: "sat-trujillo", status: "error", message: "DNI, Celular y Correo requeridos" }, 400);
   }
-  
-  req.setTimeout(180000); // 3 minutos (puede tardar más por iframe)
-  
+
+  req.setTimeout(180000); // 3 minutos (puede tardar mÃ¡s por iframe)
+
   try {
     const scraper = new TrujilloRecordScraper();
     const resultado = await scraper.consultar(dni, celular, correo);
-    
+
     const hasInfracciones = resultado.infracciones && Array.isArray(resultado.infracciones) && resultado.infracciones.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-trujillo",
@@ -4984,7 +5019,7 @@ app.post("/api/sat-trujillo", async (req, res) => {
         infracciones: resultado.infracciones || [],
         total: (resultado.infracciones || []).length
       },
-      message: hasInfracciones ? `Se encontraron ${resultado.infracciones.length} infracción(es)` : "No se encontraron infracciones"
+      message: hasInfracciones ? `Se encontraron ${resultado.infracciones.length} infracciÃ³n(es)` : "No se encontraron infracciones"
     });
   } catch (error) {
     return respond(res, {
@@ -5003,16 +5038,16 @@ app.post("/api/sat-andahuaylas", async (req, res) => {
   if (!placa && !expediente && !nombre) {
     return respond(res, { ok: false, source: "sat-andahuaylas", status: "error", message: "Placa, Expediente o Nombre requerido" }, 400);
   }
-  
+
   req.setTimeout(180000); // 3 minutos (CAPTCHA puede tardar)
-  
+
   try {
     const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
     const scraper = new AndahuaylasPapeletasScraper(CAPTCHA_API_KEY);
     const resultado = await scraper.consultar(placa, expediente, nombre, apellidoPaterno, apellidoMaterno);
-    
+
     const hasPapeletas = resultado.papeletas && Array.isArray(resultado.papeletas) && resultado.papeletas.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-andahuaylas",
@@ -5051,16 +5086,16 @@ app.post("/api/sat-tacna", async (req, res) => {
   if (!dni && !placa && !papeleta) {
     return respond(res, { ok: false, source: "sat-tacna", status: "error", message: "DNI, Placa o Papeleta requerido" }, 400);
   }
-  
+
   req.setTimeout(180000); // 3 minutos (CAPTCHA puede tardar)
-  
+
   try {
     const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
     const scraper = new TacnaPapeletasScraper(CAPTCHA_API_KEY);
     const resultado = await scraper.consultar(dni, placa, papeleta);
-    
+
     const hasPapeletas = resultado.papeletas && Array.isArray(resultado.papeletas) && resultado.papeletas.length > 0;
-    
+
     return respond(res, {
       ok: true,
       source: "sat-tacna",
@@ -5099,16 +5134,16 @@ app.post("/api/infogas", async (req, res) => {
   if (!placa) {
     return respond(res, { ok: false, source: "infogas", status: "error", message: "Placa requerida" }, 400);
   }
-  
+
   req.setTimeout(180000); // 3 minutos (reCAPTCHA puede tardar)
-  
+
   try {
     const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
     const scraper = new InfogasScraper(CAPTCHA_API_KEY);
     const resultado = await scraper.consultarPlaca(placa);
-    
+
     // El scraper ahora siempre devuelve un resultado (no lanza errores)
-    // Verificar si el resultado es válido
+    // Verificar si el resultado es vÃ¡lido
     if (!resultado) {
       return respond(res, {
         ok: true,
@@ -5117,13 +5152,13 @@ app.post("/api/infogas", async (req, res) => {
         data: {
           placa: placa,
           encontrado: false,
-          mensaje: "No se pudo obtener información"
+          mensaje: "No se pudo obtener informaciÃ³n"
         },
-        message: "No se pudo obtener información"
+        message: "No se pudo obtener informaciÃ³n"
       });
     }
-    
-    // Si no tiene success o no está encontrado, devolver empty
+
+    // Si no tiene success o no estÃ¡ encontrado, devolver empty
     if (!resultado.success || !resultado.encontrado) {
       return respond(res, {
         ok: true,
@@ -5137,7 +5172,7 @@ app.post("/api/infogas", async (req, res) => {
         message: resultado.mensaje || "Sin resultados"
       });
     }
-    
+
     return respond(res, {
       ok: true,
       source: "infogas",
@@ -5151,12 +5186,12 @@ app.post("/api/infogas", async (req, res) => {
         habilitadoParaConsumir: resultado.habilitadoParaConsumir || '',
         tipoCombustible: resultado.tipoCombustible || ''
       },
-      message: "Información de INFOGAS obtenida correctamente"
+      message: "InformaciÃ³n de INFOGAS obtenida correctamente"
     });
   } catch (error) {
     console.error('[INFOGAS] Error en endpoint:', error);
     const errorMessage = error.message || 'Error al consultar INFOGAS';
-    
+
     // El scraper ahora siempre devuelve un resultado, pero por si acaso hay un error inesperado
     // devolver siempre ok: true con status: empty
     return respond(res, {
@@ -5166,12 +5201,12 @@ app.post("/api/infogas", async (req, res) => {
       data: {
         placa: placa,
         encontrado: false,
-        mensaje: errorMessage.includes('temporalmente') || errorMessage.includes('no disponible') 
-          ? 'Servicio temporalmente no disponible' 
+        mensaje: errorMessage.includes('temporalmente') || errorMessage.includes('no disponible')
+          ? 'Servicio temporalmente no disponible'
           : errorMessage
       },
-      message: errorMessage.includes('temporalmente') || errorMessage.includes('no disponible') 
-        ? 'Servicio temporalmente no disponible' 
+      message: errorMessage.includes('temporalmente') || errorMessage.includes('no disponible')
+        ? 'Servicio temporalmente no disponible'
         : errorMessage
     });
   }
@@ -5185,16 +5220,16 @@ app.post("/api/callao", async (req, res) => {
   if (!placa) {
     return respond(res, { ok: false, source: "callao", status: "error", message: "Placa requerida" }, 400);
   }
-  
+
   req.setTimeout(300000); // 5 minutos (CAPTCHA puede tardar mucho)
-  
+
   try {
     const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || null;
     const scraper = new CallaoPapeletasScraper(CAPTCHA_API_KEY);
     const resultado = await scraper.consultarPlaca(placa);
-    
+
     console.log('[CALLAO] Resultado del scraper:', JSON.stringify(resultado, null, 2));
-    
+
     // El scraper siempre devuelve un resultado (no lanza errores)
     if (!resultado) {
       return respond(res, {
@@ -5205,15 +5240,15 @@ app.post("/api/callao", async (req, res) => {
           placa: placa,
           encontrado: false,
           papeletas: [],
-          mensaje: "No se pudo obtener información"
+          mensaje: "No se pudo obtener informaciÃ³n"
         },
-        message: "No se pudo obtener información"
+        message: "No se pudo obtener informaciÃ³n"
       });
     }
-    
-    // Si no tiene success o no está encontrado, devolver empty
+
+    // Si no tiene success o no estÃ¡ encontrado, devolver empty
     if (!resultado.success || !resultado.encontrado) {
-      console.log('[CALLAO] Resultado sin éxito o no encontrado:', {
+      console.log('[CALLAO] Resultado sin Ã©xito o no encontrado:', {
         success: resultado.success,
         encontrado: resultado.encontrado,
         mensaje: resultado.mensaje,
@@ -5234,8 +5269,8 @@ app.post("/api/callao", async (req, res) => {
         message: resultado.mensaje || "Sin resultados"
       });
     }
-    
-    // Si tiene éxito y está encontrado, devolver success
+
+    // Si tiene Ã©xito y estÃ¡ encontrado, devolver success
     console.log('[CALLAO] Resultado exitoso:', {
       papeletasCount: resultado.papeletas?.length || 0,
       total: resultado.total
@@ -5251,12 +5286,12 @@ app.post("/api/callao", async (req, res) => {
         total: resultado.total || (resultado.papeletas?.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0) || 0),
         cantidad: resultado.papeletas?.length || 0
       },
-      message: "Información de papeletas de Callao obtenida correctamente"
+      message: "InformaciÃ³n de papeletas de Callao obtenida correctamente"
     });
   } catch (error) {
     console.error('[CALLAO] Error en endpoint:', error);
     const errorMessage = error.message || 'Error al consultar papeletas de Callao';
-    
+
     // Siempre devolver ok: true con status: empty
     return respond(res, {
       ok: true,
@@ -5281,14 +5316,14 @@ app.post("/api/callao", async (req, res) => {
 app.post("/api/generar-pdf", async (req, res) => {
   try {
     const { placa, fechaConsulta, resultados, rawResults } = req.body;
-    
+
     if (!placa || !resultados) {
       return res.status(400).json({ ok: false, message: "Datos incompletos" });
     }
 
     console.log(`[PDF] Generando PDF para placa: ${placa}`);
-    
-    // Generar PDF usando modelo normalizado (pasar rawResults para insights determinísticos)
+
+    // Generar PDF usando modelo normalizado (pasar rawResults para insights determinÃ­sticos)
     const pdfBuffer = await renderPdf(resultados, placa, fechaConsulta || new Date().toLocaleString('es-PE'), rawResults);
 
     // Configurar headers de respuesta
@@ -5309,10 +5344,10 @@ app.post("/api/generar-pdf", async (req, res) => {
 // INICIO DEL SERVIDOR
 // ============================================
 const server = app.listen(PORT, () => {
-  console.log(`[ENV] Ambiente detectado: ${IS_PRODUCTION ? 'PRODUCCIÓN' : 'DESARROLLO'}`);
-  console.log(`✅ Servidor activo en http://localhost:${PORT}`);
-  console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📋 Endpoints disponibles:`);
+  console.log(`[ENV] Ambiente detectado: ${IS_PRODUCTION ? 'PRODUCCIÃ“N' : 'DESARROLLO'}`);
+  console.log(`âœ… Servidor activo en http://localhost:${PORT}`);
+  console.log(`ðŸ” Health check: http://localhost:${PORT}/api/health`);
+  console.log(`ðŸ“‹ Endpoints disponibles:`);
   console.log(`   - POST /api/soat`);
   console.log(`   - POST /api/siniestro`);
   console.log(`   - POST /api/revision`);

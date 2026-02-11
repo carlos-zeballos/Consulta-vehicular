@@ -57,10 +57,17 @@ Ejemplo (rellena con valores reales):
 NODE_ENV=production
 BASE_PATH=
 
-FACTILIZA_TOKEN=Bearer xxxx
 CAPTCHA_API_KEY=xxxx
 ACCESS_TOKEN=APP_USR-xxxx
 PUBLIC_KEY=APP_USR-xxxx
+
+# =========================
+# MTC (CITV) - Anti-bot/WAF
+# =========================
+# IMPORTANTE: MTC suele bloquear IPs de datacenter (Contabo) con 403/429 (Cloudflare/WAF).
+# Para obtener HTTP 200 + datos reales, configura un proxy residencial:
+# Formato: http://USER:PASS@HOST:PORT
+MTC_PROXY_URL=
 
 # Cupones (secretos)
 COUPON_ADMIN_CODE=ADMIN-XXXX-ROOT

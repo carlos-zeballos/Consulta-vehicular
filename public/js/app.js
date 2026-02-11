@@ -578,6 +578,20 @@
 
     // 3. Datos encontrados - arrays/tablas
     if (Array.isArray(data)) {
+      if (payload?.status === 'blocked') {
+        const mensaje = payload?.message || 'El servicio estÃ¡ bloqueando consultas desde este servidor.';
+        return {
+          status: 'error',
+          content: `
+            <div class="message error">
+              <span class="message-icon">ðŸš«</span>
+              <div>
+                <strong>Consulta bloqueada</strong>
+                <p>${escapeHTML(mensaje)}</p>
+              </div>
+            </div>`
+        };
+      }
       if (data.length === 0) {
         return {
           status: 'empty',

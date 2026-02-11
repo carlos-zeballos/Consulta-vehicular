@@ -7,8 +7,12 @@ services:
       NODE_ENV: production
       PORT: "8080"
       # APIs / Pagos
-      FACTILIZA_TOKEN: "${FACTILIZA_TOKEN}"
       CAPTCHA_API_KEY: "${CAPTCHA_API_KEY}"
+      # Proxy residencial para MTC (Cloudflare/WAF)
+      # Formato: http://USER:PASS@HOST:PORT
+      MTC_PROXY_URL: "${MTC_PROXY_URL}"
+      # (Opcional global)
+      PROXY_URL: "${PROXY_URL}"
       ACCESS_TOKEN: "${ACCESS_TOKEN}"
       PUBLIC_KEY: "${PUBLIC_KEY}"
       # Cupones (secretos)
