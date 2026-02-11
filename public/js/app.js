@@ -398,6 +398,8 @@
         console.log(`[FRONTEND-SOAT] Procesando datos de SOAT`);
         console.log(`[FRONTEND-SOAT] payload:`, payload);
         
+        const data = payload?.data; // Definir data desde payload
+        
         // Si hay error
         if (payload?.ok === false || payload?.status === 'error') {
           const errorMsg = payload?.message || 'Error al consultar SOAT';
@@ -416,6 +418,9 @@
         
         // Si hay datos exitosos
         if (payload?.status === 'success' && data) {
+          console.log(`[FRONTEND-SOAT] ✅ Datos recibidos:`, data);
+          console.log(`[FRONTEND-SOAT] Pólizas:`, data.polizas?.length || 0);
+          
           // Guardar datos originales para PDF
           const container = document.getElementById(`resultado-${key}`);
           if (container) {
@@ -439,6 +444,7 @@
           
           // Si hay datos pero no pólizas (datos principales)
           if (data.compania_aseguradora || data.numero_poliza || data.estado) {
+            console.log(`[FRONTEND-SOAT] ✅ Datos principales encontrados (sin array de pólizas)`);
             return {
               status: data.estado === 'VIGENTE' ? 'success' : 'warn',
               content: createInfoGrid(data, key)
@@ -448,6 +454,7 @@
         
         // Si está vacío o no encontrado
         if (payload?.status === 'empty' || !data || (!data.polizas && !data.compania_aseguradora)) {
+          console.log(`[FRONTEND-SOAT] ⚠️ Sin datos - status: ${payload?.status}, tiene data: ${!!data}`);
           const mensaje = payload?.message || "No se encontraron certificados SOAT para esta placa";
           return {
             status: 'empty',
