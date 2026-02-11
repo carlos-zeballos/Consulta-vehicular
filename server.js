@@ -993,8 +993,17 @@ app.post("/api/vehiculo", async (req, res) => {
       return respond(res, { ok: false, source: "vehiculo", status: "error", message: "Token no configurado" }, 500);
     }
 
+    // Log para debugging (solo primeros caracteres del token)
+    console.log(`[VEHICULO-FACTILIZA] Consultando placa: ${placa}`);
+    console.log(`[VEHICULO-FACTILIZA] Token configurado: ${FACTILIZA_TOKEN ? 'SÍ' : 'NO'}`);
+    console.log(`[VEHICULO-FACTILIZA] Token (primeros 50 chars): ${FACTILIZA_TOKEN ? FACTILIZA_TOKEN.substring(0, 50) + '...' : 'N/A'}`);
+    
     const response = await axios.get(`https://api.factiliza.com/v1/placa/info/${placa}`, {
-      headers: { Authorization: FACTILIZA_TOKEN },
+      headers: { 
+        'Authorization': FACTILIZA_TOKEN,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
       timeout: 300000 // 5 minutos para obtener respuesta completa
     });
 
@@ -1006,6 +1015,7 @@ app.post("/api/vehiculo", async (req, res) => {
   } catch (error) {
     console.error('[VEHICULO-FACTILIZA] Error:', error.message);
     console.error('[VEHICULO-FACTILIZA] Status:', error.response?.status);
+    console.error('[VEHICULO-FACTILIZA] Status Text:', error.response?.statusText);
     console.error('[VEHICULO-FACTILIZA] Response:', error.response?.data);
     console.error('[VEHICULO-FACTILIZA] Token usado:', FACTILIZA_TOKEN ? FACTILIZA_TOKEN.substring(0, 30) + '...' : 'NO CONFIGURADO');
     
