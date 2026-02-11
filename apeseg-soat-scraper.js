@@ -386,13 +386,23 @@ class ApesegSoatScraper {
         
         // Esperar tiempo adicional para que la app React/Vue cargue los datos
         console.log('[APESEG] Esperando que la aplicación frontend cargue los datos...');
-        await page.waitForTimeout(15000); // 15 segundos para que React/Vue cargue los datos
+        await page.waitForTimeout(10000); // 10 segundos para que React/Vue cargue los datos
         
         // Intentar hacer la llamada directamente desde el navegador usando el token interceptado
+        // HACER ESTO PRIMERO, ANTES DE ESPERAR 180 SEGUNDOS
         console.log('[APESEG] Intentando obtener certificados directamente desde el navegador...');
         
         // Esperar un momento para que el token se establezca
         await page.waitForTimeout(5000);
+        
+        // Verificar si tenemos token antes de intentar
+        if (!authToken) {
+          console.log('[APESEG] ⚠️ No hay token disponible, esperando a que se obtenga...');
+          // Esperar hasta 10 segundos más para que llegue el token
+          for (let i = 0; i < 10 && !authToken; i++) {
+            await page.waitForTimeout(1000);
+          }
+        }
         
         // Intentar obtener certificados directamente desde el contexto del navegador usando el token interceptado
         console.log('[APESEG] Token disponible:', authToken ? authToken.substring(0, 30) + '...' : 'NO DISPONIBLE');
