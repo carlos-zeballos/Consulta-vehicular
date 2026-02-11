@@ -372,26 +372,54 @@ class ApesegSoatScraper {
         console.log('[APESEG] Enviando formulario...');
         await page.click('button[type="submit"]');
         
-        // Esperar a que se complete la petición (optimizado: esperar hasta que se intercepten certificados o timeout)
+        // Esperar tiempo inicial para que se procese la petición
+        console.log('[APESEG] Esperando procesamiento inicial...');
+        await page.waitForTimeout(5000); // 5 segundos iniciales
+        
+        // Esperar a que se complete la petición (aumentado tiempo para asegurar resultados)
         console.log('[APESEG] Esperando respuesta de la API...');
         let intentos = 0;
-        const maxIntentos = 30; // 30 intentos x 2 segundos = 60 segundos máximo
+        const maxIntentos = 50; // 50 intentos x 3 segundos = 150 segundos (2.5 minutos) máximo
         
         while (intentos < maxIntentos && certificadosInterceptados === null) {
-          await page.waitForTimeout(2000); // Esperar 2 segundos entre verificaciones
+          await page.waitForTimeout(3000); // Esperar 3 segundos entre verificaciones
           intentos++;
+          
+          // Verificar si hay datos en el DOM mientras esperamos
+          if (intentos % 3 === 0) {
+            const hayDatosEnDOM = await page.evaluate(() => {
+              // Buscar tablas con resultados
+              const tablas = document.querySelectorAll('table, .table, [class*="table"], [id*="table"]');
+              if (tablas.length > 0) {
+                for (const tabla of tablas) {
+                  const texto = tabla.textContent || '';
+                  if (texto.includes('Interseguro') || texto.includes('Rimac') || texto.includes('La Positiva') || 
+                      texto.includes('NombreCompania') || texto.includes('NumeroPoliza')) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            });
+            
+            if (hayDatosEnDOM) {
+              console.log('[APESEG] ✅ Datos detectados en el DOM, extrayendo...');
+              break;
+            }
+          }
+          
           if (certificadosInterceptados !== null) {
             // Se interceptó algo (puede ser array vacío o con datos)
-            console.log(`[APESEG] ✅ Respuesta interceptada después de ${intentos * 2} segundos`);
+            console.log(`[APESEG] ✅ Respuesta interceptada después de ${intentos * 3} segundos`);
             break;
           }
-          if (intentos % 5 === 0) {
-            console.log(`[APESEG] Esperando respuesta... (${intentos * 2}s/${maxIntentos * 2}s)`);
+          if (intentos % 10 === 0) {
+            console.log(`[APESEG] Esperando respuesta... (${intentos * 3}s/${maxIntentos * 3}s)`);
           }
         }
         
         if (certificadosInterceptados === null && intentos >= maxIntentos) {
-          console.log('[APESEG] ⚠️ Timeout esperando respuesta de certificados');
+          console.log('[APESEG] ⚠️ Timeout esperando respuesta de certificados, intentando extraer del DOM...');
         }
         
         // Si se interceptaron certificados, usarlos
@@ -402,29 +430,61 @@ class ApesegSoatScraper {
           return this.formatResponse(certificadosInterceptados, placa);
         }
         
-        // Si no se interceptaron, intentar extraer del DOM (fallback)
+        // Si no se interceptaron, intentar extraer del DOM (fallback mejorado)
         console.log('[APESEG] Intentando extraer datos del DOM como fallback...');
         const datosDelDOM = await page.evaluate(() => {
-          // Buscar datos en variables globales o scripts
+          // 1. Buscar datos en variables globales o scripts
           if (window.certificados || window.data || window.resultados) {
-            return window.certificados || window.data || window.resultados;
+            const datos = window.certificados || window.data || window.resultados;
+            if (Array.isArray(datos) && datos.length > 0) {
+              return datos;
+            }
           }
           
-          // Buscar en scripts que puedan contener JSON
+          // 2. Buscar en scripts que puedan contener JSON
           const scripts = Array.from(document.querySelectorAll('script'));
           for (const script of scripts) {
             const content = script.textContent || '';
-            if (content.includes('NombreCompania') || content.includes('NumeroPoliza')) {
+            if (content.includes('NombreCompania') || content.includes('NumeroPoliza') || 
+                content.includes('Interseguro') || content.includes('Rimac')) {
               try {
+                // Buscar arrays JSON
                 const match = content.match(/\[[\s\S]{100,}?\]/);
                 if (match) {
-                  return JSON.parse(match[0]);
+                  const parsed = JSON.parse(match[0]);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                  }
                 }
               } catch (e) {
                 // Continuar buscando
               }
             }
           }
+          
+          // 3. Buscar en elementos de la página que puedan contener datos
+          const elementosConDatos = document.querySelectorAll('[data-certificados], [data-resultados], [id*="result"], [class*="result"]');
+          for (const el of elementosConDatos) {
+            try {
+              const dataAttr = el.getAttribute('data-certificados') || el.getAttribute('data-resultados');
+              if (dataAttr) {
+                const parsed = JSON.parse(dataAttr);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  return parsed;
+                }
+              }
+            } catch (e) {
+              // Continuar
+            }
+          }
+          
+          // 4. Buscar en el body completo por texto que indique datos
+          const bodyText = document.body.textContent || '';
+          if (bodyText.includes('NombreCompania') || bodyText.includes('NumeroPoliza')) {
+            // Hay datos en la página, pero no los podemos extraer fácilmente
+            console.log('[APESEG-DOM] Se detectaron datos en la página pero no se pudieron extraer automáticamente');
+          }
+          
           return null;
         });
         
@@ -433,6 +493,19 @@ class ApesegSoatScraper {
           await browser.close();
           browser = null;
           return this.formatResponse(datosDelDOM, placa);
+        }
+        
+        // Esperar un poco más y verificar nuevamente la intercepción (puede que llegue tarde)
+        if (certificadosInterceptados === null) {
+          console.log('[APESEG] Esperando 10 segundos adicionales por si la respuesta llega tarde...');
+          await page.waitForTimeout(10000);
+          
+          if (certificadosInterceptados && certificadosInterceptados.length > 0) {
+            console.log('[APESEG] ✅ Certificados interceptados después de espera adicional');
+            await browser.close();
+            browser = null;
+            return this.formatResponse(certificadosInterceptados, placa);
+          }
         }
         
       } catch (interactError) {
