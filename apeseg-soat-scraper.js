@@ -661,6 +661,7 @@ class ApesegSoatScraper {
           return null;
         });
         
+        // PRIORIDAD: Si se extrajeron datos del DOM, usarlos inmediatamente
         if (datosDelDOM && Array.isArray(datosDelDOM) && datosDelDOM.length > 0) {
           console.log('[APESEG] ✅ Datos extraídos del DOM:', datosDelDOM.length);
           console.log('[APESEG] Primeros datos:', JSON.stringify(datosDelDOM[0], null, 2));
@@ -669,83 +670,126 @@ class ApesegSoatScraper {
           return this.formatResponse(datosDelDOM, placa);
         }
         
-        // Si no se encontraron datos, tomar screenshot y analizar la página
-        if (!datosDelDOM || datosDelDOM.length === 0) {
-          console.log('[APESEG] ⚠️ No se encontraron datos, analizando página...');
-          
-          // Verificar si hay mensajes de error en la página
-          const analisisPagina = await page.evaluate(() => {
-            const bodyText = document.body.textContent || '';
-            const errores = [];
-            const info = [];
-            
-            // Buscar mensajes de error
-            if (bodyText.includes('error') || bodyText.includes('Error') || bodyText.includes('ERROR')) {
-              errores.push('Se detectó texto de error en la página');
+        // Si no se encontraron datos, esperar un poco más y analizar la página
+        console.log('[APESEG] ⚠️ No se encontraron datos en primera extracción, esperando y analizando...');
+        await page.waitForTimeout(10000); // Esperar 10 segundos adicionales
+        
+        // Intentar extraer del DOM una vez más después de esperar
+        console.log('[APESEG] Intentando segunda extracción del DOM...');
+        const datosDelDOM2 = await page.evaluate(() => {
+          // 1. Buscar en variables globales
+          if (window.certificados || window.data || window.resultados) {
+            const datos = window.certificados || window.data || window.resultados;
+            if (Array.isArray(datos) && datos.length > 0) {
+              return datos;
             }
-            if (bodyText.includes('no se encontr') || bodyText.includes('sin registros') || bodyText.includes('Sin registros')) {
-              info.push('Mensaje de "sin registros" encontrado');
-            }
-            if (bodyText.includes('captcha') || bodyText.includes('Captcha') || bodyText.includes('CAPTCHA')) {
-              info.push('Mensaje relacionado con captcha encontrado');
-            }
-            
-            // Verificar URL actual
-            const url = window.location.href;
-            
-            return {
-              url: url,
-              titulo: document.title,
-              errores: errores,
-              info: info,
-              tieneInterseguro: bodyText.includes('Interseguro'),
-              tieneRimac: bodyText.includes('Rimac'),
-              tieneLaPositiva: bodyText.includes('La Positiva'),
-              tieneFechas: /\d{2}\/\d{2}\/\d{4}/.test(bodyText),
-              longitudTexto: bodyText.length
-            };
-          });
-          
-          console.log('[APESEG] Análisis de página:', JSON.stringify(analisisPagina, null, 2));
-          
-          try {
-            await page.screenshot({ path: `apeseg-debug-${placa}-${Date.now()}.png`, fullPage: true });
-            const htmlContent = await page.content();
-            const fs = require('fs');
-            fs.writeFileSync(`apeseg-debug-${placa}-${Date.now()}.html`, htmlContent);
-            console.log('[APESEG] Screenshot y HTML guardados para análisis');
-          } catch (e) {
-            console.warn('[APESEG] No se pudo guardar screenshot:', e.message);
           }
+          
+          // 2. Buscar en scripts
+          const scripts = Array.from(document.querySelectorAll('script'));
+          for (const script of scripts) {
+            const content = script.textContent || '';
+            if (content.includes('NombreCompania') || content.includes('NumeroPoliza')) {
+              try {
+                const match = content.match(/\[[\s\S]{100,}?\]/);
+                if (match) {
+                  const parsed = JSON.parse(match[0]);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                  }
+                }
+              } catch (e) {}
+            }
+          }
+          
+          // 3. Buscar tablas con datos
+          const tablas = document.querySelectorAll('table, .table, [class*="table"], tbody');
+          for (const tabla of tablas) {
+            const filas = tabla.querySelectorAll('tr');
+            if (filas.length > 0) {
+              const datosExtraidos = [];
+              for (let i = 0; i < filas.length; i++) {
+                const fila = filas[i];
+                const textoFila = (fila.textContent || '').trim();
+                if (textoFila && (textoFila.includes('Interseguro') || textoFila.includes('Rimac') || 
+                    textoFila.includes('La Positiva') || /\d{2}\/\d{2}\/\d{4}/.test(textoFila))) {
+                  const celdas = fila.querySelectorAll('td, th');
+                  if (celdas.length >= 2) {
+                    const valores = Array.from(celdas).map(c => (c.textContent || '').trim()).filter(v => v);
+                    if (valores.length >= 2) {
+                      const fechas = valores.filter(v => /\d{1,2}\/\d{1,2}\/\d{4}/.test(v));
+                      const numeros = valores.filter(v => /^[0-9\s]{8,}$/.test(v.replace(/\s/g, '')));
+                      const compania = valores.find(v => v.includes('Interseguro') || v.includes('Rimac') || v.includes('La Positiva'));
+                      
+                      if (compania || fechas.length > 0 || numeros.length > 0) {
+                        datosExtraidos.push({
+                          NombreCompania: compania || valores[0] || '',
+                          NombreClaseVehiculo: valores.find(v => v.toUpperCase().includes('CAMIONETA') || v.toUpperCase().includes('AUTOMOVIL')) || '',
+                          NombreUsoVehiculo: valores.find(v => v.toUpperCase().includes('PARTICULAR') || v.toUpperCase().includes('COMERCIAL')) || 'PARTICULAR',
+                          NumeroPoliza: numeros[0]?.replace(/\s/g, '') || '',
+                          CodigoUnicoPoliza: numeros[1]?.replace(/\s/g, '') || numeros[0]?.replace(/\s/g, '') || '',
+                          FechaInicio: fechas[0] || '',
+                          FechaFin: fechas[1] || fechas[0] || '',
+                          Estado: valores.find(v => v.toUpperCase().includes('VIGENTE') || v.toUpperCase().includes('VENCIDO')) || '',
+                          TipoCertificado: 'DIGITAL'
+                        });
+                      }
+                    }
+                  }
+                }
+              }
+              if (datosExtraidos.length > 0) {
+                return datosExtraidos;
+              }
+            }
+          }
+          
+          return null;
+        });
+        
+        if (datosDelDOM2 && Array.isArray(datosDelDOM2) && datosDelDOM2.length > 0) {
+          console.log('[APESEG] ✅ Datos extraídos del DOM en segunda extracción:', datosDelDOM2.length);
+          console.log('[APESEG] Primeros datos:', JSON.stringify(datosDelDOM2[0], null, 2));
+          await browser.close();
+          browser = null;
+          return this.formatResponse(datosDelDOM2, placa);
         }
         
-        // Esperar un poco más y verificar nuevamente la intercepción (puede que llegue tarde)
-        if (certificadosInterceptados === null) {
-          console.log('[APESEG] Esperando 15 segundos adicionales por si la respuesta llega tarde...');
-          await page.waitForTimeout(15000);
-          
-          // Intentar extraer del DOM una vez más después de esperar
-          const datosDelDOM2 = await page.evaluate(() => {
-            // Buscar cualquier texto que contenga datos de pólizas
-            const bodyText = document.body.textContent || '';
-            if (bodyText.includes('Interseguro') || bodyText.includes('Rimac') || bodyText.includes('La Positiva')) {
-              // Hay datos pero no los podemos extraer fácilmente
-              return { hayDatos: true, texto: bodyText.substring(0, 500) };
-            }
-            return null;
-          });
-          
-          if (datosDelDOM2 && datosDelDOM2.hayDatos) {
-            console.log('[APESEG] ⚠️ Se detectaron datos en la página pero no se pudieron extraer automáticamente');
-            console.log('[APESEG] Texto encontrado:', datosDelDOM2.texto);
-          }
-          
-          if (certificadosInterceptados && certificadosInterceptados.length > 0) {
-            console.log('[APESEG] ✅ Certificados interceptados después de espera adicional');
-            await browser.close();
-            browser = null;
-            return this.formatResponse(certificadosInterceptados, placa);
-          }
+        // Si aún no hay datos, analizar la página para debug
+        console.log('[APESEG] ⚠️ No se encontraron datos después de segunda extracción, analizando página...');
+        const analisisPagina = await page.evaluate(() => {
+          const bodyText = document.body.textContent || '';
+          return {
+            url: window.location.href,
+            titulo: document.title,
+            tieneInterseguro: bodyText.includes('Interseguro'),
+            tieneRimac: bodyText.includes('Rimac'),
+            tieneLaPositiva: bodyText.includes('La Positiva'),
+            tieneFechas: /\d{2}\/\d{2}\/\d{4}/.test(bodyText),
+            longitudTexto: bodyText.length,
+            textoMuestra: bodyText.substring(0, 1000)
+          };
+        });
+        
+        console.log('[APESEG] Análisis de página:', JSON.stringify(analisisPagina, null, 2));
+        
+        // Tomar screenshot para debug
+        try {
+          await page.screenshot({ path: `apeseg-debug-${placa}-${Date.now()}.png`, fullPage: true });
+          const htmlContent = await page.content();
+          const fs = require('fs');
+          fs.writeFileSync(`apeseg-debug-${placa}-${Date.now()}.html`, htmlContent);
+          console.log('[APESEG] Screenshot y HTML guardados para análisis');
+        } catch (e) {
+          console.warn('[APESEG] No se pudo guardar screenshot:', e.message);
+        }
+        
+        // Verificar intercepción una última vez
+        if (certificadosInterceptados && certificadosInterceptados.length > 0) {
+          console.log('[APESEG] ✅ Certificados interceptados encontrados');
+          await browser.close();
+          browser = null;
+          return this.formatResponse(certificadosInterceptados, placa);
         }
         
       } catch (interactError) {
@@ -756,29 +800,17 @@ class ApesegSoatScraper {
       await browser.close();
       browser = null;
 
-      // Si llegamos aquí sin datos, verificar si fue procesado o no se interceptó nada
-      if (certificadosInterceptados === null) {
-        // No se interceptó ninguna respuesta - puede ser que la página no haya respondido
-        console.log('[APESEG] ⚠️ No se interceptó ninguna respuesta de certificados');
-        return {
-          success: true,
-          placa: placa,
-          polizas: [],
-          message: 'No se encontraron certificados SOAT para esta placa'
-        };
-      } else if (Array.isArray(certificadosInterceptados) && certificadosInterceptados.length === 0) {
-        // Se interceptó pero está vacío - sin certificados
-        console.log('[APESEG] ⚠️ Se interceptó respuesta pero está vacía');
-        return {
-          success: true,
-          placa: placa,
-          polizas: [],
-          message: 'No se encontraron certificados SOAT para esta placa'
-        };
-      }
-
-      // Si hay certificados, formatearlos
-      return this.formatResponse(certificadosInterceptados, placa);
+      // Si llegamos aquí sin datos, significa que no se encontraron datos ni en DOM ni en intercepción
+      console.log('[APESEG] ⚠️ No se encontraron datos después de todos los intentos');
+      console.log('[APESEG] certificadosInterceptados:', certificadosInterceptados);
+      
+      // Retornar vacío solo si realmente no hay datos
+      return {
+        success: true,
+        placa: placa,
+        polizas: [],
+        message: 'No se encontraron certificados SOAT para esta placa'
+      };
     } catch (error) {
       if (browser) {
         await browser.close();
