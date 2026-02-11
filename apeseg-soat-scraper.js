@@ -218,6 +218,14 @@ class ApesegSoatScraper {
       let authToken = null;
       let certificadosInterceptados = null;
       
+      // Capturar logs de la consola del navegador
+      page.on('console', msg => {
+        const text = msg.text();
+        if (text.includes('APESEG-BROWSER')) {
+          console.log(`[APESEG-BROWSER] ${text}`);
+        }
+      });
+      
       page.on('response', async (response) => {
         const url = response.url();
         
@@ -406,7 +414,11 @@ class ApesegSoatScraper {
         
         // Intentar obtener certificados directamente desde el contexto del navegador usando el token interceptado
         console.log('[APESEG] Token disponible:', authToken ? authToken.substring(0, 30) + '...' : 'NO DISPONIBLE');
+        console.log('[APESEG] Intentando fetch directo desde navegador con token...');
         const certificadosDesdeNavegador = await page.evaluate(async (placa, token) => {
+          console.log('[APESEG-BROWSER] Iniciando evaluación...');
+          console.log('[APESEG-BROWSER] Placa:', placa);
+          console.log('[APESEG-BROWSER] Token:', token ? token.substring(0, 30) + '...' : 'NO DISPONIBLE');
           try {
             const url = `https://webapp.apeseg.org.pe/consulta-soat/api/certificados/placa/${placa}`;
             const headers = {
