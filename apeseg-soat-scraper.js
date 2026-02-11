@@ -491,9 +491,13 @@ class ApesegSoatScraper {
             }
           }
           
-          // 4. Extraer datos de tablas HTML directamente (método mejorado)
-          const tablas = document.querySelectorAll('table, .table, [class*="table"], [id*="table"], tbody, [role="table"]');
+          // 4. Extraer datos de tablas HTML directamente (método mejorado y más agresivo)
+          const tablas = document.querySelectorAll('table, .table, [class*="table"], [id*="table"], tbody, [role="table"], thead + tbody');
           console.log('[APESEG-DOM] Tablas encontradas:', tablas.length);
+          
+          // También buscar en iframes si existen
+          const iframes = document.querySelectorAll('iframe');
+          console.log('[APESEG-DOM] Iframes encontrados:', iframes.length);
           
           for (const tabla of tablas) {
             const filas = tabla.querySelectorAll('tr');
@@ -502,23 +506,29 @@ class ApesegSoatScraper {
             if (filas.length > 0) {
               const datosExtraidos = [];
               
-              // Buscar filas que contengan datos de pólizas
+              // Buscar filas que contengan datos de pólizas (más flexible)
               for (let i = 0; i < filas.length; i++) {
                 const fila = filas[i];
-                const celdas = fila.querySelectorAll('td, th');
+                const celdas = fila.querySelectorAll('td, th, div[class*="cell"], span[class*="cell"]');
                 const textoFila = (fila.textContent || '').trim();
                 
-                // Verificar si esta fila tiene datos relevantes de SOAT
-                if (textoFila && (textoFila.includes('Interseguro') || textoFila.includes('Rimac') || 
-                    textoFila.includes('La Positiva') || textoFila.includes('Mapfre') ||
-                    textoFila.includes('VIGENTE') || textoFila.includes('VENCIDO') || 
-                    textoFila.includes('ANULADO') || /\d{2}\/\d{2}\/\d{4}/.test(textoFila))) {
+                // Verificar si esta fila tiene datos relevantes de SOAT (criterios más amplios)
+                const tieneDatosSOAT = textoFila && (
+                  textoFila.includes('Interseguro') || textoFila.includes('Rimac') || 
+                  textoFila.includes('La Positiva') || textoFila.includes('Mapfre') ||
+                  textoFila.includes('Pacífico') || textoFila.includes('Protecta') ||
+                  textoFila.includes('VIGENTE') || textoFila.includes('VENCIDO') || 
+                  textoFila.includes('ANULADO') || 
+                  /\d{2}\/\d{2}\/\d{4}/.test(textoFila) ||
+                  (textoFila.length > 30 && /[0-9]{10,}/.test(textoFila)) // Números largos (pólizas)
+                );
+                
+                if (tieneDatosSOAT && celdas.length >= 2) {
+                  // Extraer datos de las celdas
+                  const valores = Array.from(celdas).map(c => (c.textContent || '').trim()).filter(v => v && v.length > 0);
                   
-                  if (celdas.length >= 3) {
-                    // Extraer datos de las celdas
-                    const valores = Array.from(celdas).map(c => (c.textContent || '').trim()).filter(v => v);
-                    
-                    // Intentar identificar columnas por contenido
+                  if (valores.length >= 2) {
+                    // Intentar identificar columnas por contenido y posición
                     let compania = '';
                     let clase = '';
                     let uso = '';
@@ -529,44 +539,53 @@ class ApesegSoatScraper {
                     let estado = '';
                     
                     valores.forEach((valor, idx) => {
+                      const valorUpper = valor.toUpperCase();
+                      
                       if (!compania && (valor.includes('Interseguro') || valor.includes('Rimac') || 
                           valor.includes('La Positiva') || valor.includes('Mapfre') || 
-                          valor.includes('Pacífico') || valor.includes('Protecta'))) {
+                          valor.includes('Pacífico') || valor.includes('Protecta') ||
+                          valor.includes('Crecer') || valor.includes('Qualitas'))) {
                         compania = valor;
-                      } else if (!clase && (valor.includes('CAMIONETA') || valor.includes('AUTOMOVIL') || 
-                          valor.includes('MOTOCICLETA') || valor.includes('RURAL') || valor.includes('SUV'))) {
+                      } else if (!clase && (valorUpper.includes('CAMIONETA') || valorUpper.includes('AUTOMOVIL') || 
+                          valorUpper.includes('MOTOCICLETA') || valorUpper.includes('RURAL') || 
+                          valorUpper.includes('SUV') || valorUpper.includes('PICKUP'))) {
                         clase = valor;
-                      } else if (!uso && (valor.includes('PARTICULAR') || valor.includes('COMERCIAL') || 
-                          valor.includes('OFICIAL'))) {
+                      } else if (!uso && (valorUpper.includes('PARTICULAR') || valorUpper.includes('COMERCIAL') || 
+                          valorUpper.includes('OFICIAL') || valorUpper.includes('TAXI'))) {
                         uso = valor;
-                      } else if (!poliza && valor.length > 5 && /^[0-9]+$/.test(valor.replace(/\s/g, ''))) {
-                        poliza = valor;
-                      } else if (!certificado && valor.length > 5 && /^[0-9]+$/.test(valor.replace(/\s/g, '')) && valor !== poliza) {
-                        certificado = valor;
-                      } else if (!inicio && /\d{2}\/\d{2}\/\d{4}/.test(valor)) {
+                      } else if (!poliza && valor.length >= 8 && /^[0-9\s]+$/.test(valor.replace(/\s/g, ''))) {
+                        // Números largos probablemente son pólizas
+                        poliza = valor.replace(/\s/g, '');
+                      } else if (!certificado && valor.length >= 8 && /^[0-9\s]+$/.test(valor.replace(/\s/g, '')) && valor.replace(/\s/g, '') !== poliza) {
+                        certificado = valor.replace(/\s/g, '');
+                      } else if (!inicio && /\d{1,2}\/\d{1,2}\/\d{4}/.test(valor)) {
                         inicio = valor;
-                      } else if (!fin && /\d{2}\/\d{2}\/\d{4}/.test(valor) && valor !== inicio) {
+                      } else if (!fin && /\d{1,2}\/\d{1,2}\/\d{4}/.test(valor) && valor !== inicio) {
                         fin = valor;
-                      } else if (!estado && (valor.includes('VIGENTE') || valor.includes('VENCIDO') || valor.includes('ANULADO'))) {
+                      } else if (!estado && (valorUpper.includes('VIGENTE') || valorUpper.includes('VENCIDO') || 
+                          valorUpper.includes('ANULADO') || valorUpper.includes('ACTIVO'))) {
                         estado = valor;
                       }
                     });
                     
                     // Si encontramos al menos compañía o póliza, crear registro
-                    if (compania || poliza) {
+                    if (compania || poliza || (valores.length >= 3 && /\d{2}\/\d{2}\/\d{4}/.test(valores.join(' ')))) {
                       const polizaData = {
-                        NombreCompania: compania || valores[0] || '',
-                        NombreClaseVehiculo: clase || valores.find(v => v.includes('CAMIONETA') || v.includes('AUTOMOVIL')) || '',
-                        NombreUsoVehiculo: uso || valores.find(v => v.includes('PARTICULAR') || v.includes('COMERCIAL')) || 'PARTICULAR',
-                        NumeroPoliza: poliza || valores.find(v => v.length > 10 && /^[0-9]+$/.test(v.replace(/\s/g, ''))) || '',
+                        NombreCompania: compania || (valores.find(v => v.length < 50 && !/\d{2}\/\d{2}\/\d{4}/.test(v) && !/^[0-9]+$/.test(v.replace(/\s/g, ''))) || ''),
+                        NombreClaseVehiculo: clase || valores.find(v => v.toUpperCase().includes('CAMIONETA') || v.toUpperCase().includes('AUTOMOVIL')) || '',
+                        NombreUsoVehiculo: uso || valores.find(v => v.toUpperCase().includes('PARTICULAR') || v.toUpperCase().includes('COMERCIAL')) || 'PARTICULAR',
+                        NumeroPoliza: poliza || valores.find(v => v.length >= 8 && /^[0-9\s]+$/.test(v.replace(/\s/g, '')))?.replace(/\s/g, '') || '',
                         CodigoUnicoPoliza: certificado || poliza || '',
-                        FechaInicio: inicio || valores.find(v => /\d{2}\/\d{2}\/\d{4}/.test(v)) || '',
-                        FechaFin: fin || valores.find((v, i, arr) => /\d{2}\/\d{2}\/\d{4}/.test(v) && arr.indexOf(v) !== arr.findIndex(x => /\d{2}\/\d{2}\/\d{4}/.test(x))) || '',
-                        Estado: estado || valores.find(v => v.includes('VIGENTE') || v.includes('VENCIDO')) || '',
-                        TipoCertificado: valores.find(v => v.includes('DIGITAL') || v.includes('FISICO')) || 'DIGITAL'
+                        FechaInicio: inicio || valores.find(v => /\d{1,2}\/\d{1,2}\/\d{4}/.test(v)) || '',
+                        FechaFin: fin || valores.reverse().find(v => /\d{1,2}\/\d{1,2}\/\d{4}/.test(v)) || '',
+                        Estado: estado || valores.find(v => v.toUpperCase().includes('VIGENTE') || v.toUpperCase().includes('VENCIDO')) || '',
+                        TipoCertificado: valores.find(v => v.toUpperCase().includes('DIGITAL') || v.toUpperCase().includes('FISICO')) || 'DIGITAL'
                       };
                       
-                      datosExtraidos.push(polizaData);
+                      // Solo agregar si tiene datos mínimos
+                      if (polizaData.NombreCompania || polizaData.NumeroPoliza || polizaData.FechaInicio) {
+                        datosExtraidos.push(polizaData);
+                      }
                     }
                   }
                 }
@@ -579,33 +598,57 @@ class ApesegSoatScraper {
             }
           }
           
-          // 5. Buscar en divs o elementos que puedan contener datos estructurados
-          const elementosConTexto = document.querySelectorAll('div, span, p, li');
+          // 5. Buscar en todos los elementos de la página (método más agresivo)
+          const todosLosElementos = document.querySelectorAll('*');
           const datosDeTexto = [];
-          for (const el of elementosConTexto) {
+          const companias = ['Interseguro', 'Rimac', 'La Positiva', 'Mapfre', 'Pacífico', 'Protecta', 'Crecer', 'Qualitas'];
+          
+          for (const el of todosLosElementos) {
             const texto = (el.textContent || '').trim();
-            if (texto.length > 20 && (texto.includes('Interseguro') || texto.includes('Rimac') || texto.includes('La Positiva'))) {
-              // Intentar parsear texto estructurado
-              const match = texto.match(/(Interseguro|Rimac|La Positiva|Mapfre|Pacífico|Protecta)[\s\S]{0,200}?(\d{2}\/\d{2}\/\d{4})[\s\S]{0,200}?(\d{2}\/\d{2}\/\d{4})/);
-              if (match) {
-                datosDeTexto.push({
-                  NombreCompania: match[1],
-                  FechaInicio: match[2],
-                  FechaFin: match[3],
-                  NombreClaseVehiculo: '',
-                  NombreUsoVehiculo: 'PARTICULAR',
-                  NumeroPoliza: '',
-                  CodigoUnicoPoliza: '',
-                  Estado: texto.includes('VIGENTE') ? 'VIGENTE' : (texto.includes('VENCIDO') ? 'VENCIDO' : ''),
-                  TipoCertificado: 'DIGITAL'
-                });
+            if (texto.length > 30 && texto.length < 500) {
+              // Buscar patrones de pólizas en el texto
+              for (const compania of companias) {
+                if (texto.includes(compania)) {
+                  // Intentar extraer fechas y otros datos del texto
+                  const fechas = texto.match(/\d{1,2}\/\d{1,2}\/\d{4}/g) || [];
+                  const numeros = texto.match(/[0-9]{10,}/g) || [];
+                  
+                  if (fechas.length >= 1 || numeros.length >= 1) {
+                    datosDeTexto.push({
+                      NombreCompania: compania,
+                      FechaInicio: fechas[0] || '',
+                      FechaFin: fechas[1] || fechas[0] || '',
+                      NombreClaseVehiculo: texto.match(/CAMIONETA[^,]*|AUTOMOVIL[^,]*|MOTOCICLETA[^,]*/i)?.[0] || '',
+                      NombreUsoVehiculo: texto.match(/PARTICULAR|COMERCIAL|OFICIAL/i)?.[0] || 'PARTICULAR',
+                      NumeroPoliza: numeros[0] || '',
+                      CodigoUnicoPoliza: numeros[1] || numeros[0] || '',
+                      Estado: texto.includes('VIGENTE') ? 'VIGENTE' : (texto.includes('VENCIDO') ? 'VENCIDO' : (texto.includes('ANULADO') ? 'ANULADO' : '')),
+                      TipoCertificado: texto.includes('DIGITAL') ? 'DIGITAL' : (texto.includes('FISICO') ? 'FISICO' : 'DIGITAL')
+                    });
+                    
+                    // Limitar a 20 pólizas para evitar duplicados
+                    if (datosDeTexto.length >= 20) break;
+                  }
+                }
               }
+              if (datosDeTexto.length >= 20) break;
             }
           }
           
-          if (datosDeTexto.length > 0) {
-            console.log('[APESEG-DOM] ✅ Datos extraídos de texto:', datosDeTexto.length);
-            return datosDeTexto;
+          // Eliminar duplicados
+          const datosUnicos = [];
+          const vistos = new Set();
+          for (const dato of datosDeTexto) {
+            const key = `${dato.NombreCompania}-${dato.NumeroPoliza}-${dato.FechaInicio}`;
+            if (!vistos.has(key)) {
+              vistos.add(key);
+              datosUnicos.push(dato);
+            }
+          }
+          
+          if (datosUnicos.length > 0) {
+            console.log('[APESEG-DOM] ✅ Datos extraídos de texto:', datosUnicos.length);
+            return datosUnicos;
           }
           
           // 5. Buscar en el body completo por texto que indique datos
