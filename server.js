@@ -1024,7 +1024,9 @@ app.post("/api/vehiculo", async (req, res) => {
     if (error.response) {
       // Error de la API
       if (error.response.status === 401) {
-        errorMessage = 'Token de autenticación inválido o expirado';
+        errorMessage = 'Token de autenticación inválido o expirado. Por favor, verifica el token de Factiliza en la configuración.';
+        console.error('[VEHICULO-FACTILIZA] ⚠️ ERROR 401: Token inválido o expirado');
+        console.error('[VEHICULO-FACTILIZA] Verifica que el token en .env o en el código sea válido y no haya expirado');
       } else if (error.response.status === 404) {
         errorMessage = 'No se encontró información para esta placa';
       } else if (error.response.status === 429) {
