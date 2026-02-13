@@ -635,13 +635,20 @@ function nextIzipayTransId(date = new Date()) {
     izipayTransDateKey = dateKey;
     izipayTransCounter = 0;
   }
+  // Incrementar contador y asegurar que no sea 0
   izipayTransCounter = (izipayTransCounter + 1) % 1000000;
+  // Si el contador es 0, usar timestamp para evitar duplicados
+  if (izipayTransCounter === 0) {
+    izipayTransCounter = Math.floor((Date.now() % 1000000) / 1000);
+  }
   return String(izipayTransCounter).padStart(6, "0");
 }
 
 function buildIzipayOrderId() {
-  const random = crypto.randomBytes(6).toString("hex").toUpperCase();
-  return `IZI-${Date.now().toString(36).toUpperCase()}-${random}`;
+  // Generar orderId único con timestamp y random
+  const timestamp = Date.now();
+  const random = crypto.randomBytes(8).toString("hex").toUpperCase();
+  return `IZI-${timestamp.toString(36).toUpperCase()}-${random}`;
 }
 
 function getIzipayKey(ctxMode) {
@@ -1528,9 +1535,32 @@ app.post("/api/izipay/init", (req, res) => {
     }
 
     const { email } = req.body || {};
-    const orderId = buildIzipayOrderId();
+    
+    // Generar orderId único (verificar que no exista)
+    let orderId = buildIzipayOrderId();
+    let attempts = 0;
+    while (izipayPayments.has(orderId) && attempts < 5) {
+      orderId = buildIzipayOrderId();
+      attempts++;
+    }
+    if (attempts > 0) {
+      console.warn(`[IZIPAY] orderId duplicado detectado, generado nuevo después de ${attempts} intentos: ${orderId}`);
+    }
+    
     const transDate = formatIzipayUtcDate();
-    const transId = nextIzipayTransId();
+    let transId = nextIzipayTransId();
+    
+    // Verificar que el transId no esté en uso para el mismo día
+    const existingTransId = Array.from(izipayPayments.values()).find(
+      r => r.transId === transId && r.transDate === transDate && r.status !== "REFUSED" && r.status !== "ABANDONED"
+    );
+    if (existingTransId) {
+      console.warn(`[IZIPAY] transId duplicado detectado: ${transId}, generando nuevo...`);
+      // Forzar incremento del contador para evitar duplicados
+      izipayTransCounter = (izipayTransCounter + 1000) % 1000000;
+      transId = nextIzipayTransId();
+    }
+    
     const amount = Math.max(1, Math.round(PRICE_CENTS));
 
     // Verificar si BASE_URL es localhost (no válido para IPN)
