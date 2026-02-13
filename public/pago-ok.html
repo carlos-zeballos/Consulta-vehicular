@@ -107,7 +107,10 @@
           }
           const payload = await response.json();
           
-          if (payload.status === 'PAID') {
+          // Mercado Pago usa 'approved', Izipay usa 'PAID'
+          const isPaid = payload.status === 'PAID' || payload.status === 'approved';
+          
+          if (isPaid) {
             // Detener el polling inmediatamente
             if (pollInterval) {
               clearInterval(pollInterval);
