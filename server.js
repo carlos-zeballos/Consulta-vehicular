@@ -128,10 +128,6 @@ app.get("/result.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "result.html"));
 });
 
-app.get("/comprar", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "comprar.html"));
-});
-
 // Checkout MCW/Niubiz
 app.get("/checkout", (req, res) => {
   const checkoutPath = path.join(__dirname, "public", "checkout.html");
