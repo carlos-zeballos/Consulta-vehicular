@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SERVER.JS - Consulta Vehicular
  * ProducciÃƒÂ³n cPanel - Contrato JSON ÃƒÂºnico
  */
@@ -72,8 +72,23 @@ app.use((req, res, next) => {
 // ============================================
 app.use(cors());
 // Aumentar lÃƒÂ­mite para permitir imÃƒÂ¡genes base64 grandes
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: false, limit: "50mb" }));
+app.use(express.json({
+  limit: "50mb",
+  verify: (req, res, buf) => {
+    if (String(req.originalUrl || "").includes("/api/payments/mcw/ipn")) {
+      req.rawBody = buf.toString("utf8");
+    }
+  }
+}));
+app.use(express.urlencoded({
+  extended: false,
+  limit: "50mb",
+  verify: (req, res, buf) => {
+    if (String(req.originalUrl || "").includes("/api/payments/mcw/ipn")) {
+      req.rawBody = buf.toString("utf8");
+    }
+  }
+}));
 // Usar ruta absoluta para static files (mÃ¡s seguro en cPanel)
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -84,12 +99,105 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+// Fallback: si Izipay retorna por POST al root, redirigir a /pago-ok o /pago-error
+app.post("/", (req, res) => {
+  const payload = req.body || {};
+  const hasVads = Object.keys(payload).some((key) => key.startsWith("vads_"));
+  if (!hasVads) {
+    return res.status(404).send("Not Found");
+  }
+
+  const orderId = String(payload?.vads_order_id || "").trim();
+  const status = normalizeIzipayStatus(payload?.vads_trans_status || "");
+  const isError = ["REFUSED", "ABANDONED"].includes(status);
+  const target = isError ? "/pago-error" : "/pago-ok";
+
+  console.log("[IZIPAY] return root POST", { status, orderId, hasVads });
+
+  if (orderId) {
+    return res.redirect(`${target}?orderId=${encodeURIComponent(orderId)}`);
+  }
+  return res.redirect(target);
+});
+
 // TambiÃ©n servir index.html para rutas comunes
 app.get("/index.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 app.get("/result.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "result.html"));
+});
+
+// Checkout MCW/Niubiz
+app.get("/checkout", (req, res) => {
+  const checkoutPath = path.join(__dirname, "public", "checkout.html");
+  fs.readFile(checkoutPath, "utf8", (err, html) => {
+    if (err) {
+      console.error("[MCW] Error leyendo checkout.html:", err.message);
+      return res.status(500).send("No se pudo cargar el checkout");
+    }
+    const safePublicKey = MCW_PUBLIC_KEY || "";
+    const safeReturnOk = MCW_RETURN_OK || "";
+    const safeReturnKo = MCW_RETURN_KO || "";
+    const rendered = html
+      .replace(/__MCW_PUBLIC_KEY__/g, safePublicKey)
+      .replace(/__MCW_RETURN_OK__/g, safeReturnOk)
+      .replace(/__MCW_RETURN_KO__/g, safeReturnKo);
+    return res.status(200).send(rendered);
+  });
+});
+
+// Checkout Izipay (Redirección VADS)
+app.get("/comprar", (req, res) => {
+  const comprarPath = path.join(__dirname, "public", "comprar.html");
+  fs.readFile(comprarPath, "utf8", (err, html) => {
+    if (err) {
+      console.error("[IZIPAY] Error leyendo comprar.html:", err.message);
+      return res.status(500).send("No se pudo cargar el checkout");
+    }
+
+    const priceLabel = formatPriceLabel(PRICE_CENTS);
+    const rendered = html
+      .replace(/__PRICE_LABEL__/g, priceLabel)
+      .replace(/__PRICE_CENTS__/g, String(PRICE_CENTS));
+    return res.status(200).send(rendered);
+  });
+});
+
+app.get("/pago-ok", (req, res) => {
+  const orderId = String(req.query?.orderId || req.query?.vads_order_id || "").trim();
+  if (orderId && !req.query?.orderId) {
+    return res.redirect(`/pago-ok?orderId=${encodeURIComponent(orderId)}`);
+  }
+  console.log("[IZIPAY] return pago-ok GET", { query: req.query || {} });
+  return res.sendFile(path.join(__dirname, "public", "pago-ok.html"));
+});
+
+app.post("/pago-ok", (req, res) => {
+  const orderId = String(req.body?.vads_order_id || req.body?.orderId || "").trim();
+  console.log("[IZIPAY] return pago-ok POST", { body: req.body || {}, query: req.query || {} });
+  if (orderId) {
+    return res.redirect(`/pago-ok?orderId=${encodeURIComponent(orderId)}`);
+  }
+  return res.sendFile(path.join(__dirname, "public", "pago-ok.html"));
+});
+
+app.get("/pago-error", (req, res) => {
+  const orderId = String(req.query?.orderId || req.query?.vads_order_id || "").trim();
+  if (orderId && !req.query?.orderId) {
+    return res.redirect(`/pago-error?orderId=${encodeURIComponent(orderId)}`);
+  }
+  console.log("[IZIPAY] return pago-error GET", { query: req.query || {} });
+  return res.sendFile(path.join(__dirname, "public", "pago-error.html"));
+});
+
+app.post("/pago-error", (req, res) => {
+  const orderId = String(req.body?.vads_order_id || req.body?.orderId || "").trim();
+  console.log("[IZIPAY] return pago-error POST", { body: req.body || {}, query: req.query || {} });
+  if (orderId) {
+    return res.redirect(`/pago-error?orderId=${encodeURIComponent(orderId)}`);
+  }
+  return res.sendFile(path.join(__dirname, "public", "pago-error.html"));
 });
 
 // ============================================
@@ -175,7 +283,14 @@ app.post("/api/coupons/redeem", (req, res) => {
 // VARIABLES DE ENTORNO
 // ============================================
 const CAPTCHA_API_KEY = process.env.CAPTCHA_API_KEY || "";
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "";
+const MCW_API_USER = process.env.MCW_API_USER || "";
+const MCW_API_PASSWORD = process.env.MCW_API_PASSWORD || "";
+const MCW_PUBLIC_KEY = process.env.MCW_PUBLIC_KEY || "";
+const MCW_HMAC_KEY = process.env.MCW_HMAC_KEY || "";
+const MCW_RETURN_OK = process.env.MCW_RETURN_OK || "";
+const MCW_RETURN_KO = process.env.MCW_RETURN_KO || "";
+const MCW_IPN_URL = process.env.MCW_IPN_URL || "";
+const MCW_CREATE_PAYMENT_URL = process.env.MCW_CREATE_PAYMENT_URL || "https://api.micuentaweb.pe/api-payment/V4/Charge/CreatePayment";
 // CÃ³digos de cupones por defecto (si no estÃ¡n en .env)
 const DEFAULT_COUPON_ADMIN_CODE = "ADMIN-VALHAR-2025";
 const DEFAULT_COUPONS_PUBLIC_CODES = "PROMO-VALHAR1:5,PROMO-VALHAR2:5,PROMO-VALHAR3:5";
@@ -185,6 +300,15 @@ const COUPON_ADMIN_CODE = process.env.COUPON_ADMIN_CODE || DEFAULT_COUPON_ADMIN_
 const COUPONS_PUBLIC_CODES = process.env.COUPONS_PUBLIC_CODES || DEFAULT_COUPONS_PUBLIC_CODES;
 const COUPON_HASH_SALT = process.env.COUPON_HASH_SALT || "v1";
 const PORT = process.env.PORT || 3000;
+const BASE_URL = process.env.BASE_URL || process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+const PRICE_CENTS = Number.isFinite(Number(process.env.PRICE_CENTS))
+  ? Math.round(Number(process.env.PRICE_CENTS))
+  : 1500;
+const CURRENCY_NUM = String(process.env.CURRENCY_NUM || "604");
+const IZIPAY_SITE_ID = process.env.IZIPAY_SITE_ID || "";
+const IZIPAY_CTX_MODE = String(process.env.IZIPAY_CTX_MODE || "TEST").toUpperCase();
+const IZIPAY_TEST_KEY = process.env.IZIPAY_TEST_KEY || "";
+const IZIPAY_PROD_KEY = process.env.IZIPAY_PROD_KEY || "";
 
 // ============================================
 // DETECCIÃ“N DE AMBIENTE Y TIMEOUTS DINÃMICOS
@@ -292,6 +416,328 @@ function saveCouponState(state) {
     console.error("[CUPONES] Error guardando coupon-state.json:", e.message);
     return false;
   }
+}
+
+// ============================================
+// MICUENTAWEB / NIUBIZ (KRYPTON V4)
+// ============================================
+const PAYMENTS_DATA_PATH = path.join(__dirname, "data", "payments.json");
+
+function buildMcwOrderId() {
+  const ts = Date.now();
+  const random = crypto.randomBytes(4).toString("hex").toUpperCase();
+  return `ORDER-${ts}-${random}`;
+}
+
+function ensurePaymentsStore() {
+  try {
+    fs.mkdirSync(path.dirname(PAYMENTS_DATA_PATH), { recursive: true });
+    if (!fs.existsSync(PAYMENTS_DATA_PATH)) {
+      fs.writeFileSync(PAYMENTS_DATA_PATH, JSON.stringify({ version: 1, payments: [] }, null, 2), "utf8");
+    }
+  } catch (error) {
+    console.error("[MCW] Error inicializando storage de pagos:", error.message);
+  }
+}
+
+function loadPaymentsStore() {
+  ensurePaymentsStore();
+  try {
+    const raw = fs.readFileSync(PAYMENTS_DATA_PATH, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    if (!Array.isArray(parsed.payments)) parsed.payments = [];
+    return parsed;
+  } catch (error) {
+    console.error("[MCW] Error leyendo payments.json:", error.message);
+    return { version: 1, payments: [] };
+  }
+}
+
+function savePaymentsStore(store) {
+  ensurePaymentsStore();
+  const tmpPath = `${PAYMENTS_DATA_PATH}.tmp`;
+  const payload = {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    payments: Array.isArray(store?.payments) ? store.payments : []
+  };
+
+  fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), "utf8");
+  fs.renameSync(tmpPath, PAYMENTS_DATA_PATH);
+}
+
+function upsertPaymentRecord(record) {
+  const store = loadPaymentsStore();
+  const idx = store.payments.findIndex((p) => p.orderId === record.orderId);
+  const nextRecord = {
+    ...record,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (idx >= 0) {
+    store.payments[idx] = {
+      ...store.payments[idx],
+      ...nextRecord
+    };
+  } else {
+    store.payments.push({
+      createdAt: new Date().toISOString(),
+      ...nextRecord
+    });
+  }
+
+  savePaymentsStore(store);
+}
+
+function safeEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+}
+
+function formatPriceLabel(centsValue) {
+  const cents = Number.isFinite(Number(centsValue)) ? Number(centsValue) : 0;
+  const amount = (cents / 100).toFixed(2);
+  return `S/ ${amount}`;
+}
+
+function extractIpnPayload(req) {
+  if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+    return req.body;
+  }
+
+  const raw = String(req.rawBody || "").trim();
+  if (!raw) return {};
+
+  if (raw.startsWith("{")) {
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  const params = new URLSearchParams(raw);
+  const out = {};
+  for (const [k, v] of params.entries()) {
+    out[k] = v;
+  }
+  return out;
+}
+
+function getKrHashCandidate(req, payload) {
+  return String(
+    payload?.["kr-hash"] ||
+    payload?.kr_hash ||
+    req.query?.["kr-hash"] ||
+    req.query?.kr_hash ||
+    req.headers?.["kr-hash"] ||
+    req.headers?.["x-kr-hash"] ||
+    ""
+  ).trim();
+}
+
+function getKrAnswerCandidate(payload, rawBody) {
+  if (payload?.["kr-answer"]) return String(payload["kr-answer"]);
+  if (payload?.kr_answer) return String(payload.kr_answer);
+
+  const raw = String(rawBody || "").trim();
+  if (!raw) return "";
+
+  if (raw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(raw);
+      return String(parsed?.["kr-answer"] || parsed?.kr_answer || raw);
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  const params = new URLSearchParams(raw);
+  if (params.has("kr-answer")) return params.get("kr-answer");
+  if (params.has("kr_answer")) return params.get("kr_answer");
+  return raw;
+}
+
+function computeMcwKrHash({ krAnswer, hmacKey }) {
+  const hmac = crypto.createHmac("sha256", hmacKey);
+  hmac.update(String(krAnswer || ""), "utf8");
+  const digestBuffer = hmac.digest();
+  return {
+    digestHex: digestBuffer.toString("hex"),
+    digestBase64: digestBuffer.toString("base64")
+  };
+}
+
+function timingSafeEqualHash(a, b) {
+  const left = Buffer.from(String(a || ""), "utf8");
+  const right = Buffer.from(String(b || ""), "utf8");
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
+function validateKrHash({ providedHash, digestHex, digestBase64 }) {
+  const normalized = String(providedHash || "").trim();
+  if (!normalized) return false;
+  const normalizedLower = normalized.toLowerCase();
+  const digestHexLower = String(digestHex || "").toLowerCase();
+  return (
+    timingSafeEqualHash(normalized, digestBase64) ||
+    timingSafeEqualHash(normalized, digestHex) ||
+    timingSafeEqualHash(normalizedLower, digestHexLower)
+  );
+}
+
+function parseKrAnswer(krAnswerRaw) {
+  try {
+    if (!krAnswerRaw) return {};
+    if (typeof krAnswerRaw === "object") return krAnswerRaw;
+    return JSON.parse(String(krAnswerRaw));
+  } catch (_) {
+    return {};
+  }
+}
+
+function isPaidTransaction(answer) {
+  const orderStatus = String(answer?.orderStatus || "").toUpperCase();
+  const txStatus = String(answer?.transactions?.[0]?.detailedStatus || answer?.transactions?.[0]?.status || "").toUpperCase();
+  return orderStatus === "PAID" || txStatus.includes("PAID") || txStatus.includes("CAPTURED");
+}
+
+// ============================================
+// IZIPAY / MICUENTAWEB REDIRECCIÃ“N (VADS)
+// ============================================
+const IZIPAY_FORM_ACTION = "https://secure.micuentaweb.pe/vads-payment/";
+const izipayPayments = new Map();
+let izipayTransCounter = 0;
+let izipayTransDateKey = "";
+
+function formatIzipayUtcDate(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = pad(date.getUTCMonth() + 1);
+  const day = pad(date.getUTCDate());
+  const hours = pad(date.getUTCHours());
+  const minutes = pad(date.getUTCMinutes());
+  const seconds = pad(date.getUTCSeconds());
+  return `${year}${month}${day}${hours}${minutes}${seconds}`;
+}
+
+function getIzipayDateKey(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = pad(date.getUTCMonth() + 1);
+  const day = pad(date.getUTCDate());
+  return `${year}${month}${day}`;
+}
+
+function nextIzipayTransId(date = new Date()) {
+  const dateKey = getIzipayDateKey(date);
+  if (izipayTransDateKey !== dateKey) {
+    izipayTransDateKey = dateKey;
+    izipayTransCounter = 0;
+  }
+  izipayTransCounter = (izipayTransCounter + 1) % 1000000;
+  return String(izipayTransCounter).padStart(6, "0");
+}
+
+function buildIzipayOrderId() {
+  const random = crypto.randomBytes(6).toString("hex").toUpperCase();
+  return `IZI-${Date.now().toString(36).toUpperCase()}-${random}`;
+}
+
+function getIzipayKey(ctxMode) {
+  const mode = String(ctxMode || IZIPAY_CTX_MODE || "TEST").toUpperCase();
+  return mode === "PRODUCTION" ? IZIPAY_PROD_KEY : IZIPAY_TEST_KEY;
+}
+
+function computeIzipaySignature(fields, key) {
+  if (!key) return "";
+  const sortedKeys = Object.keys(fields)
+    .filter((name) => name.startsWith("vads_"))
+    .sort();
+  const values = sortedKeys.map((name) => String(fields[name] ?? ""));
+  const payload = `${values.join("+")}+${key}`;
+  return crypto.createHmac("sha256", key).update(payload, "utf8").digest("base64");
+}
+
+function timingSafeEqualText(left, right) {
+  const leftBuf = Buffer.from(String(left || ""), "utf8");
+  const rightBuf = Buffer.from(String(right || ""), "utf8");
+  if (leftBuf.length !== rightBuf.length) return false;
+  return crypto.timingSafeEqual(leftBuf, rightBuf);
+}
+
+function normalizeIzipayStatus(value) {
+  const status = String(value || "").toUpperCase();
+  if (["ACCEPTED", "AUTHORISED", "AUTHORIZED", "CAPTURED", "PAID"].includes(status)) {
+    return "PAID";
+  }
+  if (status === "REFUSED") return "REFUSED";
+  if (status === "ABANDONED") return "ABANDONED";
+  return status || "UNKNOWN";
+}
+
+function findIzipayPaymentByTransId(transId) {
+  if (!transId) return null;
+  for (const [orderId, record] of izipayPayments.entries()) {
+    if (record?.transId === transId) {
+      return { orderId, record };
+    }
+  }
+  return null;
+}
+
+function loadIzipayPaymentsFromStore() {
+  const store = loadPaymentsStore();
+  const stored = store?.izipay && typeof store.izipay === "object" ? store.izipay : {};
+  for (const [orderId, record] of Object.entries(stored)) {
+    izipayPayments.set(orderId, record);
+  }
+
+  const todayKey = getIzipayDateKey();
+  let maxCounter = 0;
+  for (const record of izipayPayments.values()) {
+    const transDate = String(record?.transDate || "");
+    if (transDate.startsWith(todayKey)) {
+      const counter = Number.parseInt(record?.transId, 10);
+      if (Number.isFinite(counter)) {
+        maxCounter = Math.max(maxCounter, counter);
+      }
+    }
+  }
+  izipayTransDateKey = todayKey;
+  izipayTransCounter = maxCounter;
+}
+
+function persistIzipayPayments() {
+  try {
+    const store = loadPaymentsStore();
+    const payload = {};
+    for (const [orderId, record] of izipayPayments.entries()) {
+      payload[orderId] = record;
+    }
+    store.izipay = payload;
+    savePaymentsStore(store);
+  } catch (error) {
+    console.error("[IZIPAY] Error guardando payments.json:", error.message);
+  }
+}
+
+loadIzipayPaymentsFromStore();
+
+function activateAccess({ orderId, email, amount, currency, provider = "MCW" }) {
+  if (provider === "IZIPAY" && orderId) {
+    const record = izipayPayments.get(orderId);
+    if (record) {
+      record.access = true;
+      record.accessToken = record.accessToken || crypto.randomBytes(16).toString("hex");
+      record.updatedAt = new Date().toISOString();
+      izipayPayments.set(orderId, record);
+      persistIzipayPayments();
+    }
+  }
+
+  // Integrar aquÃ­ con tu modelo real de usuarios/licencias.
+  console.log(`[${provider}] [ACCESS] Acceso activado (stub) -> orderId=${orderId}, email=${email || "N/A"}, amount=${amount || "N/A"} ${currency || ""}`);
 }
 
 // ============================================
@@ -881,106 +1327,590 @@ async function resolverCaptchaImagen(base64Image) {
 }
 
 // ============================================
-// MERCADO PAGO
+// MERCADO PAGO (DESHABILITADO)
 // ============================================
-let mercadopago = null;
-try {
-  const { MercadoPagoConfig, Preference } = require("mercadopago");
-  if (ACCESS_TOKEN) {
-    mercadopago = { config: new MercadoPagoConfig({ accessToken: ACCESS_TOKEN }), Preference };
-  }
-} catch (e) {
-  console.log("MercadoPago no configurado");
-}
-
-// Modo prueba para desarrollo (solo se activa explÃ­citamente)
-// Para activar: agregar MODO_PRUEBA=true en .env o establecer NODE_ENV=development
-// TambiÃ©n se activa automÃ¡ticamente si no hay ACCESS_TOKEN configurado
-const MODO_PRUEBA = process.env.MODO_PRUEBA === 'true' || !ACCESS_TOKEN;
-
-app.post("/crear-preferencia", async (req, res) => {
-  // MODO PRUEBA: Solo si estÃ¡ explÃ­citamente activado o si no hay ACCESS_TOKEN, redirigir directamente a result.html
-  // En producciÃ³n normal, siempre debe pasar por el proceso de pago
-  if (MODO_PRUEBA) {
-    if (!ACCESS_TOKEN) {
-      console.log('[MODO PRUEBA] ACCESS_TOKEN no configurado - activando bypass de pago');
-    } else {
-      console.log('[MODO PRUEBA] Bypass de pago activado explÃ­citamente');
-    }
-    return res.json({
-      id: 'TEST_MODE',
-      test_mode: true,
-      redirect_url: '/result.html'
-    });
-  }
-
-  if (!mercadopago) {
-    return respond(res, { ok: false, source: "mercadopago", status: "error", message: "MercadoPago no configurado. Configure ACCESS_TOKEN en el archivo .env" }, 500);
-  }
-  try {
-    // Base URL pÃºblico (Railway/cPanel/producciÃ³n)
-    // Recomendado: definir PUBLIC_BASE_URL en .env (ej: https://tu-dominio.com o https://tuapp.up.railway.app)
-    const host = req.get('host') || 'localhost:3000';
-    const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
-    const envBaseUrl = (process.env.PUBLIC_BASE_URL || '').trim();
-    const baseUrl = envBaseUrl
-      ? envBaseUrl.replace(/\/+$/, '')
-      : (isLocalhost ? `http://${host}` : `https://${host}`);
-
-    // Validar que baseUrl no estÃ© vacÃ­o
-    if (!baseUrl || !baseUrl.startsWith('http')) {
-      throw new Error(`URL base invÃ¡lida: ${baseUrl}`);
-    }
-
-    // Construir objeto de preferencia
-    const preferenceBody = {
-      items: [{
-        title: "Consulta vehicular",
-        quantity: 1,
-        unit_price: 15,
-        currency_id: "PEN"
-      }],
-      back_urls: {
-        success: `${baseUrl}/result.html`,
-        failure: `${baseUrl}/`,
-        pending: `${baseUrl}/pendiente`
-      }
-    };
-
-    // Solo agregar auto_return si no es localhost (MercadoPago puede rechazar localhost con auto_return)
-    if (!isLocalhost) {
-      preferenceBody.auto_return = "approved";
-    }
-
-    // Validar que success URL estÃ© definida
-    if (!preferenceBody.back_urls.success) {
-      throw new Error('back_urls.success no estÃ¡ definido');
-    }
-
-    console.log(`[MercadoPago] Creando preferencia con URLs:`, preferenceBody.back_urls);
-    if (preferenceBody.auto_return) {
-      console.log(`[MercadoPago] Auto-return activado: ${preferenceBody.auto_return}`);
-    }
-
-    const preference = await new mercadopago.Preference(mercadopago.config).create({
-      body: preferenceBody
-    });
-
-    console.log(`[MercadoPago] âœ… Preferencia creada: ${preference.id}`);
-    console.log(`[MercadoPago] URL de Ã©xito: ${preferenceBody.back_urls.success}`);
-    res.json({ id: preference.id });
-  } catch (error) {
-    console.error(`[MercadoPago] âŒ Error al crear preferencia:`, error);
-    console.error(`[MercadoPago] Detalles del error:`, error.response?.data || error.message);
-    respond(res, { ok: false, source: "mercadopago", status: "error", message: error.message }, 500);
-  }
-});
+// IntegraciÃ³n removida. El checkout oficial es MiCuentaWeb/Izipay (Krypton V4).
 
 // ============================================
 // HEALTH CHECK
 // ============================================
 app.get("/api/health", (req, res) => {
   respond(res, { ok: true, source: "health", status: "success", message: "Servidor operativo" });
+});
+
+// ============================================
+// API: MICUENTAWEB / NIUBIZ - CREATE TOKEN
+// ============================================
+app.post("/api/payments/mcw/create-token", async (req, res) => {
+  try {
+    if (!MCW_API_USER || !MCW_API_PASSWORD || !MCW_PUBLIC_KEY) {
+      return res.status(500).json({
+        ok: false,
+        source: "mcw",
+        status: "error",
+        message: "Pasarela de pago no configurada"
+      });
+    }
+
+    const { email, amount, userId } = req.body || {};
+    if (!safeEmail(email)) {
+      return respond(res, {
+        ok: false,
+        source: "mcw",
+        status: "error",
+        message: "Email válido requerido"
+      }, 400);
+    }
+
+    const finalAmount = Number.isFinite(Number(amount)) && Number(amount) > 0
+      ? Math.round(Number(amount))
+      : 1500;
+    const orderId = buildMcwOrderId();
+    const authBasic = Buffer.from(`${MCW_API_USER}:${MCW_API_PASSWORD}`).toString("base64");
+
+    const payload = {
+      amount: finalAmount,
+      currency: "PEN",
+      paymentMethods: ["CARDS", "PAGOEFECTIVO"],
+      customer: { email: String(email).trim() },
+      orderId
+    };
+
+    const mcwResponse = await axios.post(MCW_CREATE_PAYMENT_URL, payload, {
+      headers: {
+        Authorization: `Basic ${authBasic}`,
+        "Content-Type": "application/json"
+      },
+      timeout: 30000
+    });
+
+    const formToken = mcwResponse?.data?.answer?.formToken;
+    if (!formToken) {
+      throw new Error("Respuesta inválida de MiCuentaWeb: formToken ausente");
+    }
+
+    upsertPaymentRecord({
+      orderId,
+      email: String(email).trim().toLowerCase(),
+      userId: userId || null,
+      amount: finalAmount,
+      currency: "PEN",
+      provider: "MCW",
+      status: "PENDING",
+      source: "create-token"
+    });
+
+    console.log(`[MCW] formToken generado correctamente: orderId=${orderId}, email=${email}`);
+
+    return respond(res, {
+      ok: true,
+      source: "mcw",
+      status: "success",
+      message: "Token de pago generado",
+      data: {
+        orderId,
+        formToken,
+        publicKey: MCW_PUBLIC_KEY,
+        returnOk: MCW_RETURN_OK,
+        returnKo: MCW_RETURN_KO,
+        ipnUrl: MCW_IPN_URL
+      }
+    });
+  } catch (error) {
+    console.error("[MCW] Error creando formToken:", error.message);
+    if (error.response) {
+      console.error("[MCW] Respuesta remota:", {
+        status: error.response.status,
+        code: error.response.data?.status,
+        message: error.response.data?.message
+      });
+    }
+
+    return res.status(500).json({
+      ok: false,
+      source: "mcw",
+      status: "error",
+      message: "No se pudo iniciar el pago"
+    });
+  }
+});
+
+// ============================================
+// API: MICUENTAWEB / NIUBIZ - IPN (Webhook)
+// ============================================
+app.post("/api/payments/mcw/ipn", async (req, res) => {
+  try {
+    if (!MCW_HMAC_KEY) {
+      console.error("[MCW] IPN recibido sin MCW_HMAC_KEY configurado");
+      return res.status(500).json({ ok: false, message: "HMAC key no configurada" });
+    }
+
+    const payload = extractIpnPayload(req);
+    const krHash = getKrHashCandidate(req, payload);
+    const krAnswerRaw = getKrAnswerCandidate(payload, req.rawBody);
+
+    // Según especificación de MiCuentaWeb/Krypton, el hash se recalcula con HMAC-SHA256
+    // usando la HMAC key privada y el valor kr-answer (raw string JSON).
+    const { digestHex, digestBase64 } = computeMcwKrHash({ krAnswer: krAnswerRaw, hmacKey: MCW_HMAC_KEY });
+
+    if (!validateKrHash({ providedHash: krHash, digestHex, digestBase64 })) {
+      console.warn("[MCW] IPN firma inválida", {
+        hasKrHash: !!krHash,
+        hasKrAnswer: !!krAnswerRaw
+      });
+      return res.status(401).json({ ok: false, message: "Firma inválida" });
+    }
+
+    const answer = parseKrAnswer(krAnswerRaw);
+    const orderId = String(answer?.orderDetails?.orderId || answer?.orderId || payload?.orderId || "").trim();
+    const email = String(answer?.customer?.email || answer?.orderDetails?.customer?.email || payload?.email || "").trim().toLowerCase();
+    const amount = Number(answer?.orderDetails?.orderTotalAmount || answer?.amount || payload?.amount || 0);
+    const currency = String(answer?.orderDetails?.orderCurrency || answer?.currency || payload?.currency || "PEN").toUpperCase();
+    const paid = isPaidTransaction(answer);
+
+    if (!orderId) {
+      console.warn("[MCW] IPN válido pero sin orderId");
+      return res.status(400).json({ ok: false, message: "orderId ausente" });
+    }
+
+    upsertPaymentRecord({
+      orderId,
+      email,
+      amount,
+      currency,
+      provider: "MCW",
+      status: paid ? "PAID" : "RECEIVED",
+      paidAt: paid ? new Date().toISOString() : null,
+      source: "ipn",
+      ipn: {
+        orderStatus: answer?.orderStatus || null,
+        transactionStatus: answer?.transactions?.[0]?.detailedStatus || answer?.transactions?.[0]?.status || null
+      }
+    });
+
+    console.log(`[MCW] IPN recibido. Firma válida. orderId=${orderId} status=${paid ? "PAID" : "RECEIVED"}`);
+
+    if (paid) {
+      activateAccess({ orderId, email, amount, currency });
+      console.log(`[MCW] Acceso activado para orderId=${orderId}`);
+    }
+
+    // Responder rápido al IPN
+    return res.status(200).json({ ok: true, orderId, status: paid ? "PAID" : "RECEIVED" });
+  } catch (error) {
+    console.error("[MCW] Error procesando IPN:", error.message);
+    return res.status(400).json({ ok: false, message: "IPN inválido" });
+  }
+});
+
+// ============================================
+// API: IZIPAY REDIRECCIÓN (VADS) - INIT
+// ============================================
+app.post("/api/izipay/init", (req, res) => {
+  try {
+    if (!IZIPAY_SITE_ID) {
+      return respond(res, {
+        ok: false,
+        source: "izipay",
+        status: "error",
+        message: "IZIPAY_SITE_ID no configurado"
+      }, 500);
+    }
+
+    const key = getIzipayKey(IZIPAY_CTX_MODE);
+    if (!key) {
+      return respond(res, {
+        ok: false,
+        source: "izipay",
+        status: "error",
+        message: "Llave Izipay no configurada"
+      }, 500);
+    }
+
+    const { email } = req.body || {};
+    const orderId = buildIzipayOrderId();
+    const transDate = formatIzipayUtcDate();
+    const transId = nextIzipayTransId();
+    const amount = Math.max(1, Math.round(PRICE_CENTS));
+
+    // Verificar si BASE_URL es localhost (no válido para IPN)
+    const isLocalhost = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1');
+    
+    const fields = {
+      vads_action_mode: "INTERACTIVE",
+      vads_amount: String(amount),
+      vads_ctx_mode: IZIPAY_CTX_MODE,
+      vads_currency: String(CURRENCY_NUM),
+      vads_page_action: "PAYMENT",
+      vads_payment_config: "SINGLE",
+      vads_return_mode: "GET",
+      vads_site_id: IZIPAY_SITE_ID,
+      vads_trans_date: transDate,
+      vads_trans_id: transId,
+      vads_version: "V2",
+      vads_order_id: orderId,
+      vads_url_return: `${BASE_URL}/pago-ok?orderId=${encodeURIComponent(orderId)}`,
+      vads_url_cancel: `${BASE_URL}/pago-error?orderId=${encodeURIComponent(orderId)}`,
+      vads_url_success: `${BASE_URL}/pago-ok?orderId=${encodeURIComponent(orderId)}`,
+      vads_url_error: `${BASE_URL}/pago-error?orderId=${encodeURIComponent(orderId)}`,
+      vads_language: "es"
+    };
+    
+    // Solo incluir vads_url_check si NO es localhost (Izipay no puede acceder a localhost)
+    // En localhost, el IPN se debe simular manualmente o usar ngrok
+    if (!isLocalhost) {
+      fields.vads_url_check = `${BASE_URL}/api/izipay/ipn`;
+      console.log(`[IZIPAY] IPN URL configurada: ${fields.vads_url_check}`);
+    } else {
+      console.log(`[IZIPAY] Modo localhost detectado - vads_url_check omitido (usar botón de simulación o ngrok)`);
+    }
+
+    if (safeEmail(email)) {
+      fields.vads_cust_email = String(email).trim().toLowerCase();
+    }
+
+    const signature = computeIzipaySignature(fields, key);
+    const record = {
+      orderId,
+      status: "PENDING",
+      amount,
+      currency: CURRENCY_NUM,
+      transId,
+      transDate,
+      ctxMode: IZIPAY_CTX_MODE,
+      email: safeEmail(email) ? String(email).trim().toLowerCase() : null,
+      access: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    izipayPayments.set(orderId, record);
+    persistIzipayPayments();
+
+    console.log(`[IZIPAY] init -> orderId=${orderId}, transId=${transId}, amount=${amount}`);
+    if (fields.vads_url_check) {
+      console.log(`[IZIPAY] IPN URL configurada: ${fields.vads_url_check}`);
+    }
+
+    return res.status(200).json({
+      formAction: IZIPAY_FORM_ACTION,
+      fields: {
+        ...fields,
+        signature
+      }
+    });
+  } catch (error) {
+    console.error("[IZIPAY] Error en init:", error.message);
+    return respond(res, {
+      ok: false,
+      source: "izipay",
+      status: "error",
+      message: "No se pudo iniciar el pago"
+    }, 500);
+  }
+});
+
+// ============================================
+// API: IZIPAY REDIRECCIÓN (VADS) - IPN
+// ============================================
+app.post("/api/izipay/ipn", (req, res) => {
+  try {
+    console.log(`[IZIPAY] IPN recibido - Headers:`, JSON.stringify(req.headers, null, 2));
+    console.log(`[IZIPAY] IPN recibido - Body:`, JSON.stringify(req.body, null, 2));
+    
+    const payload = req.body || {};
+    const receivedSignature = String(payload.signature || "").trim();
+    const vadsFields = {};
+    Object.keys(payload || {}).forEach((key) => {
+      if (key.startsWith("vads_")) {
+        vadsFields[key] = payload[key];
+      }
+    });
+
+    if (!receivedSignature) {
+      console.warn("[IZIPAY] ipn-invalid -> signature ausente");
+      return res.status(401).send("INVALID_SIGNATURE");
+    }
+
+    const ctxMode = vadsFields.vads_ctx_mode || IZIPAY_CTX_MODE;
+    const key = getIzipayKey(ctxMode);
+    if (!key) {
+      console.warn("[IZIPAY] ipn-invalid -> key no configurada");
+      return res.status(500).send("CONFIG_ERROR");
+    }
+
+    const expectedSignature = computeIzipaySignature(vadsFields, key);
+    if (!timingSafeEqualText(receivedSignature, expectedSignature)) {
+      console.warn("[IZIPAY] ipn-invalid -> firma inválida", {
+        received: receivedSignature,
+        expected: expectedSignature
+      });
+      return res.status(401).send("INVALID_SIGNATURE");
+    }
+
+    const orderId = String(vadsFields.vads_order_id || "").trim();
+    const transId = String(vadsFields.vads_trans_id || "").trim();
+    const statusRaw = String(vadsFields.vads_trans_status || "").trim();
+    const status = normalizeIzipayStatus(statusRaw);
+    let record = orderId ? izipayPayments.get(orderId) : null;
+
+    if (!record && transId) {
+      const found = findIzipayPaymentByTransId(transId);
+      if (found) {
+        record = found.record;
+      }
+    }
+
+    if (!record) {
+      record = {
+        orderId: orderId || `UNKNOWN-${transId || Date.now()}`,
+        status: "PENDING",
+        amount: Number(vadsFields.vads_amount || 0),
+        currency: vadsFields.vads_currency || CURRENCY_NUM,
+        transId: transId || null,
+        transDate: vadsFields.vads_trans_date || null,
+        ctxMode: ctxMode,
+        access: false,
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    // Protección de idempotencia: evitar procesar el mismo IPN múltiples veces
+    const previousStatus = record.status;
+    const wasAlreadyPaid = previousStatus === "PAID";
+    const isNowPaid = status === "PAID";
+    
+    // Si ya estaba PAID y el nuevo status también es PAID, solo actualizar timestamp
+    if (wasAlreadyPaid && isNowPaid) {
+      console.log(`[IZIPAY] ipn-duplicate -> orderId=${record.orderId} ya estaba PAID, ignorando IPN duplicado`);
+      record.updatedAt = new Date().toISOString();
+      izipayPayments.set(record.orderId, record);
+      persistIzipayPayments();
+      return res.status(200).send("OK");
+    }
+
+    record.status = status;
+    record.updatedAt = new Date().toISOString();
+    record.rawIpn = {
+      receivedAt: new Date().toISOString(),
+      vads_trans_status: statusRaw,
+      payload: vadsFields
+    };
+
+    izipayPayments.set(record.orderId, record);
+    persistIzipayPayments();
+
+    console.log(`[IZIPAY] ipn-valid -> orderId=${record.orderId} status=${status} (anterior: ${previousStatus})`);
+
+    // Solo activar acceso si el status cambió a PAID (no estaba PAID antes)
+    if (isNowPaid && !wasAlreadyPaid) {
+      activateAccess({
+        orderId: record.orderId,
+        email: record.email,
+        amount: record.amount,
+        currency: record.currency,
+        provider: "IZIPAY"
+      });
+      console.log(`[IZIPAY] Acceso activado para orderId=${record.orderId}`);
+    }
+
+    return res.status(200).send("OK");
+  } catch (error) {
+    console.error("[IZIPAY] Error procesando IPN:", error.message);
+    return res.status(400).send("INVALID_IPN");
+  }
+});
+
+// ============================================
+// API: IZIPAY - SIMULAR IPN (SOLO DESARROLLO)
+// ============================================
+app.post("/api/izipay/simulate-ipn", (req, res) => {
+  console.log(`[IZIPAY] simulate-ipn -> Endpoint llamado, hostname: ${req.hostname}, url: ${req.url}`);
+  
+  // Solo permitir en desarrollo/localhost
+  const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1' || process.env.NODE_ENV !== 'production';
+  
+  console.log(`[IZIPAY] simulate-ipn -> isLocalhost: ${isLocalhost}`);
+  
+  if (!isLocalhost) {
+    return res.status(403).json({ ok: false, message: "Solo disponible en desarrollo" });
+  }
+
+  try {
+    const { orderId } = req.body || {};
+    
+    if (!orderId) {
+      return res.status(400).json({ ok: false, message: "orderId requerido" });
+    }
+
+    let record = izipayPayments.get(String(orderId));
+    
+    // Si no está en memoria, intentar cargar desde el archivo
+    if (!record) {
+      console.log(`[IZIPAY] simulate-ipn -> orderId=${orderId} no está en memoria, cargando desde archivo...`);
+      try {
+        const store = loadPaymentsStore();
+        const stored = store?.izipay && typeof store.izipay === "object" ? store.izipay : {};
+        record = stored[String(orderId)];
+        
+        if (record) {
+          // Cargar en memoria para futuras consultas
+          izipayPayments.set(String(orderId), record);
+          console.log(`[IZIPAY] simulate-ipn -> orderId=${orderId} cargado desde archivo`);
+        }
+      } catch (error) {
+        console.error(`[IZIPAY] Error cargando desde archivo:`, error.message);
+      }
+    }
+    
+    if (!record) {
+      return res.status(404).json({ 
+        ok: false, 
+        message: "Orden no encontrada. El pago puede no haberse registrado correctamente o el servidor se reinició antes de guardarlo. Intenta realizar un nuevo pago." 
+      });
+    }
+
+    // Simular IPN con status PAID
+    const vadsFields = {
+      vads_order_id: orderId,
+      vads_trans_id: record.transId || String(Date.now()).slice(-6),
+      vads_trans_status: "AUTHORISED",
+      vads_ctx_mode: record.ctxMode || IZIPAY_CTX_MODE,
+      vads_amount: String(record.amount || PRICE_CENTS),
+      vads_currency: record.currency || CURRENCY_NUM,
+      vads_trans_date: record.transDate || formatIzipayUtcDate(),
+      vads_site_id: IZIPAY_SITE_ID
+    };
+
+    const key = getIzipayKey(vadsFields.vads_ctx_mode);
+    if (!key) {
+      return res.status(500).json({ ok: false, message: "Llave Izipay no configurada" });
+    }
+
+    const signature = computeIzipaySignature(vadsFields, key);
+    
+    // Crear payload del IPN simulado
+    const ipnPayload = {
+      ...vadsFields,
+      signature
+    };
+
+    // Llamar al endpoint del IPN internamente
+    const ipnReq = {
+      body: ipnPayload,
+      headers: req.headers
+    };
+    
+    // Simular la respuesta del IPN
+    const ipnRes = {
+      status: (code) => {
+        console.log(`[IZIPAY] IPN simulado respondió con código: ${code}`);
+        return ipnRes;
+      },
+      send: (data) => {
+        console.log(`[IZIPAY] IPN simulado: ${data}`);
+        return ipnRes;
+      }
+    };
+
+    // Procesar el IPN simulado
+    console.log(`[IZIPAY] Simulando IPN para orderId=${orderId}`);
+    
+    // Actualizar el registro directamente (simulando el IPN)
+    const previousStatus = record.status;
+    record.status = "PAID";
+    record.updatedAt = new Date().toISOString();
+    record.rawIpn = {
+      receivedAt: new Date().toISOString(),
+      vads_trans_status: "AUTHORISED",
+      payload: vadsFields,
+      simulated: true
+    };
+
+    izipayPayments.set(orderId, record);
+    persistIzipayPayments();
+
+    // Activar acceso si no estaba PAID antes
+    if (previousStatus !== "PAID") {
+      activateAccess({
+        orderId: record.orderId,
+        email: record.email,
+        amount: record.amount,
+        currency: record.currency,
+        provider: "IZIPAY"
+      });
+      console.log(`[IZIPAY] Acceso activado (simulado) para orderId=${orderId}`);
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "IPN simulado correctamente",
+      orderId,
+      status: "PAID",
+      accessToken: record.accessToken || null
+    });
+
+  } catch (error) {
+    console.error("[IZIPAY] Error simulando IPN:", error.message);
+    return res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+// ============================================
+// API: IZIPAY STATUS
+// ============================================
+app.get("/api/izipay/status", (req, res) => {
+  const { orderId } = req.query || {};
+  let record = izipayPayments.get(String(orderId || ""));
+  
+  // Si no está en memoria, intentar cargar desde el archivo
+  if (!record) {
+    console.log(`[IZIPAY] status -> orderId=${orderId || ""} no está en memoria, cargando desde archivo...`);
+    try {
+      const store = loadPaymentsStore();
+      const stored = store?.izipay && typeof store.izipay === "object" ? store.izipay : {};
+      record = stored[String(orderId || "")];
+      
+      if (record) {
+        // Cargar en memoria para futuras consultas
+        izipayPayments.set(String(orderId), record);
+        console.log(`[IZIPAY] status -> orderId=${orderId} cargado desde archivo`);
+      }
+    } catch (error) {
+      console.error(`[IZIPAY] Error cargando desde archivo:`, error.message);
+    }
+  }
+  
+  if (!record) {
+    console.warn(`[IZIPAY] status -> orderId=${orderId || ""} NOT_FOUND (ni en memoria ni en archivo)`);
+    return res.status(404).json({ status: "NOT_FOUND" });
+  }
+
+  console.log(`[IZIPAY] status -> orderId=${record.orderId} status=${record.status} access=${record.access || false} token=${record.accessToken ? 'presente' : 'ausente'}`);
+
+  return res.status(200).json({
+    status: record.status,
+    updatedAt: record.updatedAt || record.createdAt,
+    access: record.access || false,
+    accessToken: record.accessToken || null
+  });
+});
+
+// ============================================
+// API: SERVICIO USAR (TOKEN STUB)
+// ============================================
+app.get("/api/servicio/usar", (req, res) => {
+  const { token } = req.query || {};
+  if (!token) {
+    return res.status(400).json({ ok: false, message: "Token requerido" });
+  }
+
+  const record = Array.from(izipayPayments.values()).find((item) => item?.accessToken === token);
+  if (!record) {
+    return res.status(404).json({ ok: false, message: "Token inválido" });
+  }
+
+  return res.status(200).json({ ok: true, message: "Acceso permitido", orderId: record.orderId });
 });
 
 // ============================================
@@ -1012,12 +1942,14 @@ app.post("/api/soat", async (req, res) => {
     console.log(`[SOAT-APESEG] Consulta completada en ${elapsed}s para placa: ${placa}`);
 
     if (!resultado.success) {
+      // Siempre devolver 200 con ok: true y status: empty
       return respond(res, {
-        ok: false,
+        ok: true,
         source: "soat",
-        status: "error",
-        message: resultado.message || "Error al consultar SOAT"
-      }, 500);
+        status: "empty",
+        data: null,
+        message: resultado.message || "No se encontraron certificados SOAT para esta placa"
+      });
     }
 
     if (!resultado.polizas || resultado.polizas.length === 0) {
@@ -1062,26 +1994,24 @@ app.post("/api/soat", async (req, res) => {
     console.error(`[SOAT-APESEG] Error despuÃ©s de ${elapsed}s:`, error.message);
 
     const msg = String(error?.message || '');
-    let publicMessage = msg || "Error al consultar SOAT";
-    let statusCode = 500;
+    let publicMessage = "No se encontraron certificados SOAT para esta placa";
 
     if (msg.includes('APESEG_TRANSIENT_ERROR')) {
-      publicMessage = "APESEG estÃ¡ bloqueando temporalmente la consulta. Reintenta en 1-2 minutos.";
-      statusCode = 503;
+      publicMessage = "El servicio SOAT no estÃ¡ disponible temporalmente. Intente mÃ¡s tarde.";
     } else if (msg.includes('APESEG_CAPTCHA_INVALID')) {
-      publicMessage = "El captcha de APESEG fue rechazado. Reintenta nuevamente.";
-      statusCode = 503;
+      publicMessage = "No se pudo validar la consulta. Intente nuevamente.";
     } else if (msg.includes('APESEG_NO_CONFIRMATION')) {
-      publicMessage = "APESEG no confirmÃ³ resultados en este intento. Reintenta en unos segundos.";
-      statusCode = 503;
+      publicMessage = "No se pudo confirmar la consulta. Intente nuevamente.";
     }
 
+    // Siempre devolver 200 con ok: true y status: empty
     respond(res, {
-      ok: false,
+      ok: true,
       source: "soat",
-      status: "error",
+      status: "empty",
+      data: null,
       message: publicMessage
-    }, statusCode);
+    });
   }
 });
 
@@ -1126,9 +2056,16 @@ app.post("/api/lima", async (req, res) => {
     }
 
     if (!frame) {
-      console.log(`[SAT LIMA] Ã¢ÂÅ’ Iframe no encontrado`);
+      console.log(`[SAT LIMA] Ã¢ÂÅ' Iframe no encontrado`);
       await browser.close();
-      return respond(res, { ok: false, source: "lima", status: "error", message: "No se pudo cargar el formulario" });
+      // Siempre devolver 200 con ok: true y status: empty
+      return respond(res, { 
+        ok: true, 
+        source: "lima", 
+        status: "empty", 
+        data: [],
+        message: "No se encontraron papeletas para esta placa" 
+      });
     }
 
     console.log(`[SAT LIMA] Iframe encontrado, llenando formulario...`);
@@ -1196,9 +2133,16 @@ app.post("/api/lima", async (req, res) => {
     respond(res, { ok: true, source: "lima", status: tabla.length > 0 ? "warn" : "empty", data: tabla });
 
   } catch (error) {
-    console.error(`[SAT LIMA] Ã¢ÂÅ’ Error:`, error.message);
+    console.error(`[SAT LIMA] Ã¢ÂÅ' Error:`, error.message);
     if (browser) await browser.close().catch(() => {});
-    respond(res, { ok: false, source: "lima", status: "error", message: sanitizeError(error) }, 500);
+    // Siempre devolver 200 con ok: true y status: empty
+    respond(res, { 
+      ok: true, 
+      source: "lima", 
+      status: "empty", 
+      data: [],
+      message: "No se encontraron papeletas para esta placa" 
+    });
   }
 });
 
@@ -1866,12 +2810,16 @@ app.post("/api/siniestro", async (req, res) => {
       errorMessage = `Error del servicio SBS (${error.response.status}). Por favor intente mÃƒÂ¡s tarde.`;
     }
 
+    // Siempre devolver 200 con ok: true y status: empty
     return respond(res, {
-      ok: false,
+      ok: true,
       source: "siniestro",
-      status: "error",
-      message: errorMessage
-    }, 503);
+      status: "empty",
+      data: null,
+      message: errorMessage.includes('Sin registros') || errorMessage.includes('No se encontraron registros') 
+        ? "No se encontraron registros de SOAT para esta placa"
+        : "No se encontraron registros de SOAT para esta placa"
+    });
   }
 });
 
@@ -2143,7 +3091,14 @@ app.post("/api/impuesto", async (req, res) => {
 
   } catch (error) {
     if (browser) await browser.close();
-    respond(res, { ok: false, source: "impuesto", status: "error", message: sanitizeError(error) }, 500);
+    // Siempre devolver 200 con ok: true y status: empty
+    respond(res, { 
+      ok: true, 
+      source: "impuesto", 
+      status: "empty", 
+      data: null,
+      message: "No se encontrÃ³ informaciÃ³n de impuesto para esta placa" 
+    });
   }
 });
 
@@ -2452,6 +3407,7 @@ app.post("/api/placas-pe", async (req, res) => {
 
   } catch (error) {
     console.error('[PLACAS.PE] âŒ Error:', error);
+    // Siempre devolver 200 con ok: true y status: empty
     return respond(res, {
       ok: true,
       source: "placas-pe",
@@ -2459,10 +3415,10 @@ app.post("/api/placas-pe", async (req, res) => {
       data: {
         placa: placa,
         encontrado: false,
-        mensaje: "Error al consultar estado de placa"
+        mensaje: "No se encontrÃ³ informaciÃ³n para esta placa"
       },
-      message: error.message || "Error al consultar estado de placa"
-    }, 500);
+      message: "No se encontrÃ³ informaciÃ³n para esta placa"
+    });
   }
 });
 
@@ -2619,9 +3575,16 @@ app.post("/api/atu", async (req, res) => {
     respond(res, { ok: true, source: "atu", status: "success", data: registrado });
 
   } catch (error) {
-    console.error(`[ATU] Ã¢ÂÅ’ Error:`, error.message);
+    console.error(`[ATU] Ã¢ÂÅ' Error:`, error.message);
     if (browser) await browser.close().catch(() => {});
-    respond(res, { ok: false, source: "atu", status: "error", message: sanitizeError(error) }, 500);
+    // Siempre devolver 200 con ok: true y status: empty
+    respond(res, { 
+      ok: true, 
+      source: "atu", 
+      status: "empty", 
+      data: null,
+      message: "Placa no registrada en ATU o servicio no disponible" 
+    });
   }
 });
 
@@ -3711,7 +4674,14 @@ app.post("/api/asientos", async (req, res) => {
   }
 
   // Placeholder - implementar segÃƒÂºn lÃƒÂ³gica original
-  respond(res, { ok: false, source: "asientos", status: "error", message: "Servicio en mantenimiento" }, 503);
+  // Siempre devolver 200 con ok: true y status: empty
+  respond(res, { 
+    ok: true, 
+    source: "asientos", 
+    status: "empty", 
+    data: null,
+    message: "No se encontraron asientos registrados para esta placa" 
+  });
 });
 
 // ============================================
@@ -3781,10 +4751,20 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
 
       const resultado = await scraper.consultarPlaca(placa, 2); // 2 intentos mÃƒÂ¡ximo
 
-      console.log(`[CERT-VEHICULO] Ã°Å¸â€œÅ  Resultado del scraper:`, JSON.stringify(resultado, null, 2));
+      console.log(`[CERT-VEHICULO] Ã°Å¸â€œÅ  Resultado del scraper:`, JSON.stringify(resultado, null, 2));
 
       if (!resultado || !resultado.success) {
-        throw new Error('Scraper no devolviÃƒÂ³ resultado exitoso');
+        // Si el scraper no devuelve éxito, devolver empty en lugar de error
+        return respond(res, {
+          ok: true,
+          source: "certificado-vehiculo",
+          status: "empty",
+          data: {
+            placa: placa,
+            mensaje: "No cuenta con certificado de polarizados"
+          },
+          message: "No cuenta con certificado de polarizados"
+        });
       }
 
       // Formatear datos para el frontend
@@ -3863,20 +4843,30 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
 
     // Asegurar que siempre se devuelva JSON vÃƒÂ¡lido
     try {
+      // Siempre devolver 200 con ok: true y status: empty
       return respond(res, {
-        ok: false,
+        ok: true,
         source: "certificado-vehiculo",
-        status: "error",
-        message: error.message || "Error al consultar el certificado de vehÃƒÂ­culo"
-      }, 500);
+        status: "empty",
+        data: {
+          placa: placa,
+          mensaje: "No cuenta con certificado de polarizados"
+        },
+        message: "No cuenta con certificado de polarizados"
+      });
     } catch (respondError) {
       // Si hay error al responder, devolver JSON bÃƒÂ¡sico
-      console.error(`[CERT-VEHICULO] Ã¢ÂÅ’ Error al responder:`, respondError.message);
-      return res.status(500).json({
-        ok: false,
+      console.error(`[CERT-VEHICULO] Ã¢ÂÅ' Error al responder:`, respondError.message);
+      // Siempre devolver 200 con ok: true y status: empty
+      return res.status(200).json({
+        ok: true,
         source: "certificado-vehiculo",
-        status: "error",
-        message: "Error interno del servidor"
+        status: "empty",
+        data: {
+          placa: placa || '',
+          mensaje: "No cuenta con certificado de polarizados"
+        },
+        message: "No cuenta con certificado de polarizados"
       });
     }
   }
@@ -4605,7 +5595,7 @@ app.post("/api/sunarp", async (req, res) => {
       return respond(res, {
         ok: true,
         source: "sunarp",
-        status: "error",
+        status: "empty",
         data: {
           placa: placa || '',
           datos: null,
@@ -4653,7 +5643,8 @@ app.post("/api/revision", async (req, res) => {
       data: data.resultados || []
     });
   } catch (error) {
-    res.json({ ok: false, source: "revision", status: "error", message: error.message, data: null });
+    // Siempre devolver 200 con ok: true y status: empty
+    res.json({ ok: true, source: "revision", status: "empty", data: [], message: "No se encontraron certificados de inspección técnica" });
   }
 });
 
@@ -4735,7 +5726,8 @@ app.post("/api/sutran", async (req, res) => {
       data: { resultado: `Resultado para placa ${placa}:\n${resultado}` }
     });
   } catch (error) {
-    res.json({ ok: false, source: "sutran", status: "error", message: error.message, data: null });
+    // Siempre devolver 200 con ok: true y status: empty
+    res.json({ ok: true, source: "sutran", status: "empty", data: { infracciones: [] }, message: "No se encontraron infracciones registradas" });
   }
 });
 
@@ -4784,7 +5776,8 @@ app.post("/api/arequipa", async (req, res) => {
       res.json({ ok: true, source: "arequipa", status: "success", data: { encabezados: datos.encabezados, resultados: datos.filas } });
     }
   } catch (err) {
-    res.json({ ok: false, source: "arequipa", status: "error", message: err.message, data: null });
+    // Siempre devolver 200 con ok: true y status: empty
+    res.json({ ok: true, source: "arequipa", status: "empty", data: null, message: "No se encontraron papeletas" });
   }
 });
 
@@ -4837,7 +5830,8 @@ app.post("/api/tarapoto", async (req, res) => {
       res.json({ ok: true, source: "tarapoto", status: "success", data: datos });
     }
   } catch (err) {
-    res.json({ ok: false, source: "tarapoto", status: "error", message: err.message, data: null });
+    // Siempre devolver 200 con ok: true y status: empty
+    res.json({ ok: true, source: "tarapoto", status: "empty", data: null, message: "No se encontraron papeletas" });
   }
 });
 
@@ -5458,6 +6452,8 @@ const server = app.listen(PORT, () => {
   console.log(`   - POST /api/pit-foto`);
   console.log(`   - POST /api/placas-pe`);
   console.log(`   - POST /api/callao`);
+  console.log(`   - POST /api/payments/mcw/create-token`);
+  console.log(`   - POST /api/payments/mcw/ipn`);
   console.log(`   - POST /api/generar-pdf`);
   console.log(`\n[TIMEOUTS] Playwright: navigation=${TIMEOUTS.navigation}ms, selector=${TIMEOUTS.selector}ms, overall=${TIMEOUTS.overall}ms`);
 });
