@@ -8,10 +8,23 @@ PUBLIC_BASE_URL=https://consultavehicular.services
 BASE_PATH=
 
 # ============================================
-# MERCADO PAGO (Perú)
+# IZIPAY / MICUENTAWEB
 # ============================================
-MERCADOPAGO_ACCESS_TOKEN=APP_USR-5363845934405232-021315-75ce11ab2c0aeb3f00d8c63c1da02b90-3202899162
-MERCADOPAGO_PUBLIC_KEY=APP_USR-3a773006-4d23-4f56-abaa-d0845043596c
+IZIPAY_SITE_ID=tu_site_id_aqui
+IZIPAY_CTX_MODE=TEST
+IZIPAY_TEST_KEY=tu_test_key_aqui
+IZIPAY_PROD_KEY=tu_prod_key_aqui
+
+# ============================================
+# MICUENTAWEB (MCW) - OPCIONAL
+# ============================================
+MCW_API_USER=88791260
+MCW_API_PASSWORD=tu_password_api_aqui
+MCW_PUBLIC_KEY=tu_public_key_aqui
+MCW_HMAC_KEY=tu_hmac_key_aqui
+MCW_RETURN_OK=https://consultavehicular.services/pago-ok
+MCW_RETURN_KO=https://consultavehicular.services/pago-error
+MCW_IPN_URL=https://consultavehicular.services/api/payments/mcw/ipn
 
 # ============================================
 # PRECIO Y MONEDA

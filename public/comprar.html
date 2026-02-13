@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comprar acceso</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #eaf4ff 0%, #f9fbfd 100%);
+    }
+    .checkout-container {
+      max-width: 720px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+    }
+    .checkout-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .checkout-header h1 {
+      margin: 0 0 12px;
+      color: #1e2f45;
+    }
+    .checkout-header p {
+      margin: 0;
+      color: #4b5563;
+    }
+    .checkout-form {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .checkout-form label {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .checkout-form input {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #cbd5f5;
+      font-size: 15px;
+    }
+    .price-box {
+      margin-top: 16px;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px;
+      font-weight: 600;
+      color: #1f2937;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .checkout-form button {
+      align-self: flex-start;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .status-box {
+      margin-top: 18px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      display: none;
+    }
+    .status-box.info {
+      display: block;
+      background: #f0f9ff;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+    .status-box.error {
+      display: block;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    <div class="checkout-header">
+      <h1>Comprar acceso</h1>
+      <p>Pago único por acceso al informe vehicular.</p>
+    </div>
+
+    <form id="comprar-form" class="checkout-form">
+      <label for="email">Correo electrónico (opcional)</label>
+      <input type="email" id="email" name="email" placeholder="tu@email.com" />
+
+      <div class="price-box">
+        <span>Total a pagar</span>
+        <span id="price-label">__PRICE_LABEL__</span>
+      </div>
+
+      <button type="submit">Comprar __PRICE_LABEL__</button>
+    </form>
+
+    <div id="status" class="status-box"></div>
+  </div>
+
+  <div class="footer">
+    Pagos procesados por Izipay/MiCuentaWeb. Solo IPN confirma la compra.
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

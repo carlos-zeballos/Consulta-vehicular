@@ -1,9 +1,8 @@
 const { chromium } = require('playwright');
-const { parseProxyUrl } = require('./playwrightConfig');
+const { getProxyConfig } = require('./playwrightConfig');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const MTC_PROXY_URL = process.env.MTC_PROXY_URL || process.env.PROXY_URL || null;
 const MTC_USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -40,15 +39,33 @@ class MTCCITVScraper {
   }
 
   // ==================== MÉTODO PRINCIPAL ====================
-  async consultarPlaca(placa, maxAttempts = 3) {
+  async consultarPlaca(placa, maxAttempts = 5, useProxyRotation = false) {
     console.log(`\n🔍 [MTC-FINAL] Iniciando consulta para: ${placa}`);
+
+    let proxyRotator = null;
+    if (useProxyRotation) {
+      try {
+        const ProxyRotator = require('./proxy-rotator');
+        proxyRotator = new ProxyRotator();
+        console.log(`🔄 Rotación de proxies activada: ${proxyRotator.proxies.length} proxies disponibles`);
+      } catch (error) {
+        console.log(`⚠️  No se pudo cargar rotador de proxies: ${error.message}`);
+      }
+    }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         console.log(`\n🔄 Intento ${attempt}/${maxAttempts}`);
         this.stats.attempts++;
 
-        const resultado = await this.consultarPlacaIntento(placa);
+        // Si hay rotación de proxies, usar un proxy diferente en cada intento
+        let proxyOverride = null;
+        if (proxyRotator && proxyRotator.proxies.length > 0) {
+          proxyOverride = proxyRotator.getNextProxy();
+          console.log(`🔄 Usando proxy rotado: ${proxyOverride.server} (${proxyOverride.username.substring(0, 20)}...)`);
+        }
+
+        const resultado = await this.consultarPlacaIntento(placa, proxyOverride);
 
         if (resultado.success) {
           console.log(`✅ [MTC-FINAL] CONSULTA EXITOSA en intento ${attempt}`);
@@ -57,11 +74,27 @@ class MTCCITVScraper {
         }
 
         console.log(`⚠️ Intento ${attempt} falló, reintentando...`);
-        await this.delay(3000); // Esperar antes de reintentar
+        // Esperar más tiempo entre reintentos
+        const waitTime = 5000 + (attempt * 2000); // 5s, 7s, 9s, 11s, 13s
+        console.log(`⏳ Esperando ${waitTime/1000}s antes del siguiente intento...`);
+        await this.delay(waitTime);
 
       } catch (error) {
-        console.error(`❌ Error en intento ${attempt}:`, error.message);
+        const errorMsg = error.message || '';
+        console.error(`❌ Error en intento ${attempt}:`, errorMsg);
         this.stats.failures++;
+
+        // Si es un error de conexión, esperar más tiempo antes de reintentar
+        if (errorMsg.includes('ERR_CONNECTION_RESET') || 
+            errorMsg.includes('ERR_TUNNEL_CONNECTION_FAILED') ||
+            errorMsg.includes('net::ERR')) {
+          if (attempt < maxAttempts) {
+            const waitTime = 8000 + (attempt * 3000); // 8s, 11s, 14s, 17s, 20s
+            console.log(`⏳ Error de conexión detectado. Esperando ${waitTime/1000}s antes de reintentar...`);
+            await this.delay(waitTime);
+            continue; // Continuar con el siguiente intento
+          }
+        }
 
         if (attempt === maxAttempts) {
           throw error;
@@ -75,19 +108,53 @@ class MTCCITVScraper {
   }
 
   // ==================== INTENTO INDIVIDUAL ====================
-  async consultarPlacaIntento(placa) {
-    const proxy = parseProxyUrl(MTC_PROXY_URL);
+  async consultarPlacaIntento(placa, proxyOverride = null) {
+    // Obtener configuración del proxy desde variables de entorno separadas o usar override
+    let proxy = proxyOverride || getProxyConfig();
+    
+    if (proxy) {
+      console.log(`🔐 Usando proxy: ${proxy.server}`);
+      console.log(`🔐 Proxy usuario: ${proxy.username ? proxy.username.substring(0, 15) + '...' : 'N/A'}`);
+    } else {
+      console.log(`⚠️  No se configuró proxy (MTC_PROXY_HOST, MTC_PROXY_PORT, MTC_PROXY_USER, MTC_PROXY_PASS no están definidos)`);
+    }
 
-    const browser = await chromium.launch({
+    const launchOptions = {
       headless: true,
-      ...(proxy ? { proxy } : {}), // Cambiar a false para debug
       args: [
         '--disable-blink-features=AutomationControlled',
         '--no-sandbox',
         '--disable-dev-shm-usage',
-        '--window-size=1366,768'
+        '--window-size=1366,768',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--ignore-certificate-errors',
+        '--ignore-ssl-errors',
+        '--ignore-certificate-errors-spki-list',
+        '--disable-extensions',
+        '--disable-plugins-discovery',
+        '--disable-background-networking'
       ]
-    });
+    };
+
+    // Agregar proxy si está configurado
+    // Playwright requiere: server (sin credenciales en URL), username y password separados
+    if (proxy && proxy.server) {
+      launchOptions.proxy = {
+        server: proxy.server,  // Formato: "http://HOST:PORT" (sin credenciales)
+        username: proxy.username,
+        password: proxy.password
+      };
+      console.log(`🔐 Proxy configurado para Playwright: ${proxy.server}`);
+      console.log(`🔐 Usuario: ${proxy.username ? proxy.username.substring(0, 15) + '...' : 'N/A'}`);
+      
+      // Agregar argumentos adicionales para mejorar compatibilidad con proxy
+      launchOptions.args.push('--disable-extensions');
+      launchOptions.args.push('--disable-plugins-discovery');
+      launchOptions.args.push('--disable-background-networking');
+    }
+
+    const browser = await chromium.launch(launchOptions);
 
     try {
       const context = await browser.newContext({
@@ -105,7 +172,7 @@ class MTCCITVScraper {
         }
       });
 
-      const page = await context.newPage();
+      let page = await context.newPage();
 
 
       // 1. NAVEGAR AL FORMULARIO

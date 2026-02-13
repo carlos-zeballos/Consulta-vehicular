@@ -1618,18 +1618,55 @@
   }
 
   // ============================================
+  // VERIFICAR TOKEN DE ACCESO AL CARGAR LA PÁGINA
+  // ============================================
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const modoPrueba = params.get('modo') === 'prueba';
+    
+    if (token) {
+      // Verificar token con el servidor
+      fetch(`/api/servicio/usar?token=${encodeURIComponent(token)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            console.log('[TOKEN] Acceso verificado correctamente');
+            // Guardar token en sessionStorage para permitir consultas
+            sessionStorage.setItem('accessToken', token);
+            sessionStorage.setItem('accessGranted', 'true');
+          } else {
+            console.warn('[TOKEN] Token inválido:', data.message);
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('accessGranted');
+          }
+        })
+        .catch(err => {
+          console.error('[TOKEN] Error verificando token:', err);
+          sessionStorage.removeItem('accessToken');
+          sessionStorage.removeItem('accessGranted');
+        });
+    } else if (modoPrueba) {
+      // Modo prueba: permitir acceso
+      sessionStorage.setItem('accessGranted', 'true');
+    }
+  })();
+
+  // ============================================
   // FUNCIÓN PRINCIPAL: CONSULTAR
   // ============================================
   async function consultar() {
     const modoPrueba = new URLSearchParams(window.location.search).get('modo') === 'prueba';
+    const hasAccess = sessionStorage.getItem('accessGranted') === 'true';
     
-    if (!modoPrueba && sessionStorage.getItem("yaConsultado")) {
-      alert("Solo se permite una consulta por sesión.");
+    // Permitir consulta si tiene token válido, modo prueba, o si no se ha consultado aún
+    if (!modoPrueba && !hasAccess && sessionStorage.getItem("yaConsultado")) {
+      alert("Solo se permite una consulta por sesión. Por favor, realiza un nuevo pago para consultar nuevamente.");
       window.location.href = "index.html";
       return;
     }
     
-    if (!modoPrueba) sessionStorage.setItem("yaConsultado", "true");
+    if (!modoPrueba && !hasAccess) sessionStorage.setItem("yaConsultado", "true");
 
     const placaInput = document.getElementById("placa");
     const placa = placaInput?.value.trim().toUpperCase();

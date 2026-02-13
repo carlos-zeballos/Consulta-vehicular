@@ -118,7 +118,13 @@ nano .env
 ```env
 PORT=3000
 FACTILIZA_TOKEN=Bearer tu-token
-MERCADOPAGO_ACCESS_TOKEN=tu-token-mercadopago
+MCW_API_USER=88791260
+MCW_API_PASSWORD=tu_password_api
+MCW_PUBLIC_KEY=tu_public_key
+MCW_HMAC_KEY=tu_hmac_key
+MCW_RETURN_OK=https://tu-dominio.com/pago-ok
+MCW_RETURN_KO=https://tu-dominio.com/pago-error
+MCW_IPN_URL=https://tu-dominio.com/api/payments/mcw/ipn
 PUBLIC_BASE_URL=https://tu-dominio.com
 ```
 

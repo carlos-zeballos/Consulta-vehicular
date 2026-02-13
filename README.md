@@ -6,7 +6,7 @@ Sistema de consulta vehicular completo que integra múltiples fuentes de informa
 
 - Consulta de información vehicular desde múltiples fuentes
 - Generación de reportes PDF completos
-- Integración con MercadoPago para pagos
+- Integración con MiCuentaWeb/Izipay (Krypton V4) para pagos
 - Resolución automática de CAPTCHAs
 - Consulta de SOAT, CITV, SBS, SUTRAN y más
 
@@ -48,8 +48,13 @@ Configura las siguientes variables en tu archivo `.env`:
 - `PORT`: Puerto del servidor (default: 3000)
 - `FACTILIZA_TOKEN`: Token de la API Factiliza
 - `CAPTCHA_API_KEY`: API Key de 2Captcha
-- `ACCESS_TOKEN`: Access Token de MercadoPago
-- `PUBLIC_KEY`: Public Key de MercadoPago
+- `MCW_API_USER`: Usuario API MiCuentaWeb
+- `MCW_API_PASSWORD`: Password API MiCuentaWeb
+- `MCW_PUBLIC_KEY`: Public Key MiCuentaWeb (Krypton)
+- `MCW_HMAC_KEY`: HMAC key para validar kr-hash
+- `MCW_RETURN_OK`: URL de retorno OK
+- `MCW_RETURN_KO`: URL de retorno error
+- `MCW_IPN_URL`: URL IPN (webhook)
 
 ## 📦 Estructura del Proyecto
 
@@ -67,7 +72,7 @@ Configura las siguientes variables en tu archivo `.env`:
 
 - Express.js
 - Playwright / Puppeteer
-- MercadoPago SDK
+- Krypton JS (MiCuentaWeb/Izipay)
 - 2Captcha API
 - PDF Generation
 

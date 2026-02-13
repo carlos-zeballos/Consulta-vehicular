@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout - Consulta Vehicular</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.css" />
+  <link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/theme/neon.css" />
+  <script
+    src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js"
+    kr-public-key="__MCW_PUBLIC_KEY__"
+    kr-post-url-success="__MCW_RETURN_OK__"
+    kr-post-url-refused="__MCW_RETURN_KO__">
+  </script>
+  <script src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/theme/neon.js"></script>
+  <style>
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #eaf4ff 0%, #f9fbfd 100%);
+    }
+    .checkout-container {
+      max-width: 820px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+    }
+    .checkout-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .checkout-header h1 {
+      margin: 0 0 10px;
+      color: #1e2f45;
+    }
+    .checkout-header p {
+      margin: 0;
+      color: #4b5563;
+    }
+    .checkout-form {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .checkout-form label {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .checkout-form input {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #cbd5f5;
+      font-size: 15px;
+    }
+    .checkout-form button {
+      align-self: flex-start;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .status-box {
+      margin-top: 18px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      display: none;
+    }
+    .status-box.info {
+      display: block;
+      background: #f0f9ff;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+    .status-box.error {
+      display: block;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+    .kr-smart-form {
+      margin-top: 24px;
+    }
+    .footer {
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    <div class="checkout-header">
+      <h1>Checkout Seguro</h1>
+      <p>Pago único por acceso al informe vehicular (S/ 15.00).</p>
+    </div>
+
+    <form id="checkout-form" class="checkout-form">
+      <label for="email">Correo electrónico</label>
+      <input type="email" id="email" name="email" placeholder="tu@email.com" required />
+      <button type="submit">Generar token de pago</button>
+    </form>
+
+    <div id="status" class="status-box"></div>
+
+    <div id="krypton-wrapper" style="display:none;">
+      <div class="kr-smart-form" id="krypton-form" kr-card-form-expanded></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>© 2025 Consulta Vehicular. Pagos procesados por MiCuentaWeb/Niubiz.</p>
+  </div>
+
+  <script>
+    const form = document.getElementById('checkout-form');
+    const statusBox = document.getElementById('status');
+    const kryptonWrapper = document.getElementById('krypton-wrapper');
+    const kryptonForm = document.getElementById('krypton-form');
+
+    function setStatus(message, type) {
+      statusBox.textContent = message;
+      statusBox.className = `status-box ${type}`;
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      if (!email) {
+        setStatus('Ingresa un correo válido.', 'error');
+        return;
+      }
+
+      setStatus('Generando token de pago...', 'info');
+      kryptonWrapper.style.display = 'none';
+
+      try {
+        const response = await fetch('/api/payments/mcw/create-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        const payload = await response.json();
+        if (!response.ok || payload?.ok === false) {
+          throw new Error(payload?.message || 'No se pudo iniciar el pago');
+        }
+
+        const { formToken } = payload.data || {};
+        if (!formToken) {
+          throw new Error('Respuesta incompleta del servidor.');
+        }
+
+        kryptonForm.setAttribute('kr-form-token', formToken);
+        window.krPaymentForm && window.krPaymentForm.refresh && window.krPaymentForm.refresh();
+
+        setStatus('Token generado. Completa el pago en el formulario.', 'info');
+        kryptonWrapper.style.display = 'block';
+      } catch (error) {
+        console.error('[MCW] Error en checkout:', error);
+        setStatus(error.message || 'No se pudo iniciar el pago.', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

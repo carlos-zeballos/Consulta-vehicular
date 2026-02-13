@@ -14,8 +14,13 @@ Configura en Cloud Run (no en el código):
 
 - `FACTILIZA_TOKEN`
 - `CAPTCHA_API_KEY`
-- `ACCESS_TOKEN`
-- `PUBLIC_KEY`
+- `MCW_API_USER`
+- `MCW_API_PASSWORD`
+- `MCW_PUBLIC_KEY`
+- `MCW_HMAC_KEY`
+- `MCW_RETURN_OK`
+- `MCW_RETURN_KO`
+- `MCW_IPN_URL`
 - `COUPON_ADMIN_CODE` (opcional)
 - `COUPONS_PUBLIC_CODES` (ej: `PROMO-AAA:5,PROMO-BBB:5`)
 - `COUPON_HASH_SALT` (pon uno fuerte y no lo cambies si quieres conservar el estado de usos)
@@ -48,4 +53,5 @@ Opciones:
 El estado de usos se guarda en `data/coupon-state.json` (ignorado por git).
 En Cloud Run el filesystem es **efímero**, así que el estado puede reiniciarse en redeploy.
 Si quieres persistencia, lo correcto es mover ese estado a una BD/Redis, o usar un storage externo.
+
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pago no completado</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fff1f2, #f8fafc);
+    }
+    .card {
+      background: #fff;
+      padding: 32px;
+      border-radius: 16px;
+      max-width: 560px;
+      text-align: center;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    }
+    .card h1 {
+      color: #dc2626;
+      margin-bottom: 12px;
+    }
+    .card p {
+      color: #1f2937;
+    }
+    .card a {
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: none;
+      color: #2563eb;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Pago no completado</h1>
+    <p>El pago no se pudo completar o fue cancelado. Puedes intentarlo nuevamente desde el checkout.</p>
+    <p>Recuerda que el acceso solo se activa cuando el IPN confirma el pago.</p>
+    <a href="/comprar">Volver al checkout</a>
+  </div>
+</body>
+</html>

@@ -42,7 +42,6 @@ const PitFotoScraper = require("./pit-foto-scraper");
 const PunoPapeletasScraper = require("./puno-papeletas-scraper");
 const ApesegSoatScraper = require("./apeseg-soat-scraper");
 const { renderPdf } = require('./renderPdf');
-const MercadoPagoHandler = require('./mercadopago-handler');
 
 const app = express();
 
@@ -129,19 +128,7 @@ app.get("/result.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "result.html"));
 });
 
-// Página de compra con Mercado Pago
-app.get("/comprar-mercadopago", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "comprar-mercadopago.html"));
-});
-
-// Redirigir /comprar a Mercado Pago (o mantener Izipay según configuración)
 app.get("/comprar", (req, res) => {
-  // Por defecto usar Mercado Pago si está configurado, sino Izipay
-  const useMercadoPago = process.env.MERCADOPAGO_ACCESS_TOKEN && mercadoPagoHandler;
-  if (useMercadoPago) {
-    return res.sendFile(path.join(__dirname, "public", "comprar-mercadopago.html"));
-  }
-  // Fallback a Izipay
   res.sendFile(path.join(__dirname, "public", "comprar.html"));
 });
 
@@ -750,15 +737,6 @@ function activateAccess({ orderId, email, amount, currency, provider = "MCW" }) 
       record.updatedAt = new Date().toISOString();
       izipayPayments.set(orderId, record);
       persistIzipayPayments();
-    }
-  } else if (provider === "MERCADOPAGO" && orderId) {
-    const record = mercadopagoPayments.get(orderId);
-    if (record) {
-      record.access = true;
-      record.accessToken = record.accessToken || crypto.randomBytes(16).toString("hex");
-      record.updatedAt = new Date().toISOString();
-      mercadopagoPayments.set(orderId, record);
-      persistMercadoPagoPayments();
     }
   }
 
@@ -1931,244 +1909,12 @@ app.get("/api/servicio/usar", (req, res) => {
     return res.status(400).json({ ok: false, message: "Token requerido" });
   }
 
-  // Buscar en Izipay
-  let record = Array.from(izipayPayments.values()).find((item) => item?.accessToken === token);
-  
-  // Si no está en Izipay, buscar en Mercado Pago
-  if (!record) {
-    record = Array.from(mercadopagoPayments.values()).find((item) => item?.accessToken === token);
-  }
-  
+  const record = Array.from(izipayPayments.values()).find((item) => item?.accessToken === token);
   if (!record) {
     return res.status(404).json({ ok: false, message: "Token inválido" });
   }
 
   return res.status(200).json({ ok: true, message: "Acceso permitido", orderId: record.orderId });
-});
-
-// ============================================
-// API: MERCADO PAGO - CREAR PREFERENCIA
-// ============================================
-app.post("/api/mercadopago/create-preference", async (req, res) => {
-  try {
-    if (!mercadoPagoHandler) {
-      return respond(res, {
-        ok: false,
-        source: "mercadopago",
-        status: "error",
-        message: "Mercado Pago no configurado. Verifica MERCADOPAGO_ACCESS_TOKEN en .env"
-      }, 500);
-    }
-
-    const { email } = req.body || {};
-    const orderId = `MP-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-    const amount = Math.max(1, Math.round(PRICE_CENTS));
-
-    // Crear registro de pago
-    const record = {
-      orderId,
-      status: "PENDING",
-      amount,
-      currency: "PEN",
-      email: safeEmail(email) ? String(email).trim().toLowerCase() : null,
-      access: false,
-      provider: "MERCADOPAGO",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    mercadopagoPayments.set(orderId, record);
-    persistMercadoPagoPayments();
-
-    console.log(`[MERCADOPAGO] Creando preferencia para orderId=${orderId}, amount=${amount}`);
-
-    // Crear preferencia en Mercado Pago
-    const preference = await mercadoPagoHandler.createPreference({
-      email: record.email,
-      orderId,
-      amount,
-      description: "Informe Vehicular Completo"
-    });
-
-    // Actualizar registro con preferenceId
-    record.preferenceId = preference.preferenceId;
-    mercadopagoPayments.set(orderId, record);
-    persistMercadoPagoPayments();
-
-    console.log(`[MERCADOPAGO] Preferencia creada: ${preference.preferenceId}`);
-
-    return res.status(200).json({
-      ok: true,
-      source: "mercadopago",
-      status: "success",
-      data: {
-        orderId,
-        preferenceId: preference.preferenceId,
-        initPoint: preference.initPoint,
-        sandboxInitPoint: preference.sandboxInitPoint
-      }
-    });
-
-  } catch (error) {
-    console.error("[MERCADOPAGO] Error creando preferencia:", error.message);
-    return respond(res, {
-      ok: false,
-      source: "mercadopago",
-      status: "error",
-      message: error.message || "No se pudo crear la preferencia de pago"
-    }, 500);
-  }
-});
-
-// ============================================
-// API: MERCADO PAGO - WEBHOOK
-// ============================================
-app.post("/api/mercadopago/webhook", async (req, res) => {
-  try {
-    console.log(`[MERCADOPAGO] Webhook recibido - Body:`, JSON.stringify(req.body, null, 2));
-    
-    const { type, data } = req.body || {};
-    
-    if (type === 'payment' && data?.id) {
-      const paymentId = data.id;
-      
-      if (!mercadoPagoHandler) {
-        console.warn("[MERCADOPAGO] Handler no disponible para procesar webhook");
-        return res.status(500).send("Handler not configured");
-      }
-
-      // Obtener información del pago
-      const paymentInfo = await mercadoPagoHandler.getPaymentStatus(paymentId);
-      const orderId = paymentInfo.externalReference;
-
-      if (!orderId) {
-        console.warn("[MERCADOPAGO] Webhook sin external_reference");
-        return res.status(400).send("Missing external_reference");
-      }
-
-      let record = mercadopagoPayments.get(orderId);
-      
-      if (!record) {
-        // Crear registro si no existe
-        record = {
-          orderId,
-          status: "PENDING",
-          amount: Math.round(paymentInfo.amount * 100), // Convertir a centavos
-          currency: "PEN",
-          access: false,
-          provider: "MERCADOPAGO",
-          createdAt: new Date().toISOString()
-        };
-      }
-
-      // Mapear estados de Mercado Pago
-      const mpStatus = paymentInfo.status;
-      let status = "PENDING";
-      
-      if (mpStatus === 'approved') {
-        status = "approved"; // Mantener 'approved' para compatibilidad con frontend
-      } else if (mpStatus === 'rejected' || mpStatus === 'cancelled') {
-        status = "REFUSED";
-      } else if (mpStatus === 'pending' || mpStatus === 'in_process') {
-        status = "PENDING";
-      }
-
-      // Protección de idempotencia
-      const previousStatus = record.status;
-      const wasAlreadyPaid = previousStatus === "approved" || previousStatus === "PAID";
-      const isNowPaid = status === "approved";
-
-      if (wasAlreadyPaid && isNowPaid) {
-        console.log(`[MERCADOPAGO] webhook-duplicate -> orderId=${orderId} ya estaba aprobado, ignorando webhook duplicado`);
-        record.updatedAt = new Date().toISOString();
-        mercadopagoPayments.set(orderId, record);
-        persistMercadoPagoPayments();
-        return res.status(200).send("OK");
-      }
-
-      record.status = status;
-      record.paymentId = paymentId;
-      record.statusDetail = paymentInfo.statusDetail;
-      record.updatedAt = new Date().toISOString();
-      record.rawWebhook = {
-        receivedAt: new Date().toISOString(),
-        paymentInfo
-      };
-
-      mercadopagoPayments.set(orderId, record);
-      persistMercadoPagoPayments();
-
-      console.log(`[MERCADOPAGO] webhook-valid -> orderId=${orderId} status=${status} (anterior: ${previousStatus})`);
-
-      // Activar acceso si el pago fue aprobado
-      if (isNowPaid && !wasAlreadyPaid) {
-        activateAccess({
-          orderId: record.orderId,
-          email: record.email,
-          amount: record.amount,
-          currency: record.currency,
-          provider: "MERCADOPAGO"
-        });
-        console.log(`[MERCADOPAGO] Acceso activado para orderId=${orderId}`);
-      }
-
-      return res.status(200).send("OK");
-    }
-
-    return res.status(200).send("OK");
-  } catch (error) {
-    console.error("[MERCADOPAGO] Error procesando webhook:", error.message);
-    return res.status(500).send("Error processing webhook");
-  }
-});
-
-// ============================================
-// API: MERCADO PAGO - STATUS
-// ============================================
-app.get("/api/mercadopago/status", (req, res) => {
-  const { orderId } = req.query || {};
-  let record = mercadopagoPayments.get(String(orderId || ""));
-
-  // Si no está en memoria, intentar cargar desde el archivo
-  if (!record) {
-    console.log(`[MERCADOPAGO] status -> orderId=${orderId || ""} no está en memoria, cargando desde archivo...`);
-    try {
-      if (fs.existsSync(MERCADOPAGO_PAYMENTS_FILE)) {
-        const data = fs.readFileSync(MERCADOPAGO_PAYMENTS_FILE, "utf8");
-        const store = JSON.parse(data);
-        record = store?.[String(orderId || "")];
-        
-        if (record) {
-          mercadopagoPayments.set(String(orderId), record);
-          console.log(`[MERCADOPAGO] status -> orderId=${orderId} cargado desde archivo`);
-        }
-      }
-    } catch (error) {
-      console.error(`[MERCADOPAGO] Error cargando desde archivo:`, error.message);
-    }
-  }
-
-  if (!record) {
-    return res.status(404).json({
-      ok: false,
-      source: "mercadopago",
-      status: "NOT_FOUND",
-      message: "Orden no encontrada"
-    });
-  }
-
-  console.log(`[MERCADOPAGO] status -> orderId=${record.orderId} status=${record.status} access=${record.access || false} token=${record.accessToken ? 'presente' : 'ausente'}`);
-
-  return res.status(200).json({
-    ok: true,
-    source: "mercadopago",
-    status: record.status, // Puede ser 'approved', 'PENDING', 'REFUSED'
-    orderId: record.orderId,
-    access: record.access || false,
-    accessToken: record.accessToken || null,
-    amount: record.amount,
-    currency: record.currency
-  });
 });
 
 // ============================================

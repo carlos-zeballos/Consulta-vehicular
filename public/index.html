@@ -1498,42 +1498,8 @@ background: linear-gradient(135deg, #d6eaff, #eaf4ff);
 
 
 
-    document.getElementById("btn-pagar").addEventListener("click", async () => {
-      try {
-        const response = await fetch("/crear-preferencia", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await response.json();
-        
-        // Verificar si hay error en la respuesta
-        if (!response.ok || (data.ok === false)) {
-          const errorMessage = data.message || "No se pudo generar el link de pago";
-          console.error("Error del servidor:", data);
-          alert(`Error: ${errorMessage}`);
-          return;
-        }
-        
-        if (data.id) {
-          // MODO PRUEBA: Si el servidor devuelve test_mode, redirigir directamente a result.html
-          if (data.test_mode && data.redirect_url) {
-            window.location.href = data.redirect_url;
-          } else {
-            // MODO PRODUCCIÓN: Redirigir a MercadoPago
-            window.location.href = `https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=${data.id}`;
-          }
-        } else {
-          const errorMessage = data.message || "No se pudo generar el link de pago";
-          console.error("Respuesta sin ID:", data);
-          alert(`Error: ${errorMessage}`);
-        }
-      } catch (err) {
-        console.error("Error:", err);
-        alert("Hubo un problema al procesar el pago. Verifica la consola para más detalles.");
-      }
+    document.getElementById("btn-pagar").addEventListener("click", () => {
+      window.location.href = "/comprar";
     });
 
      document.querySelectorAll(".faq-question").forEach(button => {
@@ -1609,43 +1575,9 @@ background: linear-gradient(135deg, #d6eaff, #eaf4ff);
     });
   });
 // Ambos botones ("Solicitar Informe" y "Pedir Informe") dirigen al proceso de pago
-document.getElementById("btnInforme").addEventListener("click", async (e) => {
+document.getElementById("btnInforme").addEventListener("click", (e) => {
   e.preventDefault();
-  try {
-    const response = await fetch("/crear-preferencia", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    const data = await response.json();
-    
-    // Verificar si hay error en la respuesta
-    if (!response.ok || (data.ok === false)) {
-      const errorMessage = data.message || "No se pudo generar el link de pago";
-      console.error("Error del servidor:", data);
-      alert(`Error: ${errorMessage}`);
-      return;
-    }
-    
-    if (data.id) {
-      // MODO PRUEBA: Si el servidor devuelve test_mode, redirigir directamente a result.html
-      if (data.test_mode && data.redirect_url) {
-        window.location.href = data.redirect_url;
-      } else {
-        // MODO PRODUCCIÓN: Redirigir a MercadoPago
-        window.location.href = `https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=${data.id}`;
-      }
-    } else {
-      const errorMessage = data.message || "No se pudo generar el link de pago";
-      console.error("Respuesta sin ID:", data);
-      alert(`Error: ${errorMessage}`);
-    }
-  } catch (err) {
-    console.error("Error:", err);
-    alert("Hubo un problema al procesar el pago. Verifica la consola para más detalles.");
-  }
+  window.location.href = "/comprar";
 });
 
 // ============================================

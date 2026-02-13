@@ -153,9 +153,14 @@ PORT=3000
 # Entorno
 NODE_ENV=production
 
-# MercadoPago
-ACCESS_TOKEN=APP_USR-442461391854...
-PUBLIC_KEY=APP_USR-...
+# MiCuentaWeb / Izipay
+MCW_API_USER=88791260
+MCW_API_PASSWORD=tu_password_api
+MCW_PUBLIC_KEY=tu_public_key
+MCW_HMAC_KEY=tu_hmac_key
+MCW_RETURN_OK=https://tu-dominio.com/pago-ok
+MCW_RETURN_KO=https://tu-dominio.com/pago-error
+MCW_IPN_URL=https://tu-dominio.com/api/payments/mcw/ipn
 
 # 2Captcha (opcional pero recomendado)
 CAPTCHA_API_KEY=tu_api_key_de_2captcha
@@ -292,7 +297,7 @@ server {
     }
 
     # Proxy para otros endpoints
-    location /crear-preferencia {
+    location /checkout {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

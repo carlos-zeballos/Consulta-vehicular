@@ -59,8 +59,7 @@
   </div>
   <script>
     const params = new URLSearchParams(window.location.search);
-    let orderId = params.get('orderId') || params.get('external_reference');
-    const provider = params.get('provider') || 'izipay'; // Por defecto izipay para compatibilidad
+    let orderId = params.get('orderId');
     const statusEl = document.getElementById('status');
 
     let redirected = false;
@@ -91,12 +90,7 @@
         }
 
         try {
-          // Determinar endpoint según el proveedor
-          const endpoint = provider === 'mercadopago' 
-            ? `/api/mercadopago/status?orderId=${encodeURIComponent(orderId)}`
-            : `/api/izipay/status?orderId=${encodeURIComponent(orderId)}`;
-          
-          const response = await fetch(endpoint);
+          const response = await fetch(`/api/izipay/status?orderId=${encodeURIComponent(orderId)}`);
           if (!response.ok) {
             if (response.status === 404) {
               statusEl.textContent = 'Orden no encontrada. Verificando...';
@@ -107,10 +101,7 @@
           }
           const payload = await response.json();
           
-          // Mercado Pago usa 'approved', Izipay usa 'PAID'
-          const isPaid = payload.status === 'PAID' || payload.status === 'approved';
-          
-          if (isPaid) {
+          if (payload.status === 'PAID') {
             // Detener el polling inmediatamente
             if (pollInterval) {
               clearInterval(pollInterval);

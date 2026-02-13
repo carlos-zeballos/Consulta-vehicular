@@ -13,8 +13,14 @@ services:
       MTC_PROXY_URL: "${MTC_PROXY_URL}"
       # (Opcional global)
       PROXY_URL: "${PROXY_URL}"
-      ACCESS_TOKEN: "${ACCESS_TOKEN}"
-      PUBLIC_KEY: "${PUBLIC_KEY}"
+      # MiCuentaWeb/Izipay
+      MCW_API_USER: "${MCW_API_USER}"
+      MCW_API_PASSWORD: "${MCW_API_PASSWORD}"
+      MCW_PUBLIC_KEY: "${MCW_PUBLIC_KEY}"
+      MCW_HMAC_KEY: "${MCW_HMAC_KEY}"
+      MCW_RETURN_OK: "${MCW_RETURN_OK}"
+      MCW_RETURN_KO: "${MCW_RETURN_KO}"
+      MCW_IPN_URL: "${MCW_IPN_URL}"
       # Cupones (secretos)
       COUPON_ADMIN_CODE: "${COUPON_ADMIN_CODE}"
       COUPONS_PUBLIC_CODES: "${COUPONS_PUBLIC_CODES}"
@@ -30,4 +36,5 @@ services:
 
 volumes:
   app_data:
+
 

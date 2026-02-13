@@ -5,24 +5,62 @@
 
 const { chromium } = require('playwright');
 
+/**
+ * Obtiene la configuración del proxy desde variables de entorno separadas
+ * Formato correcto para Playwright: server, username y password separados
+ */
+function getProxyConfig() {
+  const PROXY_HOST = process.env.MTC_PROXY_HOST;
+  const PROXY_PORT = process.env.MTC_PROXY_PORT;
+  const PROXY_USER = process.env.MTC_PROXY_USER;
+  const PROXY_PASS = process.env.MTC_PROXY_PASS;
+  
+  // Si tenemos las variables separadas, usarlas (formato preferido)
+  if (PROXY_HOST && PROXY_PORT && PROXY_USER && PROXY_PASS) {
+    const server = `http://${PROXY_HOST}:${PROXY_PORT}`;
+    console.log(`[PROXY] Configurado desde variables separadas: ${server} (usuario: ${PROXY_USER.substring(0, 15)}...)`);
+    return {
+      server: server,
+      username: PROXY_USER,
+      password: PROXY_PASS
+    };
+  }
+  
+  // Fallback: intentar parsear desde MTC_PROXY_URL
+  const proxyUrl = process.env.MTC_PROXY_URL || process.env.PROXY_URL;
+  if (!proxyUrl) {
+    return null;
+  }
+  
+  return parseProxyUrl(proxyUrl);
+}
+
+/**
+ * Parsea una URL de proxy (fallback para compatibilidad)
+ */
 function parseProxyUrl(proxyUrl) {
   if (!proxyUrl || typeof proxyUrl !== "string") return null;
+  
+  // Formato estándar: http://username:password@host:port
   try {
     const u = new URL(proxyUrl);
-    const server = u.protocol + "//" + u.hostname + (u.port ? (":" + u.port) : "");
+    const server = `http://${u.hostname}${u.port ? `:${u.port}` : ""}`;
     const username = u.username ? decodeURIComponent(u.username) : undefined;
     const password = u.password ? decodeURIComponent(u.password) : undefined;
-    const out = { server: server };
-    if (username) out.username = username;
-    if (password) out.password = password;
-    return out;
-  } catch (e) {
-    try {
-      const u = new URL("http://" + proxyUrl);
-      return { server: "http://" + u.hostname + (u.port ? (":" + u.port) : "") };
-    } catch (e2) {
-      return null;
+    
+    if (username && password) {
+      console.log(`[PROXY] Parseado desde URL: ${server} (usuario: ${username.substring(0, 15)}...)`);
+      return {
+        server: server,
+        username: username,
+        password: password
+      };
     }
+    
+    return { server: server };
+  } catch (e) {
+    console.error(`[PROXY] Error parseando URL: ${proxyUrl}`, e.message);
+    return null;
   }
 }
 
@@ -228,5 +266,6 @@ module.exports = {
   createAdvancedContext,
   guaranteePageLoad,
   humanDelay,
-  parseProxyUrl
+  parseProxyUrl,
+  getProxyConfig
 };

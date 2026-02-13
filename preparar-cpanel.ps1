@@ -121,18 +121,16 @@ FACTILIZA_TOKEN=Bearer tu_token_aqui
 CAPTCHA_API_KEY=tu_api_key_de_2captcha
 
 # ============================================
-# MERCADO PAGO (Pagos)
+# MICUENTAWEB / IZIPAY (Pagos)
 # ============================================
 
-# Token de acceso de PRODUCCIÓN (NO usar TEST-)
-ACCESS_TOKEN=APP_USR-xxxxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxx
-
-# ============================================
-# CONFIGURACIÓN OPCIONAL
-# ============================================
-
-# Modo prueba (true = bypass de pago, false = usar MercadoPago)
-# MODO_PRUEBA=false
+MCW_API_USER=88791260
+MCW_API_PASSWORD=tu_password_api
+MCW_PUBLIC_KEY=tu_public_key
+MCW_HMAC_KEY=tu_hmac_key
+MCW_RETURN_OK=https://tu-dominio.com/pago-ok
+MCW_RETURN_KO=https://tu-dominio.com/pago-error
+MCW_IPN_URL=https://tu-dominio.com/api/payments/mcw/ipn
 
 # Ruta de Chrome/Chromium (cPanel generalmente lo detecta automáticamente)
 # PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser

@@ -31,11 +31,16 @@ FACTILIZA_TOKEN=Bearer tu_token_aqui
 CAPTCHA_API_KEY=tu_api_key_de_2captcha
 
 # ============================================
-# MERCADO PAGO (Pagos)
+# MICUENTAWEB / IZIPAY (Pagos)
 # ============================================
 
-ACCESS_TOKEN=APP_USR-xxxxxxxxxxxxx
-PUBLIC_KEY=APP_USR-xxxxxxxxxxxxx
+MCW_API_USER=88791260
+MCW_API_PASSWORD=tu_password_api
+MCW_PUBLIC_KEY=tu_public_key
+MCW_HMAC_KEY=tu_hmac_key
+MCW_RETURN_OK=https://tu-dominio.com/pago-ok
+MCW_RETURN_KO=https://tu-dominio.com/pago-error
+MCW_IPN_URL=https://tu-dominio.com/api/payments/mcw/ipn
 "@
 
 if (Test-Path ".env") {
@@ -51,13 +56,23 @@ Write-Host "`nPor favor, ingresa las siguientes credenciales:`n" -ForegroundColo
 
 $factiliza = Read-Host "FACTILIZA_TOKEN (Bearer ...)"
 $captcha = Read-Host "CAPTCHA_API_KEY"
-$accessToken = Read-Host "ACCESS_TOKEN (MercadoPago)"
-$publicKey = Read-Host "PUBLIC_KEY (MercadoPago)"
+$mcwApiUser = Read-Host "MCW_API_USER"
+$mcwApiPassword = Read-Host "MCW_API_PASSWORD"
+$mcwPublicKey = Read-Host "MCW_PUBLIC_KEY"
+$mcwHmacKey = Read-Host "MCW_HMAC_KEY"
+$mcwReturnOk = Read-Host "MCW_RETURN_OK"
+$mcwReturnKo = Read-Host "MCW_RETURN_KO"
+$mcwIpnUrl = Read-Host "MCW_IPN_URL"
 
 $envContent = $envContent -replace "Bearer tu_token_aqui", $factiliza
 $envContent = $envContent -replace "tu_api_key_de_2captcha", $captcha
-$envContent = $envContent -replace "APP_USR-xxxxxxxxxxxxx", $accessToken
-$envContent = $envContent -replace "APP_USR-xxxxxxxxxxxxx", $publicKey
+$envContent = $envContent -replace "88791260", $mcwApiUser
+$envContent = $envContent -replace "tu_password_api", $mcwApiPassword
+$envContent = $envContent -replace "tu_public_key", $mcwPublicKey
+$envContent = $envContent -replace "tu_hmac_key", $mcwHmacKey
+$envContent = $envContent -replace "https://tu-dominio.com/pago-ok", $mcwReturnOk
+$envContent = $envContent -replace "https://tu-dominio.com/pago-error", $mcwReturnKo
+$envContent = $envContent -replace "https://tu-dominio.com/api/payments/mcw/ipn", $mcwIpnUrl
 
 $envContent | Out-File -FilePath ".env" -Encoding UTF8 -NoNewline
 
