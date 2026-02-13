@@ -55,6 +55,16 @@ debug-sutran-no-data.png
 # Test files
 test-*.js
 *.test.js
+smoke-*.js
+smoke.out.txt
+*.out.txt
+
+# Proxy test files
+mtc-*.txt
+*_proxies.py
+mtc_proxy_probe.py
+probe_mtc_proxies.py
+probed_mtc_proxies.py
 
 # PDFs generados
 *.pdf
