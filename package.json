@@ -12,7 +12,7 @@
     "axios-cookiejar-support": "^4.0.7",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
-    "cheerio": "^1.1.2",
+    "cheerio": "^1.0.0-rc.12",
     "cloudscraper": "^4.6.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
