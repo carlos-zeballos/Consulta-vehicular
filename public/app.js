@@ -41,8 +41,22 @@
       });
 
       const payload = await response.json();
+      
+      // Debug: mostrar respuesta en consola
+      console.log('[IZIPAY] Respuesta del servidor:', payload);
+      
       if (!response.ok || !payload?.formAction || !payload?.fields) {
+        console.error('[IZIPAY] Respuesta inválida:', payload);
         throw new Error(payload?.message || 'No se pudo iniciar el pago');
+      }
+
+      // Verificar que los campos críticos estén presentes
+      const requiredFields = ['vads_site_id', 'vads_trans_id', 'vads_order_id', 'signature'];
+      const missingFields = requiredFields.filter(field => !payload.fields[field]);
+      
+      if (missingFields.length > 0) {
+        console.error('[IZIPAY] Campos faltantes:', missingFields);
+        throw new Error(`Campos faltantes en la respuesta: ${missingFields.join(', ')}`);
       }
 
       const orderId = payload?.fields?.vads_order_id;
@@ -52,8 +66,13 @@
         } catch (_) {}
       }
 
+      console.log('[IZIPAY] Redirigiendo a Izipay con orderId:', orderId);
       setStatus('Redirigiendo a la pasarela de pago...', 'info');
-      buildAndSubmitForm(payload.formAction, payload.fields);
+      
+      // Pequeño delay para asegurar que el mensaje se vea
+      setTimeout(() => {
+        buildAndSubmitForm(payload.formAction, payload.fields);
+      }, 500);
     } catch (error) {
       console.error('[IZIPAY] Error init:', error);
       setStatus(error.message || 'No se pudo iniciar el pago.', 'error');

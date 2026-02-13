@@ -635,12 +635,22 @@ function nextIzipayTransId(date = new Date()) {
     izipayTransDateKey = dateKey;
     izipayTransCounter = 0;
   }
-  // Incrementar contador y asegurar que no sea 0
+  
+  // Incrementar contador
   izipayTransCounter = (izipayTransCounter + 1) % 1000000;
-  // Si el contador es 0, usar timestamp para evitar duplicados
-  if (izipayTransCounter === 0) {
-    izipayTransCounter = Math.floor((Date.now() % 1000000) / 1000);
+  
+  // Si el contador es muy bajo o 0, usar timestamp para asegurar unicidad
+  // Esto evita problemas cuando el servidor se reinicia
+  if (izipayTransCounter < 100) {
+    const timestampPart = Math.floor((Date.now() % 1000000) / 10);
+    izipayTransCounter = Math.max(izipayTransCounter, (timestampPart % 1000000));
   }
+  
+  // Verificar que no sea 0 (Izipay puede rechazar transId 000000)
+  if (izipayTransCounter === 0) {
+    izipayTransCounter = 1;
+  }
+  
   return String(izipayTransCounter).padStart(6, "0");
 }
 
