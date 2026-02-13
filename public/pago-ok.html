@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pago recibido</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e7f9ed, #f5f7ff);
+    }
+    .card {
+      background: #fff;
+      padding: 32px;
+      border-radius: 16px;
+      max-width: 560px;
+      text-align: center;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    }
+    .card h1 {
+      color: #16a34a;
+      margin-bottom: 12px;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+      font-weight: 600;
+    }
+    .card p {
+      color: #1f2937;
+    }
+    .card a {
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: none;
+      color: #2563eb;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>¡Pago recibido!</h1>
+    <p>Tu pago fue registrado por la pasarela. El acceso se habilita solo cuando el IPN confirma la transacción.</p>
+    <div id="status" class="status">Procesando confirmación...</div>
+    <!-- Botón para simular IPN en desarrollo (solo visible en localhost) -->
+    <button id="btnSimulateIPN" style="display: none; margin-top: 16px; padding: 10px 20px; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+      🔧 Simular Confirmación IPN (Solo Desarrollo)
+    </button>
+    <a href="/" style="display: block; margin-top: 20px;">Volver al inicio</a>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    let orderId = params.get('orderId') || params.get('external_reference');
+    const provider = params.get('provider') || 'izipay'; // Por defecto izipay para compatibilidad
+    const statusEl = document.getElementById('status');
+
+    let redirected = false;
+
+    if (!orderId) {
+      try {
+        orderId = localStorage.getItem('izipay_last_order_id');
+      } catch (_) {}
+    }
+
+    if (!orderId) {
+      statusEl.textContent = 'No se encontró orderId en la URL.';
+    } else {
+      let pollInterval = null;
+      let pollCount = 0;
+      const MAX_POLL_ATTEMPTS = 150; // 5 minutos máximo (150 * 2s = 300s)
+
+      const updateStatus = async () => {
+        // Evitar polling infinito
+        pollCount++;
+        if (pollCount > MAX_POLL_ATTEMPTS) {
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+          statusEl.textContent = 'Tiempo de espera agotado. Por favor, verifica el estado del pago manualmente.';
+          return;
+        }
+
+        try {
+          // Determinar endpoint según el proveedor
+          const endpoint = provider === 'mercadopago' 
+            ? `/api/mercadopago/status?orderId=${encodeURIComponent(orderId)}`
+            : `/api/izipay/status?orderId=${encodeURIComponent(orderId)}`;
+          
+          const response = await fetch(endpoint);
+          if (!response.ok) {
+            if (response.status === 404) {
+              statusEl.textContent = 'Orden no encontrada. Verificando...';
+            } else {
+              statusEl.textContent = 'Esperando confirmación del pago...';
+            }
+            return;
+          }
+          const payload = await response.json();
+          
+          if (payload.status === 'PAID') {
+            // Detener el polling inmediatamente
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
+            
+            statusEl.textContent = 'Pago confirmado. Acceso activado.';
+            statusEl.style.background = '#d1fae5';
+            statusEl.style.borderColor = '#10b981';
+            statusEl.style.color = '#065f46';
+            
+            // Redirigir solo una vez
+            if (!redirected) {
+              redirected = true;
+              const tokenParam = payload.accessToken ? `?token=${encodeURIComponent(payload.accessToken)}` : '';
+              setTimeout(() => {
+                window.location.href = `/result.html${tokenParam}`;
+              }, 1000);
+            }
+            return;
+          }
+          
+          // Mostrar estado actual
+          const statusText = payload.status || 'PENDING';
+          statusEl.textContent = `Procesando... (${statusText})`;
+          
+        } catch (error) {
+          console.error('Error verificando estado:', error);
+          statusEl.textContent = 'Esperando confirmación del pago...';
+        }
+      };
+
+      // Verificar inmediatamente
+      updateStatus();
+      
+      // Luego verificar cada 2 segundos
+      pollInterval = setInterval(updateStatus, 2000);
+    }
+
+    // Botón para simular IPN en desarrollo
+    const btnSimulateIPN = document.getElementById('btnSimulateIPN');
+    if (btnSimulateIPN && orderId) {
+      // Solo mostrar en localhost
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (isLocalhost) {
+        btnSimulateIPN.style.display = 'inline-block';
+        btnSimulateIPN.addEventListener('click', async () => {
+          btnSimulateIPN.disabled = true;
+          btnSimulateIPN.textContent = 'Simulando...';
+          
+          try {
+            const response = await fetch('/api/izipay/simulate-ipn', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId })
+            });
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+              statusEl.textContent = '✅ IPN simulado correctamente. Verificando...';
+              statusEl.style.background = '#d1fae5';
+              statusEl.style.borderColor = '#10b981';
+              statusEl.style.color = '#065f46';
+              
+              // Esperar un momento y verificar el estado
+              setTimeout(() => {
+                updateStatus();
+              }, 500);
+            } else {
+              statusEl.textContent = `❌ Error: ${data.message}`;
+              statusEl.style.background = '#fee2e2';
+              statusEl.style.borderColor = '#ef4444';
+              statusEl.style.color = '#991b1b';
+              btnSimulateIPN.disabled = false;
+              btnSimulateIPN.textContent = '🔧 Simular Confirmación IPN (Solo Desarrollo)';
+            }
+          } catch (error) {
+            console.error('Error simulando IPN:', error);
+            statusEl.textContent = '❌ Error al simular IPN';
+            btnSimulateIPN.disabled = false;
+            btnSimulateIPN.textContent = '🔧 Simular Confirmación IPN (Solo Desarrollo)';
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html>

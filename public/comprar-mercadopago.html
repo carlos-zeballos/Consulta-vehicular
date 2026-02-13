@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comprar acceso - Mercado Pago</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #eaf4ff 0%, #f9fbfd 100%);
+    }
+    .checkout-container {
+      max-width: 720px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+    }
+    .checkout-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .checkout-header h1 {
+      margin: 0 0 12px;
+      color: #1e2f45;
+    }
+    .checkout-header p {
+      margin: 0;
+      color: #4b5563;
+    }
+    .checkout-form {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .checkout-form label {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .checkout-form input {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #cbd5f5;
+      font-size: 15px;
+    }
+    .price-box {
+      margin-top: 16px;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px;
+      font-weight: 600;
+      color: #1f2937;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .checkout-form button {
+      align-self: flex-start;
+      background: linear-gradient(135deg, #009ee3, #0073b3);
+      border: none;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .checkout-form button:hover {
+      background: linear-gradient(135deg, #0073b3, #005a8a);
+    }
+    .checkout-form button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .status-box {
+      margin-top: 18px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      display: none;
+    }
+    .status-box.info {
+      display: block;
+      background: #f0f9ff;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+    .status-box.error {
+      display: block;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+    .status-box.success {
+      display: block;
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    #walletBrick_container {
+      margin-top: 24px;
+    }
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    <div class="checkout-header">
+      <h1>Comprar acceso</h1>
+      <p>Pago único por acceso al informe vehicular.</p>
+    </div>
+
+    <form id="comprar-form" class="checkout-form">
+      <label for="email">Correo electrónico (opcional)</label>
+      <input type="email" id="email" name="email" placeholder="tu@email.com" />
+
+      <div class="price-box">
+        <span>Total a pagar</span>
+        <span id="price-label">S/ 15.00</span>
+      </div>
+
+      <button type="submit" id="btn-crear-preferencia">Crear pago con Mercado Pago</button>
+    </form>
+
+    <div id="status" class="status-box"></div>
+    
+    <!-- Contenedor para el botón de Mercado Pago -->
+    <div id="walletBrick_container" style="display: none;"></div>
+  </div>
+
+  <div class="footer">
+    Pagos procesados por Mercado Pago. Solo el webhook confirma la compra.
+  </div>
+
+  <!-- SDK de Mercado Pago -->
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+  
+  <script>
+    // Public Key de Mercado Pago (Perú)
+    const PUBLIC_KEY = 'APP_USR-3a773006-4d23-4f56-abaa-d0845043596c';
+    let mp = null;
+    let preferenceId = null;
+    let orderId = null;
+
+    // Inicializar SDK de Mercado Pago
+    try {
+      mp = new MercadoPago(PUBLIC_KEY);
+      console.log('[MERCADOPAGO] SDK inicializado');
+    } catch (error) {
+      console.error('[MERCADOPAGO] Error inicializando SDK:', error);
+      showStatus('Error al inicializar Mercado Pago', 'error');
+    }
+
+    const form = document.getElementById('comprar-form');
+    const statusEl = document.getElementById('status');
+    const btnCrear = document.getElementById('btn-crear-preferencia');
+    const walletContainer = document.getElementById('walletBrick_container');
+
+    function showStatus(message, type = 'info') {
+      statusEl.textContent = message;
+      statusEl.className = `status-box ${type}`;
+      statusEl.style.display = 'block';
+    }
+
+    function hideStatus() {
+      statusEl.style.display = 'none';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value.trim();
+      
+      btnCrear.disabled = true;
+      btnCrear.textContent = 'Creando pago...';
+      hideStatus();
+
+      try {
+        // Crear preferencia en el servidor
+        const response = await fetch('/api/mercadopago/create-preference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (!data.ok) {
+          throw new Error(data.message || 'Error al crear la preferencia');
+        }
+
+        preferenceId = data.data.preferenceId;
+        orderId = data.data.orderId;
+
+        console.log('[MERCADOPAGO] Preferencia creada:', preferenceId);
+        console.log('[MERCADOPAGO] OrderId:', orderId);
+
+        // Guardar orderId para verificación posterior
+        localStorage.setItem('mercadopago_last_order_id', orderId);
+
+        // Mostrar botón de Mercado Pago
+        showStatus('Preferencia creada. Completa el pago con Mercado Pago:', 'success');
+        
+        // Ocultar formulario
+        form.style.display = 'none';
+        
+        // Mostrar contenedor del botón
+        walletContainer.style.display = 'block';
+
+        // Renderizar botón de Mercado Pago
+        if (mp) {
+          const bricksBuilder = mp.bricks();
+          
+          bricksBuilder.create('wallet', 'walletBrick_container', {
+            initialization: {
+              preferenceId: preferenceId
+            },
+            callbacks: {
+              onReady: () => {
+                console.log('[MERCADOPAGO] Wallet Brick listo');
+              },
+              onError: (error) => {
+                console.error('[MERCADOPAGO] Error en Wallet Brick:', error);
+                showStatus('Error al cargar el botón de pago. Intenta recargar la página.', 'error');
+              }
+            }
+          });
+        } else {
+          // Si no hay SDK, redirigir directamente
+          const initPoint = data.data.sandboxInitPoint || data.data.initPoint;
+          if (initPoint) {
+            window.location.href = initPoint;
+          }
+        }
+
+      } catch (error) {
+        console.error('[MERCADOPAGO] Error:', error);
+        showStatus(`Error: ${error.message}`, 'error');
+        btnCrear.disabled = false;
+        btnCrear.textContent = 'Crear pago con Mercado Pago';
+      }
+    });
+
+    // Verificar si hay un orderId en la URL (retorno de Mercado Pago)
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnedOrderId = urlParams.get('orderId') || urlParams.get('external_reference');
+    
+    if (returnedOrderId) {
+      // Redirigir a pago-ok para verificar estado
+      window.location.href = `/pago-ok?orderId=${encodeURIComponent(returnedOrderId)}&provider=mercadopago`;
+    }
+  </script>
+</body>
+</html>

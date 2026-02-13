@@ -1,0 +1,42 @@
+# ============================================
+# CONFIGURACIÓN BÁSICA
+# ============================================
+NODE_ENV=production
+PORT=3000
+BASE_URL=https://consultavehicular.services
+PUBLIC_BASE_URL=https://consultavehicular.services
+BASE_PATH=
+
+# ============================================
+# MERCADO PAGO (Perú)
+# ============================================
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-5363845934405232-021315-75ce11ab2c0aeb3f00d8c63c1da02b90-3202899162
+MERCADOPAGO_PUBLIC_KEY=APP_USR-3a773006-4d23-4f56-abaa-d0845043596c
+
+# ============================================
+# PRECIO Y MONEDA
+# ============================================
+PRICE_CENTS=1500
+CURRENCY_NUM=604
+
+# ============================================
+# 2CAPTCHA
+# ============================================
+CAPTCHA_API_KEY=dd23c370d7192bfb0d8cb37188918abe
+
+# ============================================
+# PROXY MTC (2Captcha)
+# ============================================
+MTC_PROXY_HOST=na.proxy.2captcha.com
+MTC_PROXY_PORT=2334
+MTC_PROXY_USER=uae12c98557ca05dd-zone-custom-region-pe-session-dDCuqxdzZ-sessTime-3
+MTC_PROXY_PASS=uae12c98557ca05dd
+MTC_PROXY_URL=http://uae12c98557ca05dd-zone-custom-region-pe-session-dDCuqxdzZ-sessTime-3:uae12c98557ca05dd@na.proxy.2captcha.com:2334
+MTC_PROXY_ROTATION_ENABLED=false
+
+# ============================================
+# CUPONES (Opcional)
+# ============================================
+COUPON_ADMIN_CODE=ADMIN-XXXX-ROOT
+COUPONS_PUBLIC_CODES=
+COUPON_HASH_SALT=cambia_esto_en_produccion
