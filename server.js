@@ -1870,7 +1870,13 @@ app.post("/api/mercadopago/webhook", async (req, res) => {
         });
 
         // Activar acceso
-        activateAccess({ orderId, email, amount: Math.round(amount * 100), currency: paymentStatus.currency_id || 'PEN' });
+        activateAccess({ 
+          orderId, 
+          email, 
+          amount: Math.round(amount * 100), 
+          currency: paymentStatus.currency_id || 'PEN',
+          provider: 'MERCADOPAGO'
+        });
         console.log(`[MERCADOPAGO] ✅ Pago aprobado y acceso activado para orderId=${orderId}`);
       }
     }
