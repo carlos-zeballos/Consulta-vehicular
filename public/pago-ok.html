@@ -90,7 +90,13 @@
         }
 
         try {
-          const response = await fetch(`/api/izipay/status?orderId=${encodeURIComponent(orderId)}`);
+          // Detectar si es Mercado Pago o Izipay
+          const isMercadoPago = orderId.startsWith('MP-');
+          const apiEndpoint = isMercadoPago 
+            ? `/api/mercadopago/status?orderId=${encodeURIComponent(orderId)}`
+            : `/api/izipay/status?orderId=${encodeURIComponent(orderId)}`;
+          
+          const response = await fetch(apiEndpoint);
           if (!response.ok) {
             if (response.status === 404) {
               statusEl.textContent = 'Orden no encontrada. Verificando...';
@@ -101,7 +107,10 @@
           }
           const payload = await response.json();
           
-          if (payload.status === 'PAID') {
+          // Mercado Pago usa 'paid', Izipay usa 'PAID'
+          const isPaid = payload.status === 'PAID' || payload.status === 'paid';
+          
+          if (isPaid) {
             // Detener el polling inmediatamente
             if (pollInterval) {
               clearInterval(pollInterval);

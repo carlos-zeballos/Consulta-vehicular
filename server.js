@@ -157,19 +157,38 @@ app.get("/checkout", (req, res) => {
 
 // Checkout Izipay (Redirección VADS)
 app.get("/comprar", (req, res) => {
-  const comprarPath = path.join(__dirname, "public", "comprar.html");
-  fs.readFile(comprarPath, "utf8", (err, html) => {
-    if (err) {
-      console.error("[IZIPAY] Error leyendo comprar.html:", err.message);
-      return res.status(500).send("No se pudo cargar el checkout");
-    }
+  // Usar Mercado Pago si está configurado, sino Izipay
+  if (MERCADOPAGO_ACCESS_TOKEN && MERCADOPAGO_PUBLIC_KEY) {
+    const comprarPath = path.join(__dirname, "public", "comprar-mercadopago.html");
+    fs.readFile(comprarPath, "utf8", (err, html) => {
+      if (err) {
+        console.error("[MERCADOPAGO] Error leyendo comprar-mercadopago.html:", err.message);
+        return res.status(500).send("No se pudo cargar el checkout");
+      }
 
-    const priceLabel = formatPriceLabel(PRICE_CENTS);
-    const rendered = html
-      .replace(/__PRICE_LABEL__/g, priceLabel)
-      .replace(/__PRICE_CENTS__/g, String(PRICE_CENTS));
-    return res.status(200).send(rendered);
-  });
+      const priceLabel = formatPriceLabel(PRICE_CENTS);
+      const rendered = html
+        .replace(/__PRICE_LABEL__/g, priceLabel)
+        .replace(/__MERCADOPAGO_PUBLIC_KEY__/g, MERCADOPAGO_PUBLIC_KEY);
+      
+      return res.status(200).send(rendered);
+    });
+  } else {
+    // Fallback a Izipay
+    const comprarPath = path.join(__dirname, "public", "comprar.html");
+    fs.readFile(comprarPath, "utf8", (err, html) => {
+      if (err) {
+        console.error("[IZIPAY] Error leyendo comprar.html:", err.message);
+        return res.status(500).send("No se pudo cargar el checkout");
+      }
+
+      const priceLabel = formatPriceLabel(PRICE_CENTS);
+      const rendered = html
+        .replace(/__PRICE_LABEL__/g, priceLabel)
+        .replace(/__PRICE_CENTS__/g, String(PRICE_CENTS));
+      return res.status(200).send(rendered);
+    });
+  }
 });
 
 app.get("/pago-ok", (req, res) => {
