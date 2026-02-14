@@ -125,7 +125,9 @@
             // Redirigir solo una vez
             if (!redirected) {
               redirected = true;
-              const tokenParam = payload.accessToken ? `?token=${encodeURIComponent(payload.accessToken)}` : '';
+              // El accessToken puede estar en payload.accessToken (Izipay) o payload.data.accessToken (Mercado Pago)
+              const accessToken = payload.data?.accessToken || payload.accessToken || null;
+              const tokenParam = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
               setTimeout(() => {
                 window.location.href = `/result.html${tokenParam}`;
               }, 1000);
