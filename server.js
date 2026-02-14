@@ -1791,6 +1791,149 @@ app.post("/api/izipay/ipn", (req, res) => {
 });
 
 // ============================================
+// API: MERCADO PAGO - CREATE PREFERENCE
+// ============================================
+app.post("/api/mercadopago/create-preference", async (req, res) => {
+  try {
+    if (!MERCADOPAGO_ACCESS_TOKEN || !MERCADOPAGO_PUBLIC_KEY) {
+      return respond(res, {
+        ok: false,
+        source: "mercadopago",
+        status: "error",
+        message: "Mercado Pago no está configurado"
+      }, 500);
+    }
+
+    const { email, amount } = req.body || {};
+    
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return respond(res, {
+        ok: false,
+        source: "mercadopago",
+        status: "error",
+        message: "Email válido requerido"
+      }, 400);
+    }
+
+    const finalAmount = amount ? Number(amount) : null;
+    const preference = await mercadoPagoHandler.createPreference(email, finalAmount);
+
+    return respond(res, {
+      ok: true,
+      source: "mercadopago",
+      status: "success",
+      message: "Preferencia de pago creada",
+      data: preference
+    });
+
+  } catch (error) {
+    console.error("[MERCADOPAGO] Error creando preferencia:", error.message);
+    return respond(res, {
+      ok: false,
+      source: "mercadopago",
+      status: "error",
+      message: error.message || "Error creando preferencia de pago"
+    }, 500);
+  }
+});
+
+// ============================================
+// API: MERCADO PAGO - WEBHOOK
+// ============================================
+app.post("/api/mercadopago/webhook", async (req, res) => {
+  try {
+    const { type, data } = req.body;
+
+    if (type === 'payment') {
+      const paymentId = data.id;
+      console.log(`[MERCADOPAGO] Webhook recibido - Payment ID: ${paymentId}`);
+
+      // Obtener estado del pago
+      const paymentStatus = await mercadoPagoHandler.getPaymentStatus(paymentId);
+
+      if (paymentStatus.status === 'approved') {
+        const email = paymentStatus.payer?.email || '';
+        const amount = paymentStatus.transaction_amount || 0;
+        const orderId = `MP-${paymentId}`;
+
+        // Guardar pago
+        upsertPaymentRecord({
+          orderId,
+          email,
+          amount: Math.round(amount * 100), // Convertir a centavos
+          currency: paymentStatus.currency_id || 'PEN',
+          provider: 'MERCADOPAGO',
+          status: 'PAID',
+          paidAt: paymentStatus.date_approved || new Date().toISOString(),
+          source: 'webhook',
+          paymentId: paymentId
+        });
+
+        // Activar acceso
+        activateAccess({ orderId, email, amount: Math.round(amount * 100), currency: paymentStatus.currency_id || 'PEN' });
+        console.log(`[MERCADOPAGO] ✅ Pago aprobado y acceso activado para orderId=${orderId}`);
+      }
+    }
+
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error("[MERCADOPAGO] Error procesando webhook:", error.message);
+    return res.status(400).json({ ok: false, message: "Error procesando webhook" });
+  }
+});
+
+// ============================================
+// API: MERCADO PAGO - STATUS
+// ============================================
+app.get("/api/mercadopago/status", (req, res) => {
+  try {
+    const { orderId } = req.query;
+    if (!orderId) {
+      return respond(res, {
+        ok: false,
+        source: "mercadopago",
+        status: "error",
+        message: "orderId requerido"
+      }, 400);
+    }
+
+    const payment = loadPaymentRecord(orderId);
+    if (!payment) {
+      return respond(res, {
+        ok: true,
+        source: "mercadopago",
+        status: "not_found",
+        message: "Pago no encontrado",
+        data: null
+      });
+    }
+
+    return respond(res, {
+      ok: true,
+      source: "mercadopago",
+      status: payment.status === 'PAID' ? 'paid' : 'pending',
+      message: payment.status === 'PAID' ? 'Pago confirmado' : 'Pago pendiente',
+      data: {
+        orderId: payment.orderId,
+        status: payment.status,
+        email: payment.email,
+        amount: payment.amount,
+        paidAt: payment.paidAt,
+        accessToken: payment.accessToken || null
+      }
+    });
+  } catch (error) {
+    console.error("[MERCADOPAGO] Error obteniendo estado:", error.message);
+    return respond(res, {
+      ok: false,
+      source: "mercadopago",
+      status: "error",
+      message: error.message
+    }, 500);
+  }
+});
+
+// ============================================
 // API: IZIPAY - SIMULAR IPN (SOLO DESARROLLO)
 // ============================================
 app.post("/api/izipay/simulate-ipn", (req, res) => {
