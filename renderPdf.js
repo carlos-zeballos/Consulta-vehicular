@@ -2443,10 +2443,7 @@ async function renderPdf(reportData, placa, fechaConsulta, rawResults = null) {
     .replace(/{{FECHA}}/g, cleanText(fechaConsulta || formatDate(report.meta.fechaConsulta)))
     .replace(/{{VEHICULO}}/g, '')
     .replace(/{{VEHICULO_KV}}/g, '')
-    .replace(/{{RIESGO_SCORE}}/g, riskData.score)
-    .replace(/{{RIESGO_CATEGORIA}}/g, riskData.categoria || (riskData.score <= 30 ? 'Bajo' : riskData.score <= 60 ? 'Moderado' : 'Alto'))
-    .replace(/{{RIESGO_COLOR}}/g, riskData.score <= 30 ? 'b-ok' : riskData.score <= 60 ? 'b-warn' : 'b-bad')
-    .replace(/{{RIESGO_PERCENT}}/g, riskData.score)
+    // Nivel de riesgo eliminado - placeholders removidos
     .replace(/{{SUMMARY_BADGES}}/g, summaryBadges.join(''))
     .replace(/{{LOGO_IMG}}/g, getLogoPath())
     .replace(/{{WATERMARK_IMG}}/g, getLogoPath())
