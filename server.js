@@ -1982,12 +1982,26 @@ app.post("/api/soat", async (req, res) => {
     console.log(`[SOAT-APESEG] Consulta completada en ${elapsed}s para placa: ${placa}`);
 
     if (!resultado.success) {
-      // Siempre devolver 200 con ok: true y status: empty
+      // Siempre devolver 200 con ok: true y status: empty con estructura completa
       return respond(res, {
         ok: true,
         source: "soat",
         status: "empty",
-        data: null,
+        data: {
+          placa: resultado.placa || placa,
+          encontrado: false,
+          compania_aseguradora: '',
+          clase_vehiculo: '',
+          uso_vehiculo: '',
+          numero_accidentes: 0,
+          numero_poliza: '',
+          numero_certificado: '',
+          inicio_vigencia: '',
+          fin_vigencia: '',
+          estado: '',
+          comentario: '',
+          polizas: []
+        },
         message: resultado.message || "No se encontraron certificados SOAT para esta placa"
       });
     }
@@ -1997,7 +2011,21 @@ app.post("/api/soat", async (req, res) => {
         ok: true,
         source: "soat",
         status: "empty",
-        data: null,
+        data: {
+          placa: resultado.placa || placa,
+          encontrado: false,
+          compania_aseguradora: '',
+          clase_vehiculo: '',
+          uso_vehiculo: '',
+          numero_accidentes: 0,
+          numero_poliza: '',
+          numero_certificado: '',
+          inicio_vigencia: '',
+          fin_vigencia: '',
+          estado: '',
+          comentario: '',
+          polizas: []
+        },
         message: "No se encontraron certificados SOAT para esta placa"
       });
     }
@@ -2044,12 +2072,26 @@ app.post("/api/soat", async (req, res) => {
       publicMessage = "No se pudo confirmar la consulta. Intente nuevamente.";
     }
 
-    // Siempre devolver 200 con ok: true y status: empty
+    // Siempre devolver 200 con ok: true y status: empty con estructura completa
     respond(res, {
       ok: true,
       source: "soat",
       status: "empty",
-      data: null,
+      data: {
+        placa: placa,
+        encontrado: false,
+        compania_aseguradora: '',
+        clase_vehiculo: '',
+        uso_vehiculo: '',
+        numero_accidentes: 0,
+        numero_poliza: '',
+        numero_certificado: '',
+        inicio_vigencia: '',
+        fin_vigencia: '',
+        estado: '',
+        comentario: '',
+        polizas: []
+      },
       message: publicMessage
     });
   }
