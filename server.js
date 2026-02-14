@@ -14,6 +14,14 @@ const cors = require("cors");
 const FormData = require("form-data");
 const { consultSbsSoat } = require("./sbsAdapter");
 const { getCitvCaptcha, consultCitvByPlaca } = require("./mtcAdapter");
+// Intentar usar adapter con proxy si está disponible
+let mtcAdapterWithProxy = null;
+try {
+  mtcAdapterWithProxy = require("./mtcAdapterWithProxyFinal");
+  console.log("[MTC] ✅ Adapter con proxy cargado");
+} catch (e) {
+  console.log("[MTC] ⚠️  Adapter con proxy no disponible, usando adapter sin proxy");
+}
 const { consultSbsSoatPlaywright } = require("./sbsPlaywrightAdapter");
 const { getCitvCaptchaPlaywright, consultCitvByPlacaPlaywright } = require("./mtcPlaywrightAdapter");
 const { consultSbsSoatAdvanced } = require("./sbsAdvancedPlaywright");
@@ -2590,7 +2598,19 @@ console.log(`[MTC] ðŸš« Bloqueo WAF/Cloudflare detectado (scraper final) - d
     // Si el error es captcha invÃƒÂ¡lido, devolver nuevo captcha
     if (error.message.includes('CAPTCHA_INVALID')) {
       try {
-        const captchaData = await getCitvCaptcha();
+        // Intentar con proxy primero si está disponible
+        let captchaData;
+        if (mtcAdapterWithProxy && process.env.MTC_PROXY_HOST) {
+          try {
+            console.log(`[MTC] 🔐 Intentando obtener CAPTCHA con proxy...`);
+            captchaData = await mtcAdapterWithProxy.getCitvCaptcha();
+          } catch (proxyError) {
+            console.log(`[MTC] ⚠️  Proxy falló, usando sin proxy...`);
+            captchaData = await getCitvCaptcha();
+          }
+        } else {
+          captchaData = await getCitvCaptcha();
+        }
         return respond(res, {
           ok: true,
           source: "revision",
