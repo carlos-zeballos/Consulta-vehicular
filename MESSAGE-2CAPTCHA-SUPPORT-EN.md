@@ -50,13 +50,35 @@ I also tested directly from my VPS using curl (without Node.js):
 curl -v -x "http://uae12c98557ca05dd-zone-custom-region-pe-asn-AS6147-session-lbxUwyWbY-sessTime-3:uae12c98557ca05dd@na.proxy.2captcha.com:2334" https://www.google.com
 ```
 
-**Result:** [PASTE THE EXACT OUTPUT FROM CURL HERE]
+**Result from VPS:**
+```
+* Connected to na.proxy.2captcha.com (43.135.141.142) port 2334
+* CONNECT tunnel: HTTP/1.1 negotiated
+* Proxy auth using Basic with user 'uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3'
+* Establish HTTP proxy tunnel to www.google.com:443
+> CONNECT www.google.com:443 HTTP/1.1
+> Proxy-Authorization: Basic dWFlMTJjOTg1NTdjYTA1ZGQtem9uZS1jdXN0b20tcmVnaW9uLXBlLWFzbi1BUzI3ODQzLXNlc3Npb24tWDJSQ1AxTGdFLXNlc3NUaW1lLTM6dWFlMTJjOTg1NTdjYTA1ZGQ=
+< HTTP/1.1 403 Forbidden
+< Content-Type: text/plain; charset=utf-8
+< Proxy-Authenticate: Basic realm=""
+* CONNECT tunnel failed, response 403
+```
 
-The curl test also fails, confirming this is not a Node.js/Axios-specific issue.
+**Analysis:** The proxy connects successfully and authentication is sent correctly, but the proxy responds with **403 Forbidden**. This is different from the local error (`Proxy connection ended before receiving CONNECT response`). The 403 suggests:
+- The proxy is reachable and accepts the connection
+- Authentication credentials are being sent correctly
+- But the proxy is rejecting the CONNECT request, possibly due to:
+  - IP whitelist restrictions
+  - Proxy configuration issues
+  - Session/authentication method mismatch
 
 ### Analysis:
 
-**Critical Finding:** The proxy **fails with ALL HTTPS sites**, not just MTC. This indicates the problem is **NOT site-specific** but a general issue with the proxy not responding correctly to the CONNECT method for HTTPS tunnels.
+**Critical Finding:** The proxy **fails with ALL HTTPS sites**, not just MTC. 
+
+**From VPS test:** The proxy connects successfully but responds with **403 Forbidden** to CONNECT requests. This indicates:
+- The proxy is reachable and authentication is sent correctly
+- But the proxy rejects CONNECT requests, possibly due to IP whitelist, proxy configuration, or session restrictions
 
 ### Environment:
 
@@ -91,9 +113,13 @@ I've tested the ISP Peru proxy with the exact format you recommended (`http://US
 curl -v -x "http://uae12c98557ca05dd-zone-custom-region-pe-asn-AS6147-session-lbxUwyWbY-sessTime-3:uae12c98557ca05dd@na.proxy.2captcha.com:2334" https://www.google.com
 ```
 
-**Result:** [PASTE CURL OUTPUT HERE]
+**Result from VPS:**
+```
+< HTTP/1.1 403 Forbidden
+* CONNECT tunnel failed, response 403
+```
 
-The curl test also fails, confirming this is not Node.js-specific. The proxy is not responding to CONNECT requests for HTTPS tunnels with any domain.
+The curl test shows the proxy **connects and accepts authentication**, but responds with **403 Forbidden** to CONNECT requests. This suggests the proxy is rejecting the request due to configuration, IP whitelist, or session restrictions rather than a connection/authentication issue.
 
 Since I'm using the correct format (HTTP 2334 + `http://USER:PASS@na.proxy.2captcha.com:2334`) and it fails with curl too, this appears to be a server-side issue.
 
