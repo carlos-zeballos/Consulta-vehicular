@@ -2381,7 +2381,8 @@ async function renderPdf(reportData, placa, fechaConsulta, rawResults = null) {
   // 4. Generar secciones
   const placasPeHTML = renderPlacasPe(report);
   const soatHTML = renderSOAT(report);
-  const citvHTML = renderCITV(report);
+  // MTC temporalmente deshabilitado - no mostrar en PDF
+  const citvHTML = '<div style="padding: 20px; text-align: center; color: #64748b;"><i class="fas fa-info-circle"></i> Servicio temporalmente no disponible</div>';
   const satLimaHTML = renderSATLima(report);
   const infraccionesHTML = renderInfracciones(report);
   const sutranHTML = renderSUTRAN(report);

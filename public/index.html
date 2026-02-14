@@ -448,6 +448,70 @@
       .form-box {
         max-width: 100%;
       }
+      
+      #consultas-counter-badge {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        padding: 10px 16px;
+        font-size: 12px;
+        justify-content: center;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .navbar-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      .navbar nav {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+      }
+      
+      .navbar nav a {
+        margin: 0;
+        text-align: center;
+      }
+      
+      .btn-navbar {
+        width: 100%;
+        margin: 10px 0 0 0;
+      }
+      
+      .container {
+        margin: 20px auto;
+        padding: 15px;
+      }
+      
+      .form-box, .info-box {
+        padding: 25px;
+      }
+      
+      .section-quienes-somos {
+        padding: 40px 15px;
+      }
+      
+      .bloques-info {
+        flex-direction: column;
+      }
+      
+      .bloque {
+        width: 100%;
+      }
+      
+      #consultas-counter-badge {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        right: auto;
+        margin: 20px auto;
+        max-width: 90%;
+      }
     }
  .faq-section {
   background: #f8fbff;
@@ -1222,10 +1286,10 @@ background: linear-gradient(135deg, #d6eaff, #eaf4ff);
   </div>
 </div>
 
-<!-- Contador de visitas -->
-<div style="position: fixed; bottom: 20px; left: 20px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3); z-index: 999; font-family: 'Inter', 'Poppins', sans-serif; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px);">
-  <i class="fas fa-eye" style="font-size: 16px;"></i>
-  <span>Visitas: <strong id="visit-counter">5324</strong></span>
+<!-- Contador de consultas hechas hoy -->
+<div id="consultas-counter-badge" style="position: fixed; bottom: 20px; left: 20px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3); z-index: 999; font-family: 'Inter', 'Poppins', sans-serif; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px);">
+  <i class="fas fa-chart-line" style="font-size: 16px;"></i>
+  <span>Consultas hoy: <strong id="consultas-counter">150</strong></span>
 </div>
   
  
@@ -1658,13 +1722,13 @@ if (modall) {
   }
 }
 
-// Contador de visitas (inicia en 5324, aumenta 2 puntos diariamente)
-function initVisitCounter() {
-    const STORAGE_KEY = 'visitCounter';
-    const START_COUNT = 5324;
-    const DAILY_INCREMENT = 2;
+// Contador de consultas hechas hoy (inicia en 150, aumenta diariamente)
+function initConsultasCounter() {
+    const STORAGE_KEY = 'consultasCounter';
+    const START_COUNT = 150;
+    const DAILY_INCREMENT = 1; // Aumenta 1 cada día
     
-    // Obtener fecha actual
+    // Obtener fecha actual (solo fecha, sin hora)
     const today = new Date().toDateString();
     
     // Obtener datos del contador del localStorage
@@ -1696,7 +1760,7 @@ function initVisitCounter() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(counterData));
     
     // Mostrar contador en la página
-    const counterElement = document.getElementById('visit-counter');
+    const counterElement = document.getElementById('consultas-counter');
     if (counterElement) {
       counterElement.textContent = counterData.count.toLocaleString('es-PE');
     }
@@ -1706,9 +1770,9 @@ function initVisitCounter() {
   
   // Inicializar contador cuando la página carga
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initVisitCounter);
+    document.addEventListener('DOMContentLoaded', initConsultasCounter);
   } else {
-    initVisitCounter();
+    initConsultasCounter();
   }
   
   </script>

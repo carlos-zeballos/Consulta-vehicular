@@ -12,7 +12,7 @@
   const SECTIONS = {
     'soat': { title: 'SOAT', icon: '📄' },
     'siniestro': { title: 'SBS - Siniestralidad SOAT', icon: '⚠️' },
-    'revision': { title: 'Certificados de Inspección Técnica Vehicular', icon: '🔧' },
+    // 'revision': { title: 'Certificados de Inspección Técnica Vehicular', icon: '🔧' }, // MTC temporalmente deshabilitado
     'certificado-vehiculo': { title: 'Certificado de lunas polarizadas', icon: '📜' },
     'sutran': { title: 'SUTRAN - Record de Infracciones', icon: '🚨' },
     'sat': { title: 'SAT Lima - Capturas de Vehículos', icon: '🚓' },
@@ -43,7 +43,7 @@
   const ENDPOINTS = {
     'soat': '/api/soat',
     'siniestro': '/api/siniestro',
-    'revision': '/api/revision',
+    // 'revision': '/api/revision', // MTC temporalmente deshabilitado
     'certificado-vehiculo': '/api/certificado-vehiculo',
     'sutran': '/api/sutran',
     'sat': '/api/sat',
@@ -1420,10 +1420,9 @@
         return;
       }
       
-      // MTC requiere captcha, manejar de forma especial
+      // MTC temporalmente deshabilitado
       if (key === 'revision') {
-        await handleRevisionWithCaptcha(key, url, placa);
-        return;
+        return; // No consultar MTC por el momento
       }
       
       // SBS: usar directamente safeFetch (el endpoint ya maneja el fallback internamente)

@@ -117,9 +117,49 @@
   </div>
 
   <div class="footer">
-    Pagos procesados por Izipay/MiCuentaWeb. Solo IPN confirma la compra.
+    Pagos procesados por Mercado Pago. Solo webhook confirma la compra.
   </div>
 
-  <script src="/app.js"></script>
+  <script>
+    // Eliminar app.js que usa Izipay - usar Mercado Pago directamente
+    const form = document.getElementById('comprar-form');
+    const statusBox = document.getElementById('status');
+    
+    if (form && statusBox) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email')?.value?.trim() || '';
+        
+        statusBox.className = 'status-box info';
+        statusBox.textContent = 'Preparando tu pago seguro...';
+        
+        try {
+          const response = await fetch('/api/mercadopago/create-preference', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok || !data.ok || !data.data?.preferenceId) {
+            throw new Error(data.message || 'No se pudo crear la preferencia de pago');
+          }
+          
+          // Guardar orderId en localStorage
+          if (data.data.orderId) {
+            localStorage.setItem('mercadopago_last_order_id', data.data.orderId);
+          }
+          
+          // Redirigir a Mercado Pago
+          window.location.href = data.data.init_point || data.data.sandbox_init_point;
+          
+        } catch (error) {
+          statusBox.className = 'status-box error';
+          statusBox.textContent = error.message || 'Error al procesar el pago';
+        }
+      });
+    }
+  </script>
 </body>
 </html>

@@ -66,7 +66,7 @@
 
     if (!orderId) {
       try {
-        orderId = localStorage.getItem('izipay_last_order_id');
+        orderId = localStorage.getItem('mercadopago_last_order_id');
       } catch (_) {}
     }
 
@@ -90,11 +90,8 @@
         }
 
         try {
-          // Detectar si es Mercado Pago o Izipay
-          const isMercadoPago = orderId.startsWith('MP-');
-          const apiEndpoint = isMercadoPago 
-            ? `/api/mercadopago/status?orderId=${encodeURIComponent(orderId)}`
-            : `/api/izipay/status?orderId=${encodeURIComponent(orderId)}`;
+          // Solo Mercado Pago ahora
+          const apiEndpoint = `/api/mercadopago/status?orderId=${encodeURIComponent(orderId)}`;
           
           const response = await fetch(apiEndpoint);
           if (!response.ok) {
@@ -107,8 +104,8 @@
           }
           const payload = await response.json();
           
-          // Mercado Pago usa 'paid', Izipay usa 'PAID'
-          const isPaid = payload.status === 'PAID' || payload.status === 'paid';
+          // Mercado Pago usa 'paid'
+          const isPaid = payload.status === 'paid' || payload.data?.status === 'PAID';
           
           if (isPaid) {
             // Detener el polling inmediatamente
@@ -125,8 +122,8 @@
             // Redirigir solo una vez
             if (!redirected) {
               redirected = true;
-              // El accessToken puede estar en payload.accessToken (Izipay) o payload.data.accessToken (Mercado Pago)
-              const accessToken = payload.data?.accessToken || payload.accessToken || null;
+              // El accessToken está en payload.data.accessToken (Mercado Pago)
+              const accessToken = payload.data?.accessToken || null;
               const tokenParam = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
               setTimeout(() => {
                 window.location.href = `/result.html${tokenParam}`;
@@ -136,7 +133,7 @@
           }
           
           // Mostrar estado actual
-          const statusText = payload.status || 'PENDING';
+          const statusText = payload.status || payload.data?.status || 'PENDING';
           statusEl.textContent = `Procesando... (${statusText})`;
           
         } catch (error) {
@@ -159,44 +156,8 @@
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       if (isLocalhost) {
         btnSimulateIPN.style.display = 'inline-block';
-        btnSimulateIPN.addEventListener('click', async () => {
-          btnSimulateIPN.disabled = true;
-          btnSimulateIPN.textContent = 'Simulando...';
-          
-          try {
-            const response = await fetch('/api/izipay/simulate-ipn', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId })
-            });
-            
-            const data = await response.json();
-            
-            if (data.ok) {
-              statusEl.textContent = '✅ IPN simulado correctamente. Verificando...';
-              statusEl.style.background = '#d1fae5';
-              statusEl.style.borderColor = '#10b981';
-              statusEl.style.color = '#065f46';
-              
-              // Esperar un momento y verificar el estado
-              setTimeout(() => {
-                updateStatus();
-              }, 500);
-            } else {
-              statusEl.textContent = `❌ Error: ${data.message}`;
-              statusEl.style.background = '#fee2e2';
-              statusEl.style.borderColor = '#ef4444';
-              statusEl.style.color = '#991b1b';
-              btnSimulateIPN.disabled = false;
-              btnSimulateIPN.textContent = '🔧 Simular Confirmación IPN (Solo Desarrollo)';
-            }
-          } catch (error) {
-            console.error('Error simulando IPN:', error);
-            statusEl.textContent = '❌ Error al simular IPN';
-            btnSimulateIPN.disabled = false;
-            btnSimulateIPN.textContent = '🔧 Simular Confirmación IPN (Solo Desarrollo)';
-          }
-        });
+        // Botón de simulación IPN eliminado - solo Mercado Pago ahora
+        btnSimulateIPN.style.display = 'none';
       }
     }
   </script>

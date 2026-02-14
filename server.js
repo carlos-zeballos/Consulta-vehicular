@@ -107,20 +107,15 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Fallback: si Izipay retorna por POST al root, redirigir a /pago-ok o /pago-error
+// Fallback: si Mercado Pago retorna por POST al root, redirigir a /pago-ok o /pago-error
 app.post("/", (req, res) => {
   const payload = req.body || {};
-  const hasVads = Object.keys(payload).some((key) => key.startsWith("vads_"));
-  if (!hasVads) {
-    return res.status(404).send("Not Found");
-  }
-
-  const orderId = String(payload?.vads_order_id || "").trim();
-  const status = normalizeIzipayStatus(payload?.vads_trans_status || "");
-  const isError = ["REFUSED", "ABANDONED"].includes(status);
+  const orderId = String(payload?.orderId || payload?.preference_id || "").trim();
+  const status = String(payload?.status || "").toLowerCase();
+  const isError = ["rejected", "cancelled", "failure"].includes(status);
   const target = isError ? "/pago-error" : "/pago-ok";
 
-  console.log("[IZIPAY] return root POST", { status, orderId, hasVads });
+  console.log("[MERCADOPAGO] return root POST", { status, orderId });
 
   if (orderId) {
     return res.redirect(`${target}?orderId=${encodeURIComponent(orderId)}`);
@@ -157,52 +152,35 @@ app.get("/checkout", (req, res) => {
 
 // Checkout Izipay (Redirección VADS)
 app.get("/comprar", (req, res) => {
-  // Usar Mercado Pago si está configurado, sino Izipay
-  if (MERCADOPAGO_ACCESS_TOKEN && MERCADOPAGO_PUBLIC_KEY) {
-    const comprarPath = path.join(__dirname, "public", "comprar-mercadopago.html");
-    fs.readFile(comprarPath, "utf8", (err, html) => {
-      if (err) {
-        console.error("[MERCADOPAGO] Error leyendo comprar-mercadopago.html:", err.message);
-        return res.status(500).send("No se pudo cargar el checkout");
-      }
-
-      const priceLabel = formatPriceLabel(PRICE_CENTS);
-      const rendered = html
-        .replace(/__PRICE_LABEL__/g, priceLabel)
-        .replace(/__MERCADOPAGO_PUBLIC_KEY__/g, MERCADOPAGO_PUBLIC_KEY);
-      
-      return res.status(200).send(rendered);
-    });
-  } else {
-    // Fallback a Izipay
-    const comprarPath = path.join(__dirname, "public", "comprar.html");
-    fs.readFile(comprarPath, "utf8", (err, html) => {
-      if (err) {
-        console.error("[IZIPAY] Error leyendo comprar.html:", err.message);
-        return res.status(500).send("No se pudo cargar el checkout");
-      }
-
-      const priceLabel = formatPriceLabel(PRICE_CENTS);
-      const rendered = html
-        .replace(/__PRICE_LABEL__/g, priceLabel)
-        .replace(/__PRICE_CENTS__/g, String(PRICE_CENTS));
-      return res.status(200).send(rendered);
-    });
+  if (!MERCADOPAGO_ACCESS_TOKEN || !MERCADOPAGO_PUBLIC_KEY) {
+    return res.status(500).send("Mercado Pago no está configurado. Verifica las variables de entorno.");
   }
+
+  const comprarPath = path.join(__dirname, "public", "comprar-mercadopago.html");
+  fs.readFile(comprarPath, "utf8", (err, html) => {
+    if (err) {
+      console.error("[MERCADOPAGO] Error leyendo comprar-mercadopago.html:", err.message);
+      return res.status(500).send("No se pudo cargar el checkout");
+    }
+
+    const priceLabel = formatPriceLabel(PRICE_CENTS);
+    const rendered = html
+      .replace(/__PRICE_LABEL__/g, priceLabel)
+      .replace(/__MERCADOPAGO_PUBLIC_KEY__/g, MERCADOPAGO_PUBLIC_KEY);
+    
+    return res.status(200).send(rendered);
+  });
 });
 
 app.get("/pago-ok", (req, res) => {
-  const orderId = String(req.query?.orderId || req.query?.vads_order_id || "").trim();
-  if (orderId && !req.query?.orderId) {
-    return res.redirect(`/pago-ok?orderId=${encodeURIComponent(orderId)}`);
-  }
-  console.log("[IZIPAY] return pago-ok GET", { query: req.query || {} });
+  const orderId = String(req.query?.orderId || "").trim();
+  console.log("[MERCADOPAGO] return pago-ok GET", { query: req.query || {} });
   return res.sendFile(path.join(__dirname, "public", "pago-ok.html"));
 });
 
 app.post("/pago-ok", (req, res) => {
-  const orderId = String(req.body?.vads_order_id || req.body?.orderId || "").trim();
-  console.log("[IZIPAY] return pago-ok POST", { body: req.body || {}, query: req.query || {} });
+  const orderId = String(req.body?.orderId || "").trim();
+  console.log("[MERCADOPAGO] return pago-ok POST", { body: req.body || {}, query: req.query || {} });
   if (orderId) {
     return res.redirect(`/pago-ok?orderId=${encodeURIComponent(orderId)}`);
   }
@@ -210,17 +188,17 @@ app.post("/pago-ok", (req, res) => {
 });
 
 app.get("/pago-error", (req, res) => {
-  const orderId = String(req.query?.orderId || req.query?.vads_order_id || "").trim();
-  if (orderId && !req.query?.orderId) {
+  const orderId = String(req.query?.orderId || "").trim();
+  if (orderId) {
     return res.redirect(`/pago-error?orderId=${encodeURIComponent(orderId)}`);
   }
-  console.log("[IZIPAY] return pago-error GET", { query: req.query || {} });
+  console.log("[MERCADOPAGO] return pago-error GET", { query: req.query || {} });
   return res.sendFile(path.join(__dirname, "public", "pago-error.html"));
 });
 
 app.post("/pago-error", (req, res) => {
-  const orderId = String(req.body?.vads_order_id || req.body?.orderId || "").trim();
-  console.log("[IZIPAY] return pago-error POST", { body: req.body || {}, query: req.query || {} });
+  const orderId = String(req.body?.orderId || "").trim();
+  console.log("[MERCADOPAGO] return pago-error POST", { body: req.body || {}, query: req.query || {} });
   if (orderId) {
     return res.redirect(`/pago-error?orderId=${encodeURIComponent(orderId)}`);
   }
@@ -332,10 +310,7 @@ const PRICE_CENTS = Number.isFinite(Number(process.env.PRICE_CENTS))
   ? Math.round(Number(process.env.PRICE_CENTS))
   : 1500;
 const CURRENCY_NUM = String(process.env.CURRENCY_NUM || "604");
-const IZIPAY_SITE_ID = process.env.IZIPAY_SITE_ID || "";
-const IZIPAY_CTX_MODE = String(process.env.IZIPAY_CTX_MODE || "TEST").toUpperCase();
-const IZIPAY_TEST_KEY = process.env.IZIPAY_TEST_KEY || "";
-const IZIPAY_PROD_KEY = process.env.IZIPAY_PROD_KEY || "";
+// Izipay eliminado - solo Mercado Pago
 
 // ============================================
 // DETECCIÃ“N DE AMBIENTE Y TIMEOUTS DINÃMICOS
@@ -630,157 +605,21 @@ function isPaidTransaction(answer) {
 }
 
 // ============================================
-// IZIPAY / MICUENTAWEB REDIRECCIÃ“N (VADS)
+// IZIPAY ELIMINADO - Solo Mercado Pago
 // ============================================
-const IZIPAY_FORM_ACTION = "https://secure.micuentaweb.pe/vads-payment/";
-const izipayPayments = new Map();
-let izipayTransCounter = 0;
-let izipayTransDateKey = "";
 
-function formatIzipayUtcDate(date = new Date()) {
-  const pad = (value) => String(value).padStart(2, "0");
-  const year = date.getUTCFullYear();
-  const month = pad(date.getUTCMonth() + 1);
-  const day = pad(date.getUTCDate());
-  const hours = pad(date.getUTCHours());
-  const minutes = pad(date.getUTCMinutes());
-  const seconds = pad(date.getUTCSeconds());
-  return `${year}${month}${day}${hours}${minutes}${seconds}`;
-}
+// Izipay eliminado - funciones removidas
 
-function getIzipayDateKey(date = new Date()) {
-  const pad = (value) => String(value).padStart(2, "0");
-  const year = date.getUTCFullYear();
-  const month = pad(date.getUTCMonth() + 1);
-  const day = pad(date.getUTCDate());
-  return `${year}${month}${day}`;
-}
-
-function nextIzipayTransId(date = new Date()) {
-  const dateKey = getIzipayDateKey(date);
-  if (izipayTransDateKey !== dateKey) {
-    izipayTransDateKey = dateKey;
-    izipayTransCounter = 0;
-  }
-  
-  // Incrementar contador
-  izipayTransCounter = (izipayTransCounter + 1) % 1000000;
-  
-  // Si el contador es muy bajo o 0, usar timestamp para asegurar unicidad
-  // Esto evita problemas cuando el servidor se reinicia
-  if (izipayTransCounter < 100) {
-    const timestampPart = Math.floor((Date.now() % 1000000) / 10);
-    izipayTransCounter = Math.max(izipayTransCounter, (timestampPart % 1000000));
-  }
-  
-  // Verificar que no sea 0 (Izipay puede rechazar transId 000000)
-  if (izipayTransCounter === 0) {
-    izipayTransCounter = 1;
-  }
-  
-  return String(izipayTransCounter).padStart(6, "0");
-}
-
-function buildIzipayOrderId() {
-  // Generar orderId único con timestamp y random
-  const timestamp = Date.now();
-  const random = crypto.randomBytes(8).toString("hex").toUpperCase();
-  return `IZI-${timestamp.toString(36).toUpperCase()}-${random}`;
-}
-
-function getIzipayKey(ctxMode) {
-  const mode = String(ctxMode || IZIPAY_CTX_MODE || "TEST").toUpperCase();
-  return mode === "PRODUCTION" ? IZIPAY_PROD_KEY : IZIPAY_TEST_KEY;
-}
-
-function computeIzipaySignature(fields, key) {
-  if (!key) return "";
-  const sortedKeys = Object.keys(fields)
-    .filter((name) => name.startsWith("vads_"))
-    .sort();
-  const values = sortedKeys.map((name) => String(fields[name] ?? ""));
-  const payload = `${values.join("+")}+${key}`;
-  return crypto.createHmac("sha256", key).update(payload, "utf8").digest("base64");
-}
-
-function timingSafeEqualText(left, right) {
-  const leftBuf = Buffer.from(String(left || ""), "utf8");
-  const rightBuf = Buffer.from(String(right || ""), "utf8");
-  if (leftBuf.length !== rightBuf.length) return false;
-  return crypto.timingSafeEqual(leftBuf, rightBuf);
-}
-
-function normalizeIzipayStatus(value) {
-  const status = String(value || "").toUpperCase();
-  if (["ACCEPTED", "AUTHORISED", "AUTHORIZED", "CAPTURED", "PAID"].includes(status)) {
-    return "PAID";
-  }
-  if (status === "REFUSED") return "REFUSED";
-  if (status === "ABANDONED") return "ABANDONED";
-  return status || "UNKNOWN";
-}
-
-function findIzipayPaymentByTransId(transId) {
-  if (!transId) return null;
-  for (const [orderId, record] of izipayPayments.entries()) {
-    if (record?.transId === transId) {
-      return { orderId, record };
-    }
-  }
-  return null;
-}
-
-function loadIzipayPaymentsFromStore() {
-  const store = loadPaymentsStore();
-  const stored = store?.izipay && typeof store.izipay === "object" ? store.izipay : {};
-  for (const [orderId, record] of Object.entries(stored)) {
-    izipayPayments.set(orderId, record);
+function activateAccess({ orderId, email, amount, currency, provider = "MERCADOPAGO" }) {
+  // Generar accessToken para cualquier proveedor
+  const payment = loadPaymentRecord(orderId);
+  if (payment) {
+    payment.accessToken = payment.accessToken || crypto.randomBytes(16).toString("hex");
+    payment.access = true;
+    upsertPaymentRecord(payment);
   }
 
-  const todayKey = getIzipayDateKey();
-  let maxCounter = 0;
-  for (const record of izipayPayments.values()) {
-    const transDate = String(record?.transDate || "");
-    if (transDate.startsWith(todayKey)) {
-      const counter = Number.parseInt(record?.transId, 10);
-      if (Number.isFinite(counter)) {
-        maxCounter = Math.max(maxCounter, counter);
-      }
-    }
-  }
-  izipayTransDateKey = todayKey;
-  izipayTransCounter = maxCounter;
-}
-
-function persistIzipayPayments() {
-  try {
-    const store = loadPaymentsStore();
-    const payload = {};
-    for (const [orderId, record] of izipayPayments.entries()) {
-      payload[orderId] = record;
-    }
-    store.izipay = payload;
-    savePaymentsStore(store);
-  } catch (error) {
-    console.error("[IZIPAY] Error guardando payments.json:", error.message);
-  }
-}
-
-loadIzipayPaymentsFromStore();
-
-function activateAccess({ orderId, email, amount, currency, provider = "MCW" }) {
-  if (provider === "IZIPAY" && orderId) {
-    const record = izipayPayments.get(orderId);
-    if (record) {
-      record.access = true;
-      record.accessToken = record.accessToken || crypto.randomBytes(16).toString("hex");
-      record.updatedAt = new Date().toISOString();
-      izipayPayments.set(orderId, record);
-      persistIzipayPayments();
-    }
-  }
-
-  // Integrar aquÃ­ con tu modelo real de usuarios/licencias.
+  // Integrar aquí con tu modelo real de usuarios/licencias.
   console.log(`[${provider}] [ACCESS] Acceso activado (stub) -> orderId=${orderId}, email=${email || "N/A"}, amount=${amount || "N/A"} ${currency || ""}`);
 }
 
@@ -1550,245 +1389,14 @@ app.post("/api/payments/mcw/ipn", async (req, res) => {
 });
 
 // ============================================
-// API: IZIPAY REDIRECCIÓN (VADS) - INIT
+// IZIPAY ELIMINADO - Todos los endpoints removidos
 // ============================================
-app.post("/api/izipay/init", (req, res) => {
-  try {
-    if (!IZIPAY_SITE_ID) {
-      return respond(res, {
-        ok: false,
-        source: "izipay",
-        status: "error",
-        message: "IZIPAY_SITE_ID no configurado"
-      }, 500);
-    }
-
-    const key = getIzipayKey(IZIPAY_CTX_MODE);
-    if (!key) {
-      return respond(res, {
-        ok: false,
-        source: "izipay",
-        status: "error",
-        message: "Llave Izipay no configurada"
-      }, 500);
-    }
-
-    const { email } = req.body || {};
-    
-    // Generar orderId único (verificar que no exista)
-    let orderId = buildIzipayOrderId();
-    let attempts = 0;
-    while (izipayPayments.has(orderId) && attempts < 5) {
-      orderId = buildIzipayOrderId();
-      attempts++;
-    }
-    if (attempts > 0) {
-      console.warn(`[IZIPAY] orderId duplicado detectado, generado nuevo después de ${attempts} intentos: ${orderId}`);
-    }
-    
-    const transDate = formatIzipayUtcDate();
-    let transId = nextIzipayTransId();
-    
-    // Verificar que el transId no esté en uso para el mismo día
-    const existingTransId = Array.from(izipayPayments.values()).find(
-      r => r.transId === transId && r.transDate === transDate && r.status !== "REFUSED" && r.status !== "ABANDONED"
-    );
-    if (existingTransId) {
-      console.warn(`[IZIPAY] transId duplicado detectado: ${transId}, generando nuevo...`);
-      // Forzar incremento del contador para evitar duplicados
-      izipayTransCounter = (izipayTransCounter + 1000) % 1000000;
-      transId = nextIzipayTransId();
-    }
-    
-    const amount = Math.max(1, Math.round(PRICE_CENTS));
-
-    // Verificar si BASE_URL es localhost (no válido para IPN)
-    const isLocalhost = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1');
-    
-    const fields = {
-      vads_action_mode: "INTERACTIVE",
-      vads_amount: String(amount),
-      vads_ctx_mode: IZIPAY_CTX_MODE,
-      vads_currency: String(CURRENCY_NUM),
-      vads_page_action: "PAYMENT",
-      vads_payment_config: "SINGLE",
-      vads_return_mode: "GET",
-      vads_site_id: IZIPAY_SITE_ID,
-      vads_trans_date: transDate,
-      vads_trans_id: transId,
-      vads_version: "V2",
-      vads_order_id: orderId,
-      vads_url_return: `${BASE_URL}/pago-ok?orderId=${encodeURIComponent(orderId)}`,
-      vads_url_cancel: `${BASE_URL}/pago-error?orderId=${encodeURIComponent(orderId)}`,
-      vads_url_success: `${BASE_URL}/pago-ok?orderId=${encodeURIComponent(orderId)}`,
-      vads_url_error: `${BASE_URL}/pago-error?orderId=${encodeURIComponent(orderId)}`,
-      vads_language: "es"
-    };
-    
-    // Solo incluir vads_url_check si NO es localhost (Izipay no puede acceder a localhost)
-    // En localhost, el IPN se debe simular manualmente o usar ngrok
-    if (!isLocalhost) {
-      fields.vads_url_check = `${BASE_URL}/api/izipay/ipn`;
-      console.log(`[IZIPAY] IPN URL configurada: ${fields.vads_url_check}`);
-    } else {
-      console.log(`[IZIPAY] Modo localhost detectado - vads_url_check omitido (usar botón de simulación o ngrok)`);
-    }
-
-    if (safeEmail(email)) {
-      fields.vads_cust_email = String(email).trim().toLowerCase();
-    }
-
-    const signature = computeIzipaySignature(fields, key);
-    const record = {
-      orderId,
-      status: "PENDING",
-      amount,
-      currency: CURRENCY_NUM,
-      transId,
-      transDate,
-      ctxMode: IZIPAY_CTX_MODE,
-      email: safeEmail(email) ? String(email).trim().toLowerCase() : null,
-      access: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    izipayPayments.set(orderId, record);
-    persistIzipayPayments();
-
-    console.log(`[IZIPAY] init -> orderId=${orderId}, transId=${transId}, amount=${amount}`);
-    if (fields.vads_url_check) {
-      console.log(`[IZIPAY] IPN URL configurada: ${fields.vads_url_check}`);
-    }
-
-    return res.status(200).json({
-      formAction: IZIPAY_FORM_ACTION,
-      fields: {
-        ...fields,
-        signature
-      }
-    });
-  } catch (error) {
-    console.error("[IZIPAY] Error en init:", error.message);
-    return respond(res, {
-      ok: false,
-      source: "izipay",
-      status: "error",
-      message: "No se pudo iniciar el pago"
-    }, 500);
-  }
-});
-
-// ============================================
-// API: IZIPAY REDIRECCIÓN (VADS) - IPN
-// ============================================
-app.post("/api/izipay/ipn", (req, res) => {
-  try {
-    console.log(`[IZIPAY] IPN recibido - Headers:`, JSON.stringify(req.headers, null, 2));
-    console.log(`[IZIPAY] IPN recibido - Body:`, JSON.stringify(req.body, null, 2));
-    
-    const payload = req.body || {};
-    const receivedSignature = String(payload.signature || "").trim();
-    const vadsFields = {};
-    Object.keys(payload || {}).forEach((key) => {
-      if (key.startsWith("vads_")) {
-        vadsFields[key] = payload[key];
-      }
-    });
-
-    if (!receivedSignature) {
-      console.warn("[IZIPAY] ipn-invalid -> signature ausente");
-      return res.status(401).send("INVALID_SIGNATURE");
-    }
-
-    const ctxMode = vadsFields.vads_ctx_mode || IZIPAY_CTX_MODE;
-    const key = getIzipayKey(ctxMode);
-    if (!key) {
-      console.warn("[IZIPAY] ipn-invalid -> key no configurada");
-      return res.status(500).send("CONFIG_ERROR");
-    }
-
-    const expectedSignature = computeIzipaySignature(vadsFields, key);
-    if (!timingSafeEqualText(receivedSignature, expectedSignature)) {
-      console.warn("[IZIPAY] ipn-invalid -> firma inválida", {
-        received: receivedSignature,
-        expected: expectedSignature
-      });
-      return res.status(401).send("INVALID_SIGNATURE");
-    }
-
-    const orderId = String(vadsFields.vads_order_id || "").trim();
-    const transId = String(vadsFields.vads_trans_id || "").trim();
-    const statusRaw = String(vadsFields.vads_trans_status || "").trim();
-    const status = normalizeIzipayStatus(statusRaw);
-    let record = orderId ? izipayPayments.get(orderId) : null;
-
-    if (!record && transId) {
-      const found = findIzipayPaymentByTransId(transId);
-      if (found) {
-        record = found.record;
-      }
-    }
-
-    if (!record) {
-      record = {
-        orderId: orderId || `UNKNOWN-${transId || Date.now()}`,
-        status: "PENDING",
-        amount: Number(vadsFields.vads_amount || 0),
-        currency: vadsFields.vads_currency || CURRENCY_NUM,
-        transId: transId || null,
-        transDate: vadsFields.vads_trans_date || null,
-        ctxMode: ctxMode,
-        access: false,
-        createdAt: new Date().toISOString()
-      };
-    }
-
-    // Protección de idempotencia: evitar procesar el mismo IPN múltiples veces
-    const previousStatus = record.status;
-    const wasAlreadyPaid = previousStatus === "PAID";
-    const isNowPaid = status === "PAID";
-    
-    // Si ya estaba PAID y el nuevo status también es PAID, solo actualizar timestamp
-    if (wasAlreadyPaid && isNowPaid) {
-      console.log(`[IZIPAY] ipn-duplicate -> orderId=${record.orderId} ya estaba PAID, ignorando IPN duplicado`);
-      record.updatedAt = new Date().toISOString();
-      izipayPayments.set(record.orderId, record);
-      persistIzipayPayments();
-      return res.status(200).send("OK");
-    }
-
-    record.status = status;
-    record.updatedAt = new Date().toISOString();
-    record.rawIpn = {
-      receivedAt: new Date().toISOString(),
-      vads_trans_status: statusRaw,
-      payload: vadsFields
-    };
-
-    izipayPayments.set(record.orderId, record);
-    persistIzipayPayments();
-
-    console.log(`[IZIPAY] ipn-valid -> orderId=${record.orderId} status=${status} (anterior: ${previousStatus})`);
-
-    // Solo activar acceso si el status cambió a PAID (no estaba PAID antes)
-    if (isNowPaid && !wasAlreadyPaid) {
-      activateAccess({
-        orderId: record.orderId,
-        email: record.email,
-        amount: record.amount,
-        currency: record.currency,
-        provider: "IZIPAY"
-      });
-      console.log(`[IZIPAY] Acceso activado para orderId=${record.orderId}`);
-    }
-
-    return res.status(200).send("OK");
-  } catch (error) {
-    console.error("[IZIPAY] Error procesando IPN:", error.message);
-    return res.status(400).send("INVALID_IPN");
-  }
-});
+// Los siguientes endpoints fueron eliminados:
+// - POST /api/izipay/init
+// - POST /api/izipay/ipn
+// - POST /api/izipay/simulate-ipn
+// - GET /api/izipay/status
+// Solo se usa Mercado Pago ahora.
 
 // ============================================
 // API: MERCADO PAGO - CREATE PREFERENCE
@@ -1940,179 +1548,8 @@ app.get("/api/mercadopago/status", (req, res) => {
 });
 
 // ============================================
-// API: IZIPAY - SIMULAR IPN (SOLO DESARROLLO)
+// IZIPAY ELIMINADO - Endpoints removidos
 // ============================================
-app.post("/api/izipay/simulate-ipn", (req, res) => {
-  console.log(`[IZIPAY] simulate-ipn -> Endpoint llamado, hostname: ${req.hostname}, url: ${req.url}`);
-  
-  // Solo permitir en desarrollo/localhost
-  const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1' || process.env.NODE_ENV !== 'production';
-  
-  console.log(`[IZIPAY] simulate-ipn -> isLocalhost: ${isLocalhost}`);
-  
-  if (!isLocalhost) {
-    return res.status(403).json({ ok: false, message: "Solo disponible en desarrollo" });
-  }
-
-  try {
-    const { orderId } = req.body || {};
-    
-    if (!orderId) {
-      return res.status(400).json({ ok: false, message: "orderId requerido" });
-    }
-
-    let record = izipayPayments.get(String(orderId));
-    
-    // Si no está en memoria, intentar cargar desde el archivo
-    if (!record) {
-      console.log(`[IZIPAY] simulate-ipn -> orderId=${orderId} no está en memoria, cargando desde archivo...`);
-      try {
-        const store = loadPaymentsStore();
-        const stored = store?.izipay && typeof store.izipay === "object" ? store.izipay : {};
-        record = stored[String(orderId)];
-        
-        if (record) {
-          // Cargar en memoria para futuras consultas
-          izipayPayments.set(String(orderId), record);
-          console.log(`[IZIPAY] simulate-ipn -> orderId=${orderId} cargado desde archivo`);
-        }
-      } catch (error) {
-        console.error(`[IZIPAY] Error cargando desde archivo:`, error.message);
-      }
-    }
-    
-    if (!record) {
-      return res.status(404).json({ 
-        ok: false, 
-        message: "Orden no encontrada. El pago puede no haberse registrado correctamente o el servidor se reinició antes de guardarlo. Intenta realizar un nuevo pago." 
-      });
-    }
-
-    // Simular IPN con status PAID
-    const vadsFields = {
-      vads_order_id: orderId,
-      vads_trans_id: record.transId || String(Date.now()).slice(-6),
-      vads_trans_status: "AUTHORISED",
-      vads_ctx_mode: record.ctxMode || IZIPAY_CTX_MODE,
-      vads_amount: String(record.amount || PRICE_CENTS),
-      vads_currency: record.currency || CURRENCY_NUM,
-      vads_trans_date: record.transDate || formatIzipayUtcDate(),
-      vads_site_id: IZIPAY_SITE_ID
-    };
-
-    const key = getIzipayKey(vadsFields.vads_ctx_mode);
-    if (!key) {
-      return res.status(500).json({ ok: false, message: "Llave Izipay no configurada" });
-    }
-
-    const signature = computeIzipaySignature(vadsFields, key);
-    
-    // Crear payload del IPN simulado
-    const ipnPayload = {
-      ...vadsFields,
-      signature
-    };
-
-    // Llamar al endpoint del IPN internamente
-    const ipnReq = {
-      body: ipnPayload,
-      headers: req.headers
-    };
-    
-    // Simular la respuesta del IPN
-    const ipnRes = {
-      status: (code) => {
-        console.log(`[IZIPAY] IPN simulado respondió con código: ${code}`);
-        return ipnRes;
-      },
-      send: (data) => {
-        console.log(`[IZIPAY] IPN simulado: ${data}`);
-        return ipnRes;
-      }
-    };
-
-    // Procesar el IPN simulado
-    console.log(`[IZIPAY] Simulando IPN para orderId=${orderId}`);
-    
-    // Actualizar el registro directamente (simulando el IPN)
-    const previousStatus = record.status;
-    record.status = "PAID";
-    record.updatedAt = new Date().toISOString();
-    record.rawIpn = {
-      receivedAt: new Date().toISOString(),
-      vads_trans_status: "AUTHORISED",
-      payload: vadsFields,
-      simulated: true
-    };
-
-    izipayPayments.set(orderId, record);
-    persistIzipayPayments();
-
-    // Activar acceso si no estaba PAID antes
-    if (previousStatus !== "PAID") {
-      activateAccess({
-        orderId: record.orderId,
-        email: record.email,
-        amount: record.amount,
-        currency: record.currency,
-        provider: "IZIPAY"
-      });
-      console.log(`[IZIPAY] Acceso activado (simulado) para orderId=${orderId}`);
-    }
-
-    return res.status(200).json({
-      ok: true,
-      message: "IPN simulado correctamente",
-      orderId,
-      status: "PAID",
-      accessToken: record.accessToken || null
-    });
-
-  } catch (error) {
-    console.error("[IZIPAY] Error simulando IPN:", error.message);
-    return res.status(500).json({ ok: false, message: error.message });
-  }
-});
-
-// ============================================
-// API: IZIPAY STATUS
-// ============================================
-app.get("/api/izipay/status", (req, res) => {
-  const { orderId } = req.query || {};
-  let record = izipayPayments.get(String(orderId || ""));
-  
-  // Si no está en memoria, intentar cargar desde el archivo
-  if (!record) {
-    console.log(`[IZIPAY] status -> orderId=${orderId || ""} no está en memoria, cargando desde archivo...`);
-    try {
-      const store = loadPaymentsStore();
-      const stored = store?.izipay && typeof store.izipay === "object" ? store.izipay : {};
-      record = stored[String(orderId || "")];
-      
-      if (record) {
-        // Cargar en memoria para futuras consultas
-        izipayPayments.set(String(orderId), record);
-        console.log(`[IZIPAY] status -> orderId=${orderId} cargado desde archivo`);
-      }
-    } catch (error) {
-      console.error(`[IZIPAY] Error cargando desde archivo:`, error.message);
-    }
-  }
-  
-  if (!record) {
-    console.warn(`[IZIPAY] status -> orderId=${orderId || ""} NOT_FOUND (ni en memoria ni en archivo)`);
-    return res.status(404).json({ status: "NOT_FOUND" });
-  }
-
-  console.log(`[IZIPAY] status -> orderId=${record.orderId} status=${record.status} access=${record.access || false} token=${record.accessToken ? 'presente' : 'ausente'}`);
-
-  return res.status(200).json({
-    status: record.status,
-    updatedAt: record.updatedAt || record.createdAt,
-    access: record.access || false,
-    accessToken: record.accessToken || null
-  });
-});
 
 // ============================================
 // API: SERVICIO USAR (TOKEN STUB)
@@ -2123,7 +1560,14 @@ app.get("/api/servicio/usar", (req, res) => {
     return res.status(400).json({ ok: false, message: "Token requerido" });
   }
 
-  const record = Array.from(izipayPayments.values()).find((item) => item?.accessToken === token);
+  // Buscar en todos los pagos (Mercado Pago, MCW, etc.)
+  const store = loadPaymentsStore();
+  const allPayments = [
+    ...(store?.mercadopago ? Object.values(store.mercadopago) : []),
+    ...(store?.mcw ? Object.values(store.mcw) : [])
+  ];
+  
+  const record = allPayments.find((item) => item?.accessToken === token);
   if (!record) {
     return res.status(404).json({ ok: false, message: "Token inválido" });
   }
@@ -2448,7 +1892,30 @@ app.get("/api/revision/captcha", async (req, res) => {
 });
 
 // Endpoint para consultar con captcha
+// MTC temporalmente deshabilitado - devolver 200 sin datos
 app.post("/api/revision", async (req, res) => {
+  const { placa } = req.body;
+  if (!placa) {
+    return respond(res, { 
+      ok: true, 
+      source: "revision", 
+      status: "empty", 
+      message: "Placa requerida",
+      data: null 
+    });
+  }
+  
+  // MTC temporalmente deshabilitado
+  return respond(res, {
+    ok: true,
+    source: "revision",
+    status: "empty",
+    message: "Servicio temporalmente no disponible",
+    data: null
+  });
+});
+
+app.post("/api/revision-old", async (req, res) => {
   const { placa, captcha } = req.body;
   if (!placa) return respond(res, { ok: false, source: "revision", status: "error", message: "Placa requerida" }, 400);
 
@@ -5896,7 +5363,8 @@ app.post("/api/sunarp", async (req, res) => {
 
 
 // RevisiÃƒÂ³n - Alias para /api/consultar-revision
-app.post("/api/revision", async (req, res) => {
+// MTC temporalmente deshabilitado - este endpoint duplicado también deshabilitado
+app.post("/api/revision-old2", async (req, res) => {
   const { placa } = req.body;
   if (!placa) return res.status(400).json({ ok: false, message: "Placa requerida" });
 
