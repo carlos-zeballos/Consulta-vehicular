@@ -17,7 +17,14 @@ function getProxyConfig() {
   
   // Si tenemos las variables separadas, usarlas (formato preferido)
   if (PROXY_HOST && PROXY_PORT && PROXY_USER && PROXY_PASS) {
-    const server = `http://${PROXY_HOST}:${PROXY_PORT}`;
+    // Preferir puerto 2334 (HTTP) sobre 2333 (SOCKS5) para mejor compatibilidad con Playwright
+    let port = PROXY_PORT;
+    if (port === '2333') {
+      port = '2334';
+      console.log(`[PROXY] Cambiando puerto de 2333 (SOCKS5) a 2334 (HTTP) para mejor compatibilidad`);
+    }
+    
+    const server = `http://${PROXY_HOST}:${port}`;
     console.log(`[PROXY] Configurado desde variables separadas: ${server} (usuario: ${PROXY_USER.substring(0, 15)}...)`);
     return {
       server: server,

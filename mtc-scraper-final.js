@@ -124,6 +124,7 @@ class MTCCITVScraper {
       args: [
         '--disable-blink-features=AutomationControlled',
         '--no-sandbox',
+        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--window-size=1366,768',
         '--disable-web-security',
@@ -131,46 +132,82 @@ class MTCCITVScraper {
         '--ignore-certificate-errors',
         '--ignore-ssl-errors',
         '--ignore-certificate-errors-spki-list',
+        '--ignore-certificate-errors-spki-list',
         '--disable-extensions',
         '--disable-plugins-discovery',
-        '--disable-background-networking'
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-ipc-flooding-protection',
+        '--enable-features=NetworkService,NetworkServiceInProcess',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only'
       ]
     };
 
-    // Agregar proxy si está configurado
-    // Playwright requiere: server (sin credenciales en URL), username y password separados
+    // Configurar proxy tanto en launchOptions como en el contexto para máxima compatibilidad
     if (proxy && proxy.server) {
+      // Intentar usar puerto 2334 (HTTP) si el puerto es 2333 (SOCKS5)
+      let proxyServer = proxy.server;
+      if (proxyServer.includes(':2333')) {
+        proxyServer = proxyServer.replace(':2333', ':2334');
+        console.log(`🔄 Cambiando de puerto 2333 (SOCKS5) a 2334 (HTTP) para mejor compatibilidad`);
+      }
+      
+      // Configurar proxy en launchOptions
       launchOptions.proxy = {
-        server: proxy.server,  // Formato: "http://HOST:PORT" (sin credenciales)
+        server: proxyServer,
         username: proxy.username,
         password: proxy.password
       };
-      console.log(`🔐 Proxy configurado para Playwright: ${proxy.server}`);
-      console.log(`🔐 Usuario: ${proxy.username ? proxy.username.substring(0, 15) + '...' : 'N/A'}`);
       
-      // Agregar argumentos adicionales para mejorar compatibilidad con proxy
-      launchOptions.args.push('--disable-extensions');
-      launchOptions.args.push('--disable-plugins-discovery');
-      launchOptions.args.push('--disable-background-networking');
+      // Agregar argumentos de Chromium para proxy
+      launchOptions.args.push(`--proxy-server=${proxyServer}`);
+      launchOptions.args.push('--proxy-bypass-list=<-loopback>');
+      
+      console.log(`🔐 Proxy configurado en launchOptions: ${proxyServer}`);
     }
 
     const browser = await chromium.launch(launchOptions);
 
     try {
-      const context = await browser.newContext({
+      const contextOptions = {
         userAgent: getRandomMtcUA(),
         viewport: { width: 1366, height: 768 },
         locale: 'es-PE',
         timezoneId: 'America/Lima',
+        ignoreHTTPSErrors: true, // Ignorar errores SSL para mejorar compatibilidad con proxy
         extraHTTPHeaders: {
           'Accept-Language': 'es-PE,es;q=0.9,en;q=0.8',
           'Upgrade-Insecure-Requests': '1',
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
           'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1'
+          'Sec-Fetch-User': '?1',
+          'Connection': 'keep-alive',
+          'Cache-Control': 'max-age=0'
         }
-      });
+      };
+
+      // Si hay proxy, agregar configuración adicional al contexto
+      if (proxy && proxy.server) {
+        // Intentar usar puerto 2334 (HTTP) si el puerto es 2333 (SOCKS5)
+        let proxyServer = proxy.server;
+        if (proxyServer.includes(':2333')) {
+          proxyServer = proxyServer.replace(':2333', ':2334');
+          console.log(`🔄 Cambiando de puerto 2333 (SOCKS5) a 2334 (HTTP) para mejor compatibilidad`);
+        }
+        
+        contextOptions.proxy = {
+          server: proxyServer,
+          username: proxy.username,
+          password: proxy.password
+        };
+        console.log(`🔐 Proxy configurado para contexto: ${proxyServer}`);
+      }
+
+      const context = await browser.newContext(contextOptions);
 
       let page = await context.newPage();
 
