@@ -1,6 +1,8 @@
 const { chromium } = require('playwright');
 const { getProxyConfig } = require('./playwrightConfig');
 const axios = require('axios');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const { HttpProxyAgent } = require('http-proxy-agent');
 const fs = require('fs');
 const path = require('path');
 const MTC_USER_AGENTS = [
@@ -109,14 +111,19 @@ class MTCCITVScraper {
 
   // ==================== INTENTO INDIVIDUAL ====================
   async consultarPlacaIntento(placa, proxyOverride = null) {
-    // Obtener configuración del proxy desde variables de entorno separadas o usar override
-    let proxy = proxyOverride || getProxyConfig();
+    // SOLUCIÓN 3: Proxy Binding - Usar proxy solo para 2Captcha, NO para Playwright
+    // Obtener configuración del proxy para usarla SOLO en peticiones a 2Captcha
+    let proxyConfig = proxyOverride || getProxyConfig();
     
-    if (proxy) {
-      console.log(`🔐 Usando proxy: ${proxy.server}`);
-      console.log(`🔐 Proxy usuario: ${proxy.username ? proxy.username.substring(0, 15) + '...' : 'N/A'}`);
+    // Guardar configuración de proxy para usar en 2Captcha
+    this.proxyFor2Captcha = proxyConfig;
+    
+    if (proxyConfig) {
+      console.log(`🔐 Proxy configurado para 2Captcha: ${proxyConfig.server}`);
+      console.log(`🔐 Proxy usuario: ${proxyConfig.username ? proxyConfig.username.substring(0, 15) + '...' : 'N/A'}`);
+      console.log(`⚠️  Playwright se ejecutará SIN proxy (evita problemas de compatibilidad)`);
     } else {
-      console.log(`⚠️  No se configuró proxy (MTC_PROXY_HOST, MTC_PROXY_PORT, MTC_PROXY_USER, MTC_PROXY_PASS no están definidos)`);
+      console.log(`⚠️  No se configuró proxy - Playwright y 2Captcha funcionarán sin proxy`);
     }
 
     const launchOptions = {
@@ -146,27 +153,32 @@ class MTCCITVScraper {
       ]
     };
 
-    // Configurar proxy tanto en launchOptions como en el contexto para máxima compatibilidad
-    if (proxy && proxy.server) {
+    // SOLUCIÓN 3: Intentar usar proxy en Playwright con configuración simplificada
+    // Si falla, continuar sin proxy y usar proxy solo para 2Captcha
+    let useProxyInPlaywright = false;
+    if (proxyConfig && proxyConfig.server) {
       // Intentar usar puerto 2334 (HTTP) si el puerto es 2333 (SOCKS5)
-      let proxyServer = proxy.server;
+      let proxyServer = proxyConfig.server;
       if (proxyServer.includes(':2333')) {
         proxyServer = proxyServer.replace(':2333', ':2334');
-        console.log(`🔄 Cambiando de puerto 2333 (SOCKS5) a 2334 (HTTP) para mejor compatibilidad`);
+        console.log(`🔄 Cambiando puerto de 2333 a 2334 para Playwright`);
       }
       
-      // Configurar proxy en launchOptions
-      launchOptions.proxy = {
-        server: proxyServer,
-        username: proxy.username,
-        password: proxy.password
-      };
-      
-      // Agregar argumentos de Chromium para proxy
-      launchOptions.args.push(`--proxy-server=${proxyServer}`);
-      launchOptions.args.push('--proxy-bypass-list=<-loopback>');
-      
-      console.log(`🔐 Proxy configurado en launchOptions: ${proxyServer}`);
+      try {
+        // Configurar proxy en launchOptions con configuración simplificada
+        launchOptions.proxy = {
+          server: proxyServer,
+          username: proxyConfig.username,
+          password: proxyConfig.password
+        };
+        useProxyInPlaywright = true;
+        console.log(`🔐 Proxy configurado en Playwright: ${proxyServer}`);
+      } catch (proxyError) {
+        console.log(`⚠️  Error configurando proxy en Playwright: ${proxyError.message}`);
+        console.log(`⚠️  Continuando sin proxy en Playwright...`);
+      }
+    } else {
+      console.log(`🌐 Playwright se ejecutará SIN proxy (acceso directo a MTC)`);
     }
 
     const browser = await chromium.launch(launchOptions);
@@ -190,21 +202,18 @@ class MTCCITVScraper {
         }
       };
 
-      // Si hay proxy, agregar configuración adicional al contexto
-      if (proxy && proxy.server) {
-        // Intentar usar puerto 2334 (HTTP) si el puerto es 2333 (SOCKS5)
-        let proxyServer = proxy.server;
+      // SOLUCIÓN 3: Agregar proxy al contexto si está configurado
+      if (useProxyInPlaywright && proxyConfig && proxyConfig.server) {
+        let proxyServer = proxyConfig.server;
         if (proxyServer.includes(':2333')) {
           proxyServer = proxyServer.replace(':2333', ':2334');
-          console.log(`🔄 Cambiando de puerto 2333 (SOCKS5) a 2334 (HTTP) para mejor compatibilidad`);
         }
-        
         contextOptions.proxy = {
           server: proxyServer,
-          username: proxy.username,
-          password: proxy.password
+          username: proxyConfig.username,
+          password: proxyConfig.password
         };
-        console.log(`🔐 Proxy configurado para contexto: ${proxyServer}`);
+        console.log(`🔐 Proxy configurado en contexto: ${proxyServer}`);
       }
 
       const context = await browser.newContext(contextOptions);
@@ -747,13 +756,40 @@ class MTCCITVScraper {
     return hasMeaningful ? datos : null;
   }
 
-  // 🆕 7. RESOLVER CAPTCHA CON 2CAPTCHA
+  // 🆕 7. RESOLVER CAPTCHA CON 2CAPTCHA (USANDO PROXY)
   async resolveWith2Captcha(base64Data) {
     if (!this.captchaApiKey) {
       throw new Error('API Key de 2Captcha no configurada');
     }
 
-    console.log('   🤖 Enviando captcha a 2Captcha...');
+    console.log('   🤖 Enviando captcha a 2Captcha a través del proxy...');
+    
+    // SOLUCIÓN 3: Crear agentes de proxy para usar SOLO en peticiones a 2Captcha
+    let httpsAgent = null;
+    let httpAgent = null;
+    
+    if (this.proxyFor2Captcha && this.proxyFor2Captcha.server) {
+      try {
+        // Intentar usar puerto 2334 (HTTP) si el puerto es 2333 (SOCKS5)
+        let proxyUrl = this.proxyFor2Captcha.server;
+        if (proxyUrl.includes(':2333')) {
+          proxyUrl = proxyUrl.replace(':2333', ':2334');
+          console.log(`   🔄 Cambiando puerto de 2333 a 2334 para 2Captcha`);
+        }
+        
+        // Construir URL completa con credenciales
+        const proxyUrlWithAuth = `http://${this.proxyFor2Captcha.username}:${this.proxyFor2Captcha.password}@${proxyUrl.replace('http://', '')}`;
+        
+        // Crear agentes de proxy
+        httpsAgent = new HttpsProxyAgent(proxyUrlWithAuth);
+        httpAgent = new HttpProxyAgent(proxyUrlWithAuth);
+        
+        console.log(`   🔐 Proxy configurado para 2Captcha: ${proxyUrl}`);
+      } catch (proxyError) {
+        console.log(`   ⚠️  Error configurando proxy para 2Captcha: ${proxyError.message}`);
+        console.log(`   ⚠️  Continuando sin proxy...`);
+      }
+    }
 
     const formData = new URLSearchParams();
     formData.append('key', this.captchaApiKey);
@@ -765,10 +801,12 @@ class MTCCITVScraper {
     formData.append('json', '1');
 
     try {
-      // Enviar captcha
+      // SOLUCIÓN 3: Usar proxy agent SOLO para peticiones a 2Captcha
       const inResponse = await axios.post('http://2captcha.com/in.php', formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        timeout: 10000
+        timeout: 30000, // Aumentado para dar tiempo al proxy
+        httpAgent: httpAgent || undefined,
+        httpsAgent: httpsAgent || undefined
       });
 
       if (inResponse.data.status !== 1) {
@@ -795,6 +833,7 @@ class MTCCITVScraper {
       for (let i = 0; i < 15; i++) {
         await this.delay(2000);
 
+        // SOLUCIÓN 3: Usar proxy agent SOLO para peticiones a 2Captcha
         const resResponse = await axios.get('http://2captcha.com/res.php', {
           params: {
             key: this.captchaApiKey,
@@ -802,7 +841,9 @@ class MTCCITVScraper {
             id: captchaId,
             json: 1
           },
-          timeout: 5000
+          timeout: 10000, // Aumentado para dar tiempo al proxy
+          httpAgent: httpAgent || undefined,
+          httpsAgent: httpsAgent || undefined
         });
 
         if (resResponse.data.status === 1) {
