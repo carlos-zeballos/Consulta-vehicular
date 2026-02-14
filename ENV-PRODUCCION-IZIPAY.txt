@@ -1,0 +1,37 @@
+# ============================================
+# CONFIGURACIÓN PRODUCCIÓN - IZIPAY
+# ============================================
+# Copiar este contenido completo en: nano .env
+# ============================================
+
+# Configuración Base
+BASE_URL=https://consultavehicular.services
+PORT=3000
+NODE_ENV=production
+
+# Izipay - PRODUCCIÓN
+IZIPAY_SITE_ID=12345678
+IZIPAY_CTX_MODE=PRODUCTION
+IZIPAY_PROD_KEY=tu_clave_produccion_izipay_aqui
+IZIPAY_TEST_KEY=tu_clave_test_izipay_aqui
+MCW_HMAC_KEY=tu_hmac_key_produccion_aqui
+
+# 2Captcha
+CAPTCHA_API_KEY=dd23c370d7192bfb0d8cb37188918abe
+
+# Proxy MTC (2Captcha) - Configuración actual
+MTC_PROXY_HOST=na.proxy.2captcha.com
+MTC_PROXY_PORT=2334
+MTC_PROXY_USER=uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3
+MTC_PROXY_PASS=uae12c98557ca05dd
+MTC_PROXY_URL=http://uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3:uae12c98557ca05dd@na.proxy.2captcha.com:2334
+
+# ============================================
+# INSTRUCCIONES:
+# ============================================
+# 1. Reemplaza los valores de Izipay con tus credenciales REALES de producción
+# 2. IZIPAY_CTX_MODE debe ser "PRODUCTION" (no TEST)
+# 3. IZIPAY_PROD_KEY es tu clave de producción de Izipay
+# 4. MCW_HMAC_KEY es tu clave HMAC de producción
+# 5. Guarda el archivo: Ctrl+O, Enter, Ctrl+X
+# 6. Reinicia el servidor después de guardar

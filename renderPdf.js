@@ -2215,11 +2215,6 @@ function getPDFTemplate() {
     <div class="summary-badges">{{SUMMARY_BADGES}}</div>
   </div>
 
-  <div class="risk-score">
-    <div style="font-size: 14px; color: #64748b; margin-bottom: 8px;">Nivel de Riesgo</div>
-    <div class="risk-score-value {{RIESGO_COLOR}}">{{RIESGO_PERCENT}}%</div>
-    <div class="risk-score-category">{{RIESGO_CATEGORIA}}</div>
-  </div>
 
   <div class="card">
     <div class="card-header">
@@ -2399,7 +2394,7 @@ async function renderPdf(reportData, placa, fechaConsulta, rawResults = null) {
   const detalleCiudadesHTML = renderDetalleCiudades(report);
   const lunasHTML = renderLunasPolarizadas(report);
   const sbsHTML = renderSBS(report);
-  const riskHTML = renderRiskScore(riskData);
+  // Nivel de riesgo eliminado - renderRiskScore no se usa
   const fuentesHTML = renderFuentes(report);
   
   // 4.1. Nivel de confianza basado en meta.fuentes
