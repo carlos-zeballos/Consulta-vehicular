@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pagar con Mercado Pago</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #eaf4ff 0%, #f9fbfd 100%);
+      padding: 20px;
+    }
+    .checkout-container {
+      max-width: 720px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+    }
+    .checkout-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .checkout-header h1 {
+      margin: 0 0 12px;
+      color: #1e2f45;
+      font-size: 28px;
+    }
+    .checkout-header p {
+      margin: 0;
+      color: #4b5563;
+      font-size: 16px;
+    }
+    .checkout-form {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .checkout-form label {
+      font-weight: 600;
+      color: #1f2937;
+      font-size: 14px;
+    }
+    .checkout-form input {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #cbd5f5;
+      font-size: 15px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .price-box {
+      background: linear-gradient(135deg, #009ee3 0%, #0078d4 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      margin: 24px 0;
+    }
+    .price-box .price-label {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 4px;
+    }
+    .price-box .price-value {
+      font-size: 32px;
+      font-weight: 700;
+    }
+    .btn-pagar {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #009ee3 0%, #0078d4 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.3s ease;
+    }
+    .btn-pagar:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 158, 227, 0.4);
+    }
+    .btn-pagar:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #4b5563;
+    }
+    .loading.active {
+      display: block;
+    }
+    .error-message {
+      display: none;
+      background: #fee2e2;
+      color: #dc2626;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    .error-message.active {
+      display: block;
+    }
+    #walletBrick_container {
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    <div class="checkout-header">
+      <h1>Pagar con Mercado Pago</h1>
+      <p>Completa tu pago de forma segura</p>
+    </div>
+
+    <div class="price-box">
+      <div class="price-label">Total a pagar</div>
+      <div class="price-value" id="priceValue">S/ __PRICE_LABEL__</div>
+    </div>
+
+    <form id="checkoutForm" class="checkout-form">
+      <label for="email">Correo electrónico</label>
+      <input 
+        type="email" 
+        id="email" 
+        name="email" 
+        placeholder="tu@email.com" 
+        required 
+        autocomplete="email"
+      />
+
+      <div class="loading" id="loading">
+        <p>Creando preferencia de pago...</p>
+      </div>
+
+      <div class="error-message" id="errorMessage"></div>
+
+      <div id="walletBrick_container"></div>
+    </form>
+  </div>
+
+  <!-- SDK de Mercado Pago -->
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <script>
+    const PUBLIC_KEY = '__MERCADOPAGO_PUBLIC_KEY__';
+    const PRICE_LABEL = '__PRICE_LABEL__';
+
+    // Actualizar precio en la página
+    document.getElementById('priceValue').textContent = `S/ ${PRICE_LABEL}`;
+
+    // Inicializar Mercado Pago
+    const mp = new MercadoPago(PUBLIC_KEY, {
+      locale: 'es-PE'
+    });
+
+    const form = document.getElementById('checkoutForm');
+    const emailInput = document.getElementById('email');
+    const loading = document.getElementById('loading');
+    const errorMessage = document.getElementById('errorMessage');
+    const walletContainer = document.getElementById('walletBrick_container');
+
+    let preferenceId = null;
+
+    // Manejar envío del formulario
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = emailInput.value.trim();
+      if (!email) {
+        showError('Por favor ingresa tu correo electrónico');
+        return;
+      }
+
+      loading.classList.add('active');
+      errorMessage.classList.remove('active');
+      walletContainer.innerHTML = '';
+
+      try {
+        // Crear preferencia de pago
+        const response = await fetch('/api/mercadopago/create-preference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (!data.ok || !data.data || !data.data.preferenceId) {
+          throw new Error(data.message || 'Error creando preferencia de pago');
+        }
+
+        preferenceId = data.data.preferenceId;
+        loading.classList.remove('active');
+
+        // Renderizar botón de Mercado Pago
+        const bricksBuilder = mp.bricks();
+        await bricksBuilder.create('wallet', 'walletBrick_container', {
+          initialization: {
+            preferenceId: preferenceId
+          },
+          customization: {
+            texts: {
+              valueProp: 'security'
+            }
+          },
+          callbacks: {
+            onReady: () => {
+              console.log('Wallet Brick listo');
+            },
+            onError: (error) => {
+              console.error('Error en Wallet Brick:', error);
+              showError('Error al cargar el botón de pago. Por favor recarga la página.');
+            }
+          }
+        });
+
+      } catch (error) {
+        console.error('Error:', error);
+        loading.classList.remove('active');
+        showError(error.message || 'Error al procesar el pago. Por favor intenta nuevamente.');
+      }
+    });
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('active');
+    }
+  </script>
+</body>
+</html>

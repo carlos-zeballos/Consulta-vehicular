@@ -1,0 +1,37 @@
+# ============================================
+# CONFIGURACIÓN PRODUCCIÓN - MERCADO PAGO
+# ============================================
+# Copiar este contenido completo en: nano .env
+# ============================================
+
+# Configuración Base
+BASE_URL=https://consultavehicular.services
+PORT=3000
+NODE_ENV=production
+
+# Mercado Pago - PRODUCCIÓN
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-5363845934405232-021315-75ce11ab2c0aeb3f00d8c63c1da02b90-3202899162
+MERCADOPAGO_PUBLIC_KEY=APP_USR-3a773006-4d23-4f56-abaa-d0845043596c
+
+# Precio
+PRICE_CENTS=1500
+CURRENCY_NUM=604
+
+# 2Captcha
+CAPTCHA_API_KEY=dd23c370d7192bfb0d8cb37188918abe
+
+# Proxy MTC (2Captcha) - Configuración actual
+MTC_PROXY_HOST=na.proxy.2captcha.com
+MTC_PROXY_PORT=2334
+MTC_PROXY_USER=uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3
+MTC_PROXY_PASS=uae12c98557ca05dd
+MTC_PROXY_URL=http://uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3:uae12c98557ca05dd@na.proxy.2captcha.com:2334
+
+# ============================================
+# INSTRUCCIONES:
+# ============================================
+# 1. Las credenciales de Mercado Pago están configuradas
+# 2. MERCADOPAGO_ACCESS_TOKEN: Token de acceso de producción
+# 3. MERCADOPAGO_PUBLIC_KEY: Clave pública de producción
+# 4. Guarda el archivo: Ctrl+O, Enter, Ctrl+X
+# 5. Reinicia el servidor después de guardar

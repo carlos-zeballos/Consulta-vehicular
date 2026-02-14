@@ -1352,9 +1352,11 @@ async function resolverCaptchaImagen(base64Image) {
 }
 
 // ============================================
-// MERCADO PAGO (DESHABILITADO)
+// MERCADO PAGO
 // ============================================
-// IntegraciÃ³n removida. El checkout oficial es MiCuentaWeb/Izipay (Krypton V4).
+const mercadoPagoHandler = require('./mercadopago-handler');
+const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || '';
+const MERCADOPAGO_PUBLIC_KEY = process.env.MERCADOPAGO_PUBLIC_KEY || '';
 
 // ============================================
 // HEALTH CHECK
