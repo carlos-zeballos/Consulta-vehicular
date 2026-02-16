@@ -1,11 +1,14 @@
-FROM mcr.microsoft.com/playwright:v1.57.0-jammy
+FROM mcr.microsoft.com/playwright:v1.58.2-jammy
 
 WORKDIR /app
 
 # Instalar deps primero para aprovechar cache
 COPY package.json package-lock.json ./
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
+# NO saltar descarga de Chromium para Puppeteer - lo necesitamos
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
 RUN npm ci --omit=dev
+# Instalar navegadores de Playwright
+RUN npx playwright install chromium
 
 # Copiar el resto del proyecto
 COPY . .
