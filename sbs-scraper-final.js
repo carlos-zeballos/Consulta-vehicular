@@ -973,7 +973,22 @@ class SBSSOATScraper {
       fin_vigencia: this.normalizeDate(p.fin_vigencia)
     }));
     
-      // Verificar si hay mensaje de "no encontrado" ANTES de verificar pólizas
+      // IMPORTANTE: Primero verificar si hay pólizas. Solo si NO hay pólizas, verificar mensajes
+      if (resultado.polizas && resultado.polizas.length > 0) {
+        console.log(`   ✅ Se encontraron ${resultado.polizas.length} póliza(s) - OBLIGATORIO mostrar`);
+        // Si hay pólizas, retornar directamente sin verificar mensajes
+        return {
+          success: true,
+          placa: placa,
+          polizas: resultado.polizas,
+          accidentes_ultimos_5_anios: resultado.accidentes_ultimos_5_anios || 0,
+          fecha_consulta: resultado.fecha_consulta || '',
+          fecha_actualizacion: resultado.fecha_actualizacion || ''
+        };
+      }
+      
+      // Solo si NO hay pólizas, verificar si hay mensaje de "no encontrado"
+      console.log(`   ⚠️ No se encontraron pólizas en la tabla, verificando mensajes de "no encontrado"...`);
       const noDataMessage = await page.evaluate(() => {
         // Buscar el elemento específico de mensaje de "no encontrado"
         const messageEl = document.querySelector('#ctl00_MainBodyContent_message_not_found');
