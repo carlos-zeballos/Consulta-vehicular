@@ -10,11 +10,11 @@ RUN npm ci --omit=dev
 # Copiar el resto del proyecto
 COPY . .
 
-# Cloud Run expone PORT en runtime
+# La app escucha en PORT=3000 internamente, Docker mapea 8080:3000
 ENV NODE_ENV=production
-ENV PORT=8080
+ENV PORT=3000
 
-EXPOSE 8080
+EXPOSE 3000
 
 CMD ["npm", "start"]
 
