@@ -173,8 +173,13 @@ app.get("/comprar", (req, res) => {
 });
 
 app.get("/pago-ok", (req, res) => {
+  const preferenceId = String(req.query?.preference_id || "").trim();
   const orderId = String(req.query?.orderId || "").trim();
-  console.log("[MERCADOPAGO] return pago-ok GET", { query: req.query || {} });
+  console.log("[MERCADOPAGO] return pago-ok GET", { 
+    query: req.query || {},
+    preferenceId,
+    orderId: orderId || (preferenceId ? `MP-${preferenceId}` : '')
+  });
   return res.sendFile(path.join(__dirname, "public", "pago-ok.html"));
 });
 

@@ -1,0 +1,64 @@
+# ============================================
+# COMANDO DE DESPLIEGUE FINAL
+# ============================================
+
+# ============================================
+# PASO 1: ACTUALIZAR .ENV EN EL SERVIDOR
+# ============================================
+
+ssh root@217.216.87.255
+# Contraseña: tg4VBxwU7SCG
+
+cd /opt/Consulta-vehicular
+nano .env
+
+# Pegar esta configuración (reemplazar todo):
+# ============================================
+PORT=3000
+NODE_ENV=production
+BASE_URL=https://consultavehicular.services
+PUBLIC_BASE_URL=https://consultavehicular.services
+
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-4424613918547982-071116-fae4767f4c0af92ce13ef623f4c0596c-2549678329
+MERCADOPAGO_PUBLIC_KEY=APP_USR-d2a94353-0629-4376-ae63-f98433ae5c37
+PRICE_CENTS=1500
+CURRENCY_NUM=604
+
+CAPTCHA_API_KEY=dd23c370d7192bfb0d8cb37188918abe
+
+MTC_PROXY_HOST=na.proxy.2captcha.com
+MTC_PROXY_PORT=2334
+MTC_PROXY_USER=uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3
+MTC_PROXY_PASS=uae12c98557ca05dd
+MTC_PROXY_URL=http://uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3:uae12c98557ca05dd@na.proxy.2captcha.com:2334
+# ============================================
+
+# Guardar: Ctrl+O, Enter, Ctrl+X
+
+# ============================================
+# PASO 2: DESPLEGAR CÓDIGO ACTUALIZADO
+# ============================================
+
+git pull origin main
+docker build -t consulta-vehicular:latest .
+docker rm -f consulta-vehicular
+docker run -d --name consulta-vehicular --env-file .env -p 127.0.0.1:8080:3000 consulta-vehicular:latest
+
+# ============================================
+# PASO 3: VERIFICACIÓN
+# ============================================
+
+# Verificar contenedor
+docker ps | grep consulta-vehicular
+
+# Verificar Mercado Pago
+docker exec consulta-vehicular env | grep MERCADOPAGO
+
+# Ver logs
+docker logs -f consulta-vehicular --tail 50
+
+# ============================================
+# COMANDO ÚNICO (Después de actualizar .env)
+# ============================================
+
+ssh root@217.216.87.255 "cd /opt/Consulta-vehicular && git pull origin main && docker build -t consulta-vehicular:latest . && docker rm -f consulta-vehicular && docker run -d --name consulta-vehicular --env-file .env -p 127.0.0.1:8080:3000 consulta-vehicular:latest"
