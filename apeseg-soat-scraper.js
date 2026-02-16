@@ -31,21 +31,39 @@ function resolveChromiumPath() {
     const root = "/ms-playwright";
     if (fs.existsSync(root)) {
       const entries = fs.readdirSync(root, { withFileTypes: true });
-      const chromiumDir = entries
-        .filter((e) => e.isDirectory() && e.name.toLowerCase().startsWith("chromium-"))
+      
+      // Buscar directorios de Chromium
+      const chromiumDirs = entries
+        .filter((e) => e.isDirectory() && e.name.toLowerCase().startsWith("chromium"))
         .map((e) => e.name)
         .sort()
-        .reverse()[0];
-      if (chromiumDir) {
-        const candidate = path.join(root, chromiumDir, "chrome-linux", "chrome");
-        if (fs.existsSync(candidate)) {
-          console.log(`[APESEG] Usando Chromium de Playwright: ${candidate}`);
-          return candidate;
+        .reverse();
+      
+      console.log(`[APESEG] Directorios Chromium encontrados: ${chromiumDirs.join(', ')}`);
+      
+      // Intentar diferentes estructuras de directorio
+      for (const chromiumDir of chromiumDirs) {
+        const candidates = [
+          path.join(root, chromiumDir, "chrome-linux", "chrome"),
+          path.join(root, chromiumDir, "chrome", "chrome"),
+          path.join(root, chromiumDir, "headless_shell", "chrome-headless-shell"),
+          path.join(root, chromiumDir, "chrome-headless-shell-linux64", "chrome-headless-shell")
+        ];
+        
+        for (const candidate of candidates) {
+          if (fs.existsSync(candidate)) {
+            console.log(`[APESEG] ✅ Usando Chromium de Playwright: ${candidate}`);
+            return candidate;
+          }
         }
       }
+      
+      console.log(`[APESEG] ⚠️ Chromium de Playwright no encontrado en estructura esperada`);
+    } else {
+      console.log(`[APESEG] ⚠️ Directorio /ms-playwright no existe`);
     }
   } catch (error) {
-    console.log(`[APESEG] No se pudo buscar Chromium en Playwright: ${error.message}`);
+    console.log(`[APESEG] ⚠️ Error buscando Chromium en Playwright: ${error.message}`);
   }
 
   // 3. Dejar que Puppeteer lo resuelva automáticamente

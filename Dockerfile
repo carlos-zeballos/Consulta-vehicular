@@ -10,8 +10,8 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
 RUN npm ci --omit=dev
 # Instalar navegadores de Playwright (incluye Chromium)
 RUN npx playwright install chromium
-# Instalar Chromium para Puppeteer explícitamente
-RUN npx puppeteer browsers install chrome
+# Puppeteer usará el Chromium de Playwright (ya instalado arriba)
+# No necesitamos instalar Chromium de Puppeteer porque usamos el de Playwright
 
 # Copiar el resto del proyecto
 COPY . .
