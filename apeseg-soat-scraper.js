@@ -10,6 +10,48 @@
 
 const axios = require('axios');
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Resolver ruta del ejecutable de Chromium
+ * Busca en orden: variable de entorno, Playwright Docker image, o deja que Puppeteer lo resuelva
+ */
+function resolveChromiumPath() {
+  // 1. Variable de entorno explícita
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  if (process.env.CHROMIUM_PATH) {
+    return process.env.CHROMIUM_PATH;
+  }
+
+  // 2. Buscar en Playwright Docker image (/ms-playwright)
+  try {
+    const root = "/ms-playwright";
+    if (fs.existsSync(root)) {
+      const entries = fs.readdirSync(root, { withFileTypes: true });
+      const chromiumDir = entries
+        .filter((e) => e.isDirectory() && e.name.toLowerCase().startsWith("chromium-"))
+        .map((e) => e.name)
+        .sort()
+        .reverse()[0];
+      if (chromiumDir) {
+        const candidate = path.join(root, chromiumDir, "chrome-linux", "chrome");
+        if (fs.existsSync(candidate)) {
+          console.log(`[APESEG] Usando Chromium de Playwright: ${candidate}`);
+          return candidate;
+        }
+      }
+    }
+  } catch (error) {
+    console.log(`[APESEG] No se pudo buscar Chromium en Playwright: ${error.message}`);
+  }
+
+  // 3. Dejar que Puppeteer lo resuelva automáticamente
+  console.log(`[APESEG] Usando Chromium por defecto de Puppeteer`);
+  return undefined;
+}
 
 class ApesegSoatScraper {
   constructor(options = {}) {
@@ -196,7 +238,8 @@ class ApesegSoatScraper {
     try {
       console.log(`[APESEG] Iniciando consulta con Puppeteer para placa: ${placa}`);
       
-      browser = await puppeteer.launch({
+      const chromiumPath = resolveChromiumPath();
+      const launchOptions = {
         headless: 'new',
         args: [
           '--no-sandbox',
@@ -209,7 +252,20 @@ class ApesegSoatScraper {
           '--ignore-certificate-errors',
           '--ignore-ssl-errors'
         ]
+      };
+      
+      // Solo agregar executablePath si se encontró una ruta
+      if (chromiumPath) {
+        launchOptions.executablePath = chromiumPath;
+      }
+      
+      console.log(`[APESEG] Opciones de lanzamiento:`, {
+        headless: launchOptions.headless,
+        executablePath: launchOptions.executablePath || 'por defecto de Puppeteer',
+        argsCount: launchOptions.args.length
       });
+      
+      browser = await puppeteer.launch(launchOptions);
 
       const page = await browser.newPage();
       

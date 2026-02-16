@@ -4,11 +4,14 @@ WORKDIR /app
 
 # Instalar deps primero para aprovechar cache
 COPY package.json package-lock.json ./
-# NO saltar descarga de Chromium para Puppeteer - lo necesitamos
+# Permitir que Puppeteer descargue Chromium si es necesario
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
+# Instalar dependencias
 RUN npm ci --omit=dev
-# Instalar navegadores de Playwright
+# Instalar navegadores de Playwright (incluye Chromium)
 RUN npx playwright install chromium
+# Instalar Chromium para Puppeteer explícitamente
+RUN npx puppeteer browsers install chrome
 
 # Copiar el resto del proyecto
 COPY . .
