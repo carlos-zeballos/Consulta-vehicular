@@ -112,9 +112,6 @@
     .error-message.active {
       display: block;
     }
-    #walletBrick_container {
-      margin-top: 24px;
-    }
   </style>
 </head>
 <body>
@@ -140,13 +137,15 @@
         autocomplete="email"
       />
 
+      <button type="submit" class="btn-pagar" id="btnPagar">
+        Pagar con Mercado Pago
+      </button>
+
       <div class="loading" id="loading">
-        <p>Creando preferencia de pago...</p>
+        <p>Redirigiendo a Mercado Pago...</p>
       </div>
 
       <div class="error-message" id="errorMessage"></div>
-
-      <div id="walletBrick_container"></div>
     </form>
   </div>
 
@@ -166,11 +165,9 @@
 
     const form = document.getElementById('checkoutForm');
     const emailInput = document.getElementById('email');
+    const btnPagar = document.getElementById('btnPagar');
     const loading = document.getElementById('loading');
     const errorMessage = document.getElementById('errorMessage');
-    const walletContainer = document.getElementById('walletBrick_container');
-
-    let preferenceId = null;
 
     // Manejar envío del formulario
     form.addEventListener('submit', async (e) => {
@@ -182,9 +179,10 @@
         return;
       }
 
+      // Deshabilitar botón y mostrar loading
+      btnPagar.disabled = true;
       loading.classList.add('active');
       errorMessage.classList.remove('active');
-      walletContainer.innerHTML = '';
 
       try {
         // Crear preferencia de pago
@@ -198,37 +196,32 @@
 
         const data = await response.json();
 
-        if (!data.ok || !data.data || !data.data.preferenceId) {
+        if (!data.ok || !data.data || !data.data.initPoint) {
           throw new Error(data.message || 'Error creando preferencia de pago');
         }
 
-        preferenceId = data.data.preferenceId;
-        loading.classList.remove('active');
-
-        // Renderizar botón de Mercado Pago
-        const bricksBuilder = mp.bricks();
-        await bricksBuilder.create('wallet', 'walletBrick_container', {
-          initialization: {
-            preferenceId: preferenceId
-          },
-          customization: {
-            texts: {
-              valueProp: 'security'
-            }
-          },
-          callbacks: {
-            onReady: () => {
-              console.log('Wallet Brick listo');
-            },
-            onError: (error) => {
-              console.error('Error en Wallet Brick:', error);
-              showError('Error al cargar el botón de pago. Por favor recarga la página.');
-            }
+        // Guardar orderId en localStorage para pago-ok.html
+        if (data.data.orderId) {
+          try {
+            localStorage.setItem('mercadopago_last_order_id', data.data.orderId);
+          } catch (e) {
+            console.warn('No se pudo guardar orderId en localStorage:', e);
           }
-        });
+        }
+
+        // Redirigir automáticamente a la pasarela de Mercado Pago
+        const initPoint = data.data.initPoint || data.data.sandboxInitPoint;
+        if (initPoint) {
+          console.log('Redirigiendo a pasarela de Mercado Pago...');
+          // Redirigir inmediatamente - no quitar loading para que se vea el mensaje
+          window.location.href = initPoint;
+        } else {
+          throw new Error('No se recibió URL de pago de Mercado Pago');
+        }
 
       } catch (error) {
         console.error('Error:', error);
+        btnPagar.disabled = false;
         loading.classList.remove('active');
         showError(error.message || 'Error al procesar el pago. Por favor intenta nuevamente.');
       }

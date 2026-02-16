@@ -60,10 +60,18 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     let orderId = params.get('orderId');
+    let preferenceId = params.get('preference_id');
     const statusEl = document.getElementById('status');
 
     let redirected = false;
 
+    // Si no hay orderId pero hay preference_id, construir orderId
+    if (!orderId && preferenceId) {
+      orderId = `MP-${preferenceId}`;
+      console.log('OrderId construido desde preference_id:', orderId);
+    }
+
+    // Si aún no hay orderId, intentar desde localStorage
     if (!orderId) {
       try {
         orderId = localStorage.getItem('mercadopago_last_order_id');

@@ -54,9 +54,9 @@ async function createPreference(email, amount = null) {
           email: email
         },
         back_urls: {
-          success: `${BASE_URL}/pago-ok`,
-          failure: `${BASE_URL}/pago-error`,
-          pending: `${BASE_URL}/pago-ok`
+          success: `${BASE_URL}/pago-ok?preference_id={preference_id}`,
+          failure: `${BASE_URL}/pago-error?preference_id={preference_id}`,
+          pending: `${BASE_URL}/pago-ok?preference_id={preference_id}`
         },
         auto_return: 'approved',
         notification_url: `${BASE_URL}/api/mercadopago/webhook`,
@@ -70,9 +70,14 @@ async function createPreference(email, amount = null) {
 
     if (response && response.id) {
       console.log(`[MERCADOPAGO] ✅ Preferencia creada: ${response.id}`);
+      
+      // Generar orderId para tracking
+      const orderId = `MP-${response.id}`;
+      
       return {
         success: true,
         preferenceId: response.id,
+        orderId: orderId,
         initPoint: response.init_point,
         sandboxInitPoint: response.sandbox_init_point,
         publicKey: MERCADOPAGO_PUBLIC_KEY
