@@ -40,11 +40,15 @@ MTC_PROXY_PASS=uae12c98557ca05dd
 MTC_PROXY_URL=http://uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3:uae12c98557ca05dd@na.proxy.2captcha.com:2334
 
 # ============================================
-# CUPONES (OPCIONAL)
+# CUPONES (Usando valores hardcodeados del código)
 # ============================================
-COUPON_ADMIN_CODE=ADMIN-XXXX-ROOT
-COUPONS_PUBLIC_CODES=
-COUPON_HASH_SALT=cambia_esto_en_produccion_por_algo_seguro
+# Los cupones están hardcodeados en server.js:
+# - COUPON_ADMIN_CODE: "ADMIN-VALHAR-2025" (por defecto)
+# - COUPONS_PUBLIC_CODES: "PROMO-VALHAR1:5,PROMO-VALHAR2:5,PROMO-VALHAR3:5" (por defecto)
+# Si quieres usar otros valores, descomenta y configura:
+# COUPON_ADMIN_CODE=ADMIN-VALHAR-2025
+# COUPONS_PUBLIC_CODES=PROMO-VALHAR1:5,PROMO-VALHAR2:5,PROMO-VALHAR3:5
+# COUPON_HASH_SALT=v1
 
 # ============================================
 # NOTAS
