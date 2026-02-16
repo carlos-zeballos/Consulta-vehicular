@@ -1,0 +1,79 @@
+# ============================================
+# CONFIGURACION .ENV - PRODUCCION
+# Solo Mercado Pago (sin Izipay/MiCuentaWeb)
+# ============================================
+
+# ============================================
+# CONFIGURACION BASICA
+# ============================================
+PORT=3000
+NODE_ENV=production
+
+# URL Base Pública (IMPORTANTE: cambiar por tu dominio real)
+BASE_URL=https://consultavehicular.services
+PUBLIC_BASE_URL=https://consultavehicular.services
+
+# ============================================
+# MERCADO PAGO (PRODUCCION)
+# ============================================
+# Access Token de Mercado Pago (Producción)
+# Obtener desde: https://www.mercadopago.com.pe/developers/panel/credentials
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-4424613918547982-071116-fae4767f4c0af92ce13ef623f4c0596c-2549678329
+
+# Public Key de Mercado Pago (Producción)
+# Obtener desde: https://www.mercadopago.com.pe/developers/panel/credentials
+MERCADOPAGO_PUBLIC_KEY=APP_USR-d2a94353-0629-4376-ae63-f98433ae5c37
+
+# Precio en centavos (ejemplo: 1500 = S/ 15.00)
+PRICE_CENTS=1500
+
+# Moneda: 604 = PEN (Soles Peruanos)
+CURRENCY_NUM=604
+
+# ============================================
+# 2CAPTCHA (OBLIGATORIO para scrapers)
+# ============================================
+# API Key de 2Captcha
+# Obtener desde: https://2captcha.com/?from=1234567
+CAPTCHA_API_KEY=dd23c370d7192bfb0d8cb37188918abe
+
+# ============================================
+# MTC PROXY (OPCIONAL - Solo si usas proxy para MTC)
+# ============================================
+# Si tienes proxy de 2Captcha para MTC, descomenta estas líneas:
+# MTC_PROXY_HOST=na.proxy.2captcha.com
+# MTC_PROXY_PORT=2334
+# MTC_PROXY_USER=tu_usuario_proxy
+# MTC_PROXY_PASS=tu_password_proxy
+
+# ============================================
+# CUPONES (OPCIONAL)
+# ============================================
+# Código de administrador para activar acceso
+COUPON_ADMIN_CODE=ADMIN-XXXX-ROOT
+
+# Códigos públicos de cupones (formato: CODIGO:MAX_USOS,CODIGO2:MAX_USOS)
+# Ejemplo: PROMO-ABCDE:5,PROMO-FGHIJ:10
+COUPONS_PUBLIC_CODES=
+
+# Sal para hashear cupones (cambiar en producción)
+COUPON_HASH_SALT=cambia_esto_en_produccion_por_algo_seguro
+
+# ============================================
+# VARIABLES OPCIONALES
+# ============================================
+# Si usas certificado de vehículo con URL personalizada:
+# VEHICULO_CERT_URL=https://tu-url-personalizada.com
+
+# Si necesitas ruta base personalizada (para cPanel):
+# BASE_PATH=/consultavehicular/proyecto-cpanel
+
+# ============================================
+# NOTAS IMPORTANTES
+# ============================================
+# 1. NO incluir variables de Izipay/MiCuentaWeb (MCW_*)
+# 2. NO incluir variables de Izipay (IZIPAY_*)
+# 3. MERCADOPAGO_ACCESS_TOKEN y MERCADOPAGO_PUBLIC_KEY son OBLIGATORIAS
+# 4. CAPTCHA_API_KEY es OBLIGATORIA para que funcionen los scrapers
+# 5. BASE_URL debe ser tu dominio real en producción
+# 6. PRICE_CENTS es el precio en centavos (1500 = S/ 15.00)

@@ -1,0 +1,55 @@
+# ============================================
+# CONFIGURACION .ENV - PRODUCCION FINAL
+# Solo Mercado Pago (sin Izipay/MiCuentaWeb)
+# ============================================
+
+# ============================================
+# CONFIGURACION BASICA
+# ============================================
+PORT=3000
+NODE_ENV=production
+
+# URL Base Pública
+BASE_URL=https://consultavehicular.services
+PUBLIC_BASE_URL=https://consultavehicular.services
+
+# ============================================
+# MERCADO PAGO (PRODUCCION)
+# ============================================
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-4424613918547982-071116-fae4767f4c0af92ce13ef623f4c0596c-2549678329
+MERCADOPAGO_PUBLIC_KEY=APP_USR-d2a94353-0629-4376-ae63-f98433ae5c37
+
+# Precio en centavos (1500 = S/ 15.00)
+PRICE_CENTS=1500
+
+# Moneda: 604 = PEN (Soles Peruanos)
+CURRENCY_NUM=604
+
+# ============================================
+# 2CAPTCHA (OBLIGATORIO para scrapers)
+# ============================================
+CAPTCHA_API_KEY=dd23c370d7192bfb0d8cb37188918abe
+
+# ============================================
+# MTC PROXY (2Captcha) - Opcional
+# ============================================
+MTC_PROXY_HOST=na.proxy.2captcha.com
+MTC_PROXY_PORT=2334
+MTC_PROXY_USER=uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3
+MTC_PROXY_PASS=uae12c98557ca05dd
+MTC_PROXY_URL=http://uae12c98557ca05dd-zone-custom-region-pe-asn-AS27843-session-X2RCP1LgE-sessTime-3:uae12c98557ca05dd@na.proxy.2captcha.com:2334
+
+# ============================================
+# CUPONES (OPCIONAL)
+# ============================================
+COUPON_ADMIN_CODE=ADMIN-XXXX-ROOT
+COUPONS_PUBLIC_CODES=
+COUPON_HASH_SALT=cambia_esto_en_produccion_por_algo_seguro
+
+# ============================================
+# NOTAS
+# ============================================
+# 1. NO incluir variables de Izipay/MiCuentaWeb (MCW_*, IZIPAY_*)
+# 2. MERCADOPAGO_ACCESS_TOKEN y MERCADOPAGO_PUBLIC_KEY son OBLIGATORIAS
+# 3. CAPTCHA_API_KEY es OBLIGATORIA para que funcionen los scrapers
+# 4. BASE_URL debe ser tu dominio real en producción
