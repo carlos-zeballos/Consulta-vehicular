@@ -91,16 +91,21 @@ class ApesegSoatScraper {
         const captchaId = solveResponse.data.request;
         console.log('[APESEG] Captcha ID:', captchaId);
 
-        // Esperar a que se resuelva (máximo 2 minutos)
-        for (let i = 0; i < 24; i++) {
+        // Esperar a que se resuelva (máximo 5 minutos - aumentado para dar más tiempo)
+        console.log('[APESEG] Esperando resolución del captcha (puede tardar hasta 5 minutos)...');
+        for (let i = 0; i < 60; i++) { // 60 intentos x 5 segundos = 5 minutos
           await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          if (i % 6 === 0 && i > 0) { // Log cada 30 segundos
+            console.log(`[APESEG] Esperando captcha... (${i * 5}s / 300s)`);
+          }
           
           const resultResponse = await axios.get(
             `http://2captcha.com/res.php?key=${this.captchaApiKey}&action=get&id=${captchaId}&json=1`
           );
 
           if (resultResponse.data.status === 1) {
-            console.log('[APESEG] Captcha resuelto:', resultResponse.data.request);
+            console.log(`[APESEG] ✅ Captcha resuelto en ${i * 5}s:`, resultResponse.data.request);
             return resultResponse.data.request; // Token del captcha resuelto
           }
           
@@ -109,7 +114,7 @@ class ApesegSoatScraper {
           }
         }
 
-        throw new Error('Timeout esperando resolución del captcha');
+        throw new Error('Timeout esperando resolución del captcha (5 minutos)');
       }
 
       // Si no hay captcha que resolver, retornar la respuesta
@@ -343,9 +348,14 @@ class ApesegSoatScraper {
           const captchaId = solveResponse.data.request;
           console.log('[APESEG] Captcha ID:', captchaId);
 
-          // Esperar a que se resuelva (optimizado: verificar cada 3 segundos, máximo 90 segundos)
-          for (let i = 0; i < 30; i++) {
-            await new Promise(resolve => setTimeout(resolve, 3000));
+          // Esperar a que se resuelva (aumentado: verificar cada 5 segundos, máximo 5 minutos)
+          console.log('[APESEG] Esperando resolución del captcha (puede tardar hasta 5 minutos)...');
+          for (let i = 0; i < 60; i++) { // 60 intentos x 5 segundos = 5 minutos
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            if (i % 6 === 0 && i > 0) { // Log cada 30 segundos
+              console.log(`[APESEG] Esperando captcha... (${i * 5}s / 300s)`);
+            }
             
             const resultResponse = await axios.get(
               `http://2captcha.com/res.php?key=${this.captchaApiKey}&action=get&id=${captchaId}&json=1`
@@ -353,7 +363,7 @@ class ApesegSoatScraper {
 
             if (resultResponse.data.status === 1) {
               captchaSolution = resultResponse.data.request;
-              console.log('[APESEG] ✅ Captcha resuelto:', captchaSolution);
+              console.log(`[APESEG] ✅ Captcha resuelto en ${i * 5}s:`, captchaSolution);
               break;
             }
             
@@ -363,7 +373,7 @@ class ApesegSoatScraper {
           }
 
           if (!captchaSolution) {
-            throw new Error('Timeout esperando resolución del captcha');
+            throw new Error('Timeout esperando resolución del captcha (5 minutos)');
           }
         } else {
           throw new Error('CAPTCHA_API_KEY no configurado. Se requiere para resolver el captcha.');
@@ -394,14 +404,14 @@ class ApesegSoatScraper {
         
         // Esperar tiempo adicional para que la app React/Vue cargue los datos
         console.log('[APESEG] Esperando que la aplicación frontend cargue los datos...');
-        await page.waitForTimeout(10000); // 10 segundos para que React/Vue cargue los datos
+        await page.waitForTimeout(15000); // 15 segundos para que React/Vue cargue los datos (aumentado)
         
         // Intentar hacer la llamada directamente desde el navegador usando el token interceptado
         // HACER ESTO PRIMERO, ANTES DE ESPERAR 180 SEGUNDOS
         console.log('[APESEG] Intentando obtener certificados directamente desde el navegador...');
         
         // Esperar un momento para que el token se establezca
-        await page.waitForTimeout(5000);
+        await page.waitForTimeout(8000); // Aumentado de 5 a 8 segundos
         
         // Verificar si tenemos token antes de intentar
         if (!authToken) {
@@ -490,7 +500,7 @@ class ApesegSoatScraper {
         // Si no funcionó, esperar a que aparezcan resultados en la página
         console.log('[APESEG] Esperando que aparezcan resultados en la página...');
         let intentos = 0;
-        const maxIntentos = 40; // 40 intentos x 3 segundos = 120 segundos (2 minutos) máximo
+        const maxIntentos = 60; // 60 intentos x 3 segundos = 180 segundos (3 minutos) máximo - aumentado
         let datosEncontradosEnDOM = false;
         
         while (intentos < maxIntentos && !datosEncontradosEnDOM && certificadosInterceptados === null) {
@@ -547,11 +557,19 @@ class ApesegSoatScraper {
         }
         
         // Si se interceptaron certificados, usarlos
-        if (certificadosInterceptados && certificadosInterceptados.length > 0) {
-          console.log('[APESEG] ✅ Usando certificados interceptados');
-          await browser.close();
-          browser = null;
-          return this.formatResponse(certificadosInterceptados, placa);
+        if (certificadosInterceptados !== null) {
+          if (certificadosInterceptados.length > 0) {
+            console.log('[APESEG] ✅ Usando certificados interceptados:', certificadosInterceptados.length);
+            await browser.close();
+            browser = null;
+            return this.formatResponse(certificadosInterceptados, placa);
+          } else {
+            // Array vacío interceptado - retornar vacío inmediatamente
+            console.log('[APESEG] ⚠️ Array vacío interceptado - sin certificados');
+            await browser.close();
+            browser = null;
+            return this.formatResponse([], placa);
+          }
         }
         
         // Si no se interceptaron, intentar extraer del DOM (fallback mejorado)
@@ -957,8 +975,73 @@ class ApesegSoatScraper {
           console.log('[APESEG] datosDelDOM2:', datosDelDOM2);
         }
         
-        // Si aún no hay datos, analizar la página para debug
-        console.log('[APESEG] ⚠️ No se encontraron datos después de segunda extracción, analizando página...');
+        // Si aún no hay datos, esperar más tiempo antes de analizar (dar tiempo a que carguen los datos)
+        console.log('[APESEG] ⚠️ No se encontraron datos después de segunda extracción, esperando tiempo adicional...');
+        await page.waitForTimeout(15000); // Esperar 15 segundos adicionales antes de verificar errores
+        
+        // Intentar una última extracción después de esperar
+        const datosDelDOM3 = await page.evaluate(() => {
+          // Buscar en variables globales
+          const stateKeys = ['__INITIAL_STATE__', '__APP_STATE__', '__DATA__', 'certificados', 'data', 'resultados'];
+          for (const key of stateKeys) {
+            if (window[key] && Array.isArray(window[key]) && window[key].length > 0) {
+              return window[key];
+            }
+          }
+          
+          // Buscar en tablas
+          const tablas = document.querySelectorAll('table, .table, [class*="table"], tbody');
+          for (const tabla of tablas) {
+            const filas = tabla.querySelectorAll('tr');
+            if (filas.length > 0) {
+              const datosExtraidos = [];
+              for (let i = 0; i < filas.length; i++) {
+                const fila = filas[i];
+                const textoFila = (fila.textContent || '').trim();
+                if (textoFila && (textoFila.includes('Interseguro') || textoFila.includes('Rimac') || 
+                    textoFila.includes('La Positiva') || /\d{2}\/\d{2}\/\d{4}/.test(textoFila))) {
+                  const celdas = fila.querySelectorAll('td, th');
+                  if (celdas.length >= 2) {
+                    const valores = Array.from(celdas).map(c => (c.textContent || '').trim()).filter(v => v);
+                    if (valores.length >= 2) {
+                      const fechas = valores.filter(v => /\d{1,2}\/\d{1,2}\/\d{4}/.test(v));
+                      const numeros = valores.filter(v => /^[0-9\s]{8,}$/.test(v.replace(/\s/g, '')));
+                      const compania = valores.find(v => v.includes('Interseguro') || v.includes('Rimac') || v.includes('La Positiva'));
+                      
+                      if (compania || fechas.length > 0 || numeros.length > 0) {
+                        datosExtraidos.push({
+                          NombreCompania: compania || valores[0] || '',
+                          NombreClaseVehiculo: valores.find(v => v.toUpperCase().includes('CAMIONETA') || v.toUpperCase().includes('AUTOMOVIL')) || '',
+                          NombreUsoVehiculo: valores.find(v => v.toUpperCase().includes('PARTICULAR') || v.toUpperCase().includes('COMERCIAL')) || 'PARTICULAR',
+                          NumeroPoliza: numeros[0]?.replace(/\s/g, '') || '',
+                          CodigoUnicoPoliza: numeros[1]?.replace(/\s/g, '') || numeros[0]?.replace(/\s/g, '') || '',
+                          FechaInicio: fechas[0] || '',
+                          FechaFin: fechas[1] || fechas[0] || '',
+                          Estado: valores.find(v => v.toUpperCase().includes('VIGENTE') || v.toUpperCase().includes('VENCIDO')) || '',
+                          TipoCertificado: 'DIGITAL'
+                        });
+                      }
+                    }
+                  }
+                }
+              }
+              if (datosExtraidos.length > 0) {
+                return datosExtraidos;
+              }
+            }
+          }
+          return null;
+        });
+        
+        if (datosDelDOM3 && Array.isArray(datosDelDOM3) && datosDelDOM3.length > 0) {
+          console.log('[APESEG] ✅ Datos extraídos del DOM en tercera extracción:', datosDelDOM3.length);
+          await browser.close();
+          browser = null;
+          return this.formatResponse(datosDelDOM3, placa);
+        }
+        
+        // Ahora sí analizar la página para debug (después de esperar suficiente tiempo)
+        console.log('[APESEG] ⚠️ No se encontraron datos después de tercera extracción, analizando página...');
         const analisisPagina = await page.evaluate(() => {
           const bodyText = document.body.textContent || '';
           return {
@@ -991,14 +1074,21 @@ class ApesegSoatScraper {
           textoMuestraLower.includes('sin registros') ||
           fullBodyLower.includes('sin registros');
 
+        // Solo lanzar errores si son claramente errores de sistema (no falta de datos)
         if (hasUnauthorized || hasApiConnError || hasRateLimit) {
+          console.error('[APESEG] Error detectado en página:', { hasUnauthorized, hasApiConnError, hasRateLimit });
           throw new Error('APESEG_TRANSIENT_ERROR: El portal APESEG bloqueó temporalmente la consulta (403/API).');
         }
         if (hasCaptchaIncorrect) {
+          console.error('[APESEG] Captcha incorrecto detectado');
           throw new Error('APESEG_CAPTCHA_INVALID: Captcha incorrecto detectado en APESEG.');
         }
+        
+        // NO lanzar error si no hay confirmación - simplemente retornar vacío
+        // El error APESEG_NO_CONFIRMATION causaba que se devolviera "empty" prematuramente
         if (!hasExplicitNoData && certificadosInterceptados === null) {
-          throw new Error('APESEG_NO_CONFIRMATION: No hubo confirmación de datos ni de vacío real.');
+          console.log('[APESEG] ⚠️ No hay confirmación explícita de datos ni de vacío, pero no es un error - retornando vacío');
+          // NO lanzar error, simplemente retornar vacío
         }
         
         // Tomar screenshot para debug
@@ -1013,11 +1103,19 @@ class ApesegSoatScraper {
         }
         
         // Verificar intercepción una última vez
-        if (certificadosInterceptados && certificadosInterceptados.length > 0) {
-          console.log('[APESEG] ✅ Certificados interceptados encontrados');
-          await browser.close();
-          browser = null;
-          return this.formatResponse(certificadosInterceptados, placa);
+        if (certificadosInterceptados !== null) {
+          if (certificadosInterceptados.length > 0) {
+            console.log('[APESEG] ✅ Certificados interceptados encontrados:', certificadosInterceptados.length);
+            await browser.close();
+            browser = null;
+            return this.formatResponse(certificadosInterceptados, placa);
+          } else {
+            // Array vacío interceptado - retornar vacío
+            console.log('[APESEG] ⚠️ Array vacío interceptado - sin certificados');
+            await browser.close();
+            browser = null;
+            return this.formatResponse([], placa);
+          }
         }
         
       } catch (interactError) {
@@ -1136,6 +1234,10 @@ class ApesegSoatScraper {
       throw new Error('Placa requerida');
     }
 
+    console.log(`[APESEG] Iniciando consulta para placa: ${placaNormalizada}`);
+    console.log(`[APESEG] CAPTCHA_API_KEY configurada: ${this.captchaApiKey ? 'SÍ' : 'NO'}`);
+    console.log(`[APESEG] usePuppeteer: ${this.usePuppeteer}`);
+
     try {
       // La API HTTP de login es inestable (500 con "email field is required").
       // Priorizamos Puppeteer para replicar el flujo real del sitio.
@@ -1145,30 +1247,41 @@ class ApesegSoatScraper {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           console.log(`[APESEG] Intento global ${attempt}/${maxAttempts} para placa ${placaNormalizada}`);
-        return await this.consultarPlacaPuppeteer(placaNormalizada);
+          const resultado = await this.consultarPlacaPuppeteer(placaNormalizada);
+          console.log(`[APESEG] ✅ Intento ${attempt} exitoso: success=${resultado.success}, polizas=${resultado.polizas?.length || 0}`);
+          return resultado;
         } catch (err) {
           lastError = err;
           const msg = String(err?.message || '');
-          console.warn(`[APESEG] Intento ${attempt} falló: ${msg}`);
+          console.error(`[APESEG] ❌ Intento ${attempt} falló: ${msg}`);
+          if (err.stack) {
+            console.error(`[APESEG] Stack:`, err.stack.substring(0, 500));
+          }
 
           const isRetryable =
             msg.includes('APESEG_TRANSIENT_ERROR') ||
             msg.includes('APESEG_CAPTCHA_INVALID') ||
             msg.includes('APESEG_NO_CONFIRMATION') ||
-            msg.includes('Timeout');
+            msg.includes('Timeout') ||
+            msg.includes('CAPTCHA_API_KEY');
 
           if (!isRetryable || attempt === maxAttempts) {
+            console.error(`[APESEG] No se puede reintentar o se agotaron los intentos. Lanzando error.`);
             throw err;
           }
 
           // Backoff corto para evitar rate-limit temporal.
+          console.log(`[APESEG] Esperando ${2500 * attempt}ms antes del siguiente intento...`);
           await new Promise(resolve => setTimeout(resolve, 2500 * attempt));
         }
       }
 
       throw lastError || new Error('APESEG_UNKNOWN_ERROR');
     } catch (error) {
-      console.error('[APESEG] Error consultando placa:', error.message);
+      console.error('[APESEG] Error final consultando placa:', error.message);
+      if (error.stack) {
+        console.error('[APESEG] Stack completo:', error.stack);
+      }
       throw error;
     }
   }

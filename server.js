@@ -1584,16 +1584,23 @@ app.post("/api/soat", async (req, res) => {
 
   const startTime = Date.now();
   console.log(`[SOAT-APESEG] Iniciando consulta para placa: ${placa}`);
+  console.log(`[SOAT-APESEG] CAPTCHA_API_KEY configurada: ${CAPTCHA_API_KEY ? 'SÍ' : 'NO'}`);
 
   try {
+    if (!CAPTCHA_API_KEY) {
+      console.warn(`[SOAT-APESEG] ⚠️ CAPTCHA_API_KEY no configurada - la consulta puede fallar`);
+    }
+
     const scraper = new ApesegSoatScraper({
       captchaApiKey: CAPTCHA_API_KEY,
       usePuppeteer: true
     });
 
-    // Usar Promise.race para timeout de 6 minutos (aumentado para asegurar resultados)
+    console.log(`[SOAT-APESEG] Scraper creado, iniciando consulta...`);
+
+    // Usar Promise.race para timeout de 8 minutos (aumentado para dar tiempo a captchas)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Timeout: La consulta tardÃ³ mÃ¡s de 6 minutos')), 360000);
+      setTimeout(() => reject(new Error('Timeout: La consulta tardÃ³ mÃ¡s de 8 minutos')), 480000);
     });
 
     const consultaPromise = scraper.consultarPlaca(placa);
@@ -1602,6 +1609,7 @@ app.post("/api/soat", async (req, res) => {
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`[SOAT-APESEG] Consulta completada en ${elapsed}s para placa: ${placa}`);
+    console.log(`[SOAT-APESEG] Resultado: success=${resultado.success}, polizas=${resultado.polizas?.length || 0}`);
 
     if (!resultado.success) {
       // Siempre devolver 200 con ok: true y status: empty con estructura completa
@@ -1682,16 +1690,41 @@ app.post("/api/soat", async (req, res) => {
   } catch (error) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
     console.error(`[SOAT-APESEG] Error despuÃ©s de ${elapsed}s:`, error.message);
+    console.error(`[SOAT-APESEG] Stack:`, error.stack);
 
     const msg = String(error?.message || '');
     let publicMessage = "No se encontraron certificados SOAT para esta placa";
+    let isRealError = false; // Flag para distinguir errores reales de falta de datos
 
-    if (msg.includes('APESEG_TRANSIENT_ERROR')) {
-      publicMessage = "El servicio SOAT no estÃ¡ disponible temporalmente. Intente mÃ¡s tarde.";
+    // Si el error es muy rápido (< 2 segundos), probablemente es un error de configuración
+    if (elapsed < 2) {
+      console.error(`[SOAT-APESEG] ⚠️ Error muy rápido (${elapsed}s) - posible problema de configuración`);
+      isRealError = true;
+      if (msg.includes('CAPTCHA_API_KEY') || !CAPTCHA_API_KEY) {
+        publicMessage = "Error de configuración: CAPTCHA_API_KEY no configurada. Verifica el archivo .env";
+      } else if (msg.includes('puppeteer') || msg.includes('browser')) {
+        publicMessage = "Error al iniciar el navegador. Verifica que Puppeteer esté instalado correctamente.";
+      } else {
+        publicMessage = `Error al iniciar la consulta: ${msg.substring(0, 100)}`;
+      }
+    } else if (msg.includes('APESEG_TRANSIENT_ERROR')) {
+      isRealError = true;
+      publicMessage = "El servicio SOAT no está disponible temporalmente. Intente más tarde.";
     } else if (msg.includes('APESEG_CAPTCHA_INVALID')) {
+      isRealError = true;
       publicMessage = "No se pudo validar la consulta. Intente nuevamente.";
     } else if (msg.includes('APESEG_NO_CONFIRMATION')) {
-      publicMessage = "No se pudo confirmar la consulta. Intente nuevamente.";
+      // Este error ya no se lanza en el scraper, pero por si acaso lo manejamos
+      console.log(`[SOAT-APESEG] ⚠️ APESEG_NO_CONFIRMATION - probablemente falta de datos, no error real`);
+      publicMessage = "No se encontraron certificados SOAT para esta placa";
+    } else if (msg.includes('Timeout')) {
+      isRealError = true;
+      publicMessage = "La consulta tardó demasiado. Por favor, intente nuevamente.";
+    } else {
+      // Otros errores - log detallado pero tratar como "sin datos" para no romper el frontend
+      console.error(`[SOAT-APESEG] Error desconocido: ${msg}`);
+      console.error(`[SOAT-APESEG] Stack completo:`, error.stack);
+      publicMessage = "No se encontraron certificados SOAT para esta placa";
     }
 
     // Siempre devolver 200 con ok: true y status: empty con estructura completa
@@ -2429,7 +2462,7 @@ app.post("/api/siniestro", async (req, res) => {
       const resultado = await Promise.race([
         scraper.consultarPlaca(placa, 5), // 5 intentos mÃƒÂ¡ximo para mayor confiabilidad
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout: La consulta tardÃƒÂ³ mÃƒÂ¡s de 300 segundos")), 300000)
+          setTimeout(() => reject(new Error("Timeout: La consulta tardÃƒÂ³ mÃƒÂ¡s de 600 segundos")), 600000) // Aumentado a 10 minutos porque encuentra datos pero timeout lo mata
         )
       ]);
 
@@ -2468,6 +2501,9 @@ app.post("/api/siniestro", async (req, res) => {
           message: "No se encontraron registros de SOAT"
         });
       }
+      
+      // OBLIGATORIO: Si hay pÃ³lizas, mostrarlas siempre
+      console.log(`[SINIESTRO] PÃ³lizas encontradas - OBLIGATORIO mostrar: ${resultado.polizas.length}`);
 
       // Formatear datos para el frontend
       const data = {
@@ -3075,7 +3111,14 @@ app.post("/api/placas-pe", async (req, res) => {
     // Usar directamente el scraper de Node.js (mÃ¡s rÃ¡pido y confiable)
     console.log('[PLACAS.PE] ðŸš€ Usando scraper Node.js...');
     const scraper = new PlacasPeScraper(CAPTCHA_API_KEY);
-    const resultado = await scraper.consultarPlaca(placa, 2);
+    
+    // Agregar timeout para asegurar que no se quede colgado
+    const resultado = await Promise.race([
+      scraper.consultarPlaca(placa, 2),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout: La consulta tardÃ³ mÃ¡s de 300 segundos")), 300000) // 5 minutos
+      )
+    ]);
 
     console.log(`[PLACAS.PE] âœ… Resultado obtenido:`);
     console.log(`[PLACAS.PE]    Success: ${resultado.success}`);
@@ -3093,7 +3136,12 @@ app.post("/api/placas-pe", async (req, res) => {
     console.log(`[PLACAS.PE]    Mensaje: ${resultado.mensaje || 'null'}`);
     console.log(`[PLACAS.PE]    Resultado completo:`, JSON.stringify(resultado, null, 2));
 
-    if (!resultado.success) {
+    // Verificar si hay datos - OBLIGATORIO mostrar si hay cualquier dato
+    const hasData = resultado.brand || resultado.model || resultado.ownerCompleteName || 
+                    resultado.serialNumber || resultado.statusDescription || resultado.deliveryPoint ||
+                    resultado.plateNew || resultado.startDate || resultado.insertDate;
+
+    if (!resultado.success || !resultado.encontrado || !hasData) {
       return respond(res, {
         ok: true,
         source: "placas-pe",
@@ -3106,20 +3154,9 @@ app.post("/api/placas-pe", async (req, res) => {
         message: resultado.mensaje || "No se encontrÃ³ informaciÃ³n"
       });
     }
-
-    if (!resultado.encontrado) {
-      return respond(res, {
-        ok: true,
-        source: "placas-pe",
-        status: "empty",
-        data: {
-          placa: placa,
-          encontrado: false,
-          mensaje: resultado.mensaje || "No se encontrÃ³ informaciÃ³n para esta placa"
-        },
-        message: resultado.mensaje || "No se encontrÃ³ informaciÃ³n para esta placa"
-      });
-    }
+    
+    // Si hay datos, OBLIGATORIAMENTE mostrar con status success
+    console.log(`[PLACAS.PE] Datos encontrados - OBLIGATORIO mostrar:`, hasData);
 
     return respond(res, {
       ok: true,
@@ -4488,7 +4525,13 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
         scraper.baseURL = process.env.VEHICULO_CERT_URL;
       }
 
-      const resultado = await scraper.consultarPlaca(placa, 2); // 2 intentos mÃƒÂ¡ximo
+      // Agregar timeout para asegurar que no se quede colgado
+      const resultado = await Promise.race([
+        scraper.consultarPlaca(placa, 2), // 2 intentos mÃƒÂ¡ximo
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout: La consulta tardÃ³ mÃ¡s de 300 segundos")), 300000) // 5 minutos
+        )
+      ]);
 
       console.log(`[CERT-VEHICULO] Ã°Å¸â€œÅ  Resultado del scraper:`, JSON.stringify(resultado, null, 2));
 
@@ -4522,8 +4565,9 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
 
       console.log(`[CERT-VEHICULO] Ã°Å¸â€œâ€¹ Datos formateados:`, JSON.stringify(data, null, 2));
 
-      // Verificar si hay datos
-      const hasData = data.marca || data.modelo || data.nro_certificado;
+      // Verificar si hay datos - OBLIGATORIO mostrar si hay cualquier dato
+      const hasData = data.marca || data.modelo || data.nro_certificado || data.numero_certificado || 
+                      data.serie || data.motor || data.color || data.anio || data.categoria || data.fecha_emision;
 
       if (!hasData) {
         console.log(`[CERT-VEHICULO] Ã¢Å¡Â Ã¯Â¸Â No hay datos para placa ${placa}, devolviendo mensaje informativo`);
@@ -4539,7 +4583,9 @@ app.post("/api/certificado-vehiculo", async (req, res) => {
         });
       }
 
-      console.log(`[CERT-VEHICULO] Ã¢Å“â€¦ Consulta exitosa: ${data.marca} ${data.modelo}`);
+      // Si hay datos, OBLIGATORIAMENTE mostrar con status success
+      console.log(`[CERT-VEHICULO] Datos encontrados - OBLIGATORIO mostrar:`, hasData);
+      console.log(`[CERT-VEHICULO] Ã¢Å"â€¦ Consulta exitosa: ${data.marca} ${data.modelo}`);
       console.log(`[CERT-VEHICULO] Ã°Å¸â€œÂ¤ Enviando respuesta JSON al frontend...`);
 
       const response = {

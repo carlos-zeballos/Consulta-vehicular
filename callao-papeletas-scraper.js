@@ -131,11 +131,42 @@ class CallaoPapeletasScraper {
         console.log('   ℹ️ No se encontró radio "Número de Placa" (puede no ser necesario)');
       }
       
-      // Buscar el input de placa usando locator robusto
+      // Buscar el input de placa usando locator robusto (excluyendo DNI)
       console.log('   🔍 Buscando campo de placa...');
-      const placaLocator = page.locator(
-        'input#placa, input[name*="placa" i], input[id*="placa" i], input[placeholder*="placa" i], form input[type="text"]'
-      ).first();
+      
+      // Primero intentar selectores específicos de placa
+      let placaLocator = page.locator('input#placa, input[name*="placa" i], input[id*="placa" i], input[placeholder*="placa" i]').first();
+      let placaCount = await placaLocator.count();
+      
+      // Si no se encuentra con selectores específicos, buscar en el formulario pero excluyendo DNI
+      if (placaCount === 0) {
+        console.log('   ℹ️ Selector específico no encontrado, buscando en formulario (excluyendo DNI)...');
+        // Buscar todos los inputs de texto visibles y filtrar los que NO sean DNI
+        const allInputs = await page.locator('form input[type="text"]:visible').all();
+        for (const input of allInputs) {
+          const id = await input.getAttribute('id') || '';
+          const name = await input.getAttribute('name') || '';
+          const placeholder = await input.getAttribute('placeholder') || '';
+          const combined = `${id} ${name} ${placeholder}`.toLowerCase();
+          
+          // Si contiene "dni" o "documento", saltarlo
+          if (combined.includes('dni') || combined.includes('documento')) {
+            continue;
+          }
+          
+          // Si contiene "placa" o no tiene identificadores específicos de DNI, usarlo
+          if (combined.includes('placa') || (!combined.includes('dni') && !combined.includes('documento'))) {
+            placaLocator = input;
+            placaCount = 1;
+            console.log(`   ✅ Campo encontrado (id: ${id}, name: ${name})`);
+            break;
+          }
+        }
+      }
+      
+      if (placaCount === 0) {
+        throw new Error('No se encontró el campo de placa en el formulario');
+      }
       
       // Esperar a que el input esté visible
       await placaLocator.waitFor({ state: 'visible', timeout: 60000 });

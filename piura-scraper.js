@@ -129,8 +129,8 @@ class PiuraMultasScraper {
       // 1. NAVEGAR A LA PÁGINA
       console.log('🌐 Navegando a la página de multas...');
       await page.goto(this.baseURL, {
-        waitUntil: 'networkidle',
-        timeout: 60000
+        waitUntil: 'domcontentloaded', // Cambiado de networkidle a domcontentloaded para ser más rápido
+        timeout: 120000 // Aumentado a 2 minutos
       });
       
       await this.delay(3000);

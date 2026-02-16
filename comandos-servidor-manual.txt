@@ -1,0 +1,49 @@
+# Comandos para ejecutar manualmente en el servidor
+# Copia y pega cada comando uno por uno, ingresando la contraseña cuando se pida
+# Contraseña: tg4VBxwU7SCG
+
+# 1. Conectarse al servidor
+ssh root@217.216.87.255
+
+# 2. Una vez conectado, ejecutar estos comandos:
+
+# Verificar directorio
+cd /opt/Consulta-vehicular
+pwd
+
+# Ver estado del contenedor Docker
+docker ps | grep consulta-vehicular
+
+# Ver logs recientes (últimas 100 líneas)
+docker logs --tail 100 consulta-vehicular
+
+# Ver errores en logs
+docker logs --tail 500 consulta-vehicular 2>&1 | grep -i "error\|failed\|exception" | tail -30
+
+# Verificar archivo .env
+cat .env | grep -E "CAPTCHA_API_KEY|MERCADOPAGO"
+
+# Ver procesos Node/Puppeteer dentro del contenedor
+docker exec consulta-vehicular ps aux | grep -E "node|puppeteer|chrome" | grep -v grep
+
+# Entrar al contenedor
+docker exec -it consulta-vehicular sh
+
+# Verificar si hay archivos de debug SOAT dentro del contenedor
+docker exec consulta-vehicular ls -la /app/apeseg-debug-*.png /app/apeseg-debug-*.html 2>/dev/null | head -10
+
+# Verificar espacio en disco
+df -h
+
+# Verificar memoria
+free -h
+
+# Ver logs en tiempo real (Ctrl+C para salir)
+docker logs -f consulta-vehicular --tail 200
+
+# Desplegar nuevo commit
+cd /opt/Consulta-vehicular
+git pull origin main
+docker build -t consulta-vehicular:latest .
+docker rm -f consulta-vehicular
+docker run -d --name consulta-vehicular --env-file .env -p 127.0.0.1:8080:3000 consulta-vehicular:latest

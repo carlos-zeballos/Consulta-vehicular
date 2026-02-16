@@ -184,11 +184,13 @@
                                 url.includes('/api/chiclayo') ||
                                 url.includes('/api/infogas') ||
                                 url.includes('/api/placas-pe');
-      // SOAT y Siniestro necesitan más tiempo: SOAT 360s (6 minutos), Siniestro 300s (5 minutos)
+      // SOAT, Siniestro, Certificado Vehiculo y PLACAS.PE necesitan más tiempo
       const isVeryComplexEndpoint = url.includes('/api/siniestro');
       const isSoatEndpoint = url.includes('/api/soat');
-      // SOAT 360s (6 min), siniestro 300s (5 min), complejos 300s, manual 300s, normal 120s
-      const timeoutMs = options.useManual ? 300000 : (isSoatEndpoint ? 360000 : (isVeryComplexEndpoint ? 300000 : (isComplexEndpoint ? 300000 : 120000))); 
+      const isCertificadoVehiculo = url.includes('/api/certificado-vehiculo');
+      const isPlacasPe = url.includes('/api/placas-pe');
+      // SOAT 480s (8 min), siniestro 600s (10 min), certificado-vehiculo 300s (5 min), placas-pe 300s (5 min), complejos 300s, manual 300s, normal 120s
+      const timeoutMs = options.useManual ? 300000 : (isSoatEndpoint ? 480000 : (isVeryComplexEndpoint ? 600000 : (isCertificadoVehiculo ? 300000 : (isPlacasPe ? 300000 : (isComplexEndpoint ? 300000 : 120000))))); 
       
       const timeout = setTimeout(() => {
         controller.abort();
@@ -1446,6 +1448,28 @@
           });
         }
         return;
+      }
+      
+      // Para SOAT, mostrar mensaje de espera
+      if (key === 'soat') {
+        console.log(`[FRONTEND-SOAT] 🚀 Iniciando consulta SOAT...`);
+        const container = document.getElementById(`resultado-${key}`);
+        if (container) {
+          const body = container.querySelector('.section-body');
+          if (body) {
+            body.innerHTML = `
+              <div class="message info" style="text-align: center; padding: 20px;">
+                <span class="message-icon">⏳</span>
+                <div>
+                  <strong>Consultando SOAT en sitios oficiales...</strong>
+                  <p>Por favor, espere mientras realizamos la consulta en los sistemas oficiales de APESEG.</p>
+                  <p style="font-size: 12px; color: #6C757D; margin-top: 10px;">Esta consulta puede tardar hasta 8 minutos debido a la resolución de captchas y validaciones de seguridad.</p>
+                  <p style="font-size: 11px; color: #9CA3AF; margin-top: 8px;">⏱️ Por favor, no cierre esta ventana mientras se procesa su solicitud.</p>
+                </div>
+              </div>
+            `;
+          }
+        }
       }
       
       // Para SUNARP, mostrar mensaje de progreso
