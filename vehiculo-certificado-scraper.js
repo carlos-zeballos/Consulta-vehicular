@@ -281,11 +281,13 @@ class VehiculoCertificadoScraper {
       // Si ya tenemos los datos desde la respuesta interceptada, usarlos
       if (datosVehiculo) {
         console.log('   ✅ Usando datos de respuesta interceptada');
+        const datosFormateados = this.formatDatos(datosVehiculo);
+        console.log(`[CERT-VEHICULO] Datos encontrados - OBLIGATORIO mostrar:`, datosFormateados);
         await browser.close();
         return {
           success: true,
           placa: placa,
-          ...this.formatDatos(datosVehiculo),
+          ...datosFormateados,
           timestamp: new Date().toISOString()
         };
       }
@@ -293,6 +295,15 @@ class VehiculoCertificadoScraper {
       // 8. EXTRAER RESULTADOS DEL DOM
       console.log('📊 Extrayendo datos del DOM...');
       const resultados = await this.extractResults(page, datosVehiculo);
+      
+      // Verificar si hay datos antes de cerrar
+      const hasData = resultados.marca || resultados.modelo || resultados.nro_certificado || 
+                      resultados.serie || resultados.motor || resultados.color || 
+                      resultados.anio || resultados.categoria || resultados.fecha_emision;
+      
+      if (hasData) {
+        console.log(`[CERT-VEHICULO] Datos encontrados - OBLIGATORIO mostrar:`, resultados);
+      }
       
       await browser.close();
       

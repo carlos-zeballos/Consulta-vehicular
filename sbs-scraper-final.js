@@ -976,6 +976,7 @@ class SBSSOATScraper {
       // IMPORTANTE: Primero verificar si hay pólizas. Solo si NO hay pólizas, verificar mensajes
       if (resultado.polizas && resultado.polizas.length > 0) {
         console.log(`   ✅ Se encontraron ${resultado.polizas.length} póliza(s) - OBLIGATORIO mostrar`);
+        console.log(`[SINIESTRO] Pólizas encontradas - OBLIGATORIO mostrar: ${resultado.polizas.length}`);
         // Si hay pólizas, retornar directamente sin verificar mensajes
         return {
           success: true,
