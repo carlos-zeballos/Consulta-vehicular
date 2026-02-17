@@ -379,18 +379,44 @@ class SBSSOATScraper {
     const urlActual = page.url();
     console.log(`   📍 URL actual: ${urlActual}`);
     
-    // Si estamos en ReporteCentralRiesgo, esperar más tiempo para que se cargue el contenido dinámico
-    if (urlActual.includes('ReporteCentralRiesgo')) {
-      console.log('   ⚠️ Página ReporteCentralRiesgo detectada, esperando carga dinámica...');
-      await this.delay(30000); // Esperar 30s para carga dinámica
-      
-      // Intentar hacer scroll para activar carga lazy
-      for (let i = 0; i < 10; i++) {
-        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-        await this.delay(2000);
+      // Si estamos en ReporteCentralRiesgo, esperar más tiempo para que se cargue el contenido dinámico
+      if (urlActual.includes('ReporteCentralRiesgo')) {
+        console.log('   ⚠️ Página ReporteCentralRiesgo detectada, esperando carga dinámica...');
+        await this.delay(45000); // Aumentado a 45s para carga dinámica
+        
+        // Intentar hacer scroll para activar carga lazy - MÁS AGRESIVO
+        for (let i = 0; i < 20; i++) {
+          await page.evaluate(() => {
+            window.scrollTo(0, document.body.scrollHeight);
+            // También hacer scroll en la tabla específica
+            const tabla = document.querySelector('#listSoatPlacaVeh');
+            if (tabla) {
+              tabla.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+          });
+          await this.delay(2000);
+        }
+        await this.delay(15000); // Esperar adicional después del scroll
+        
+        // Intentar hacer clic en cualquier botón de "cargar más" o "ver más"
+        try {
+          await page.evaluate(() => {
+            const botones = Array.from(document.querySelectorAll('a, button, input[type="button"], input[type="submit"]'));
+            for (const btn of botones) {
+              const texto = (btn.textContent || btn.value || '').toLowerCase();
+              if (texto.includes('ver más') || texto.includes('cargar más') || texto.includes('mostrar más') || 
+                  texto.includes('siguiente') || texto.includes('next') || texto.includes('más resultados')) {
+                btn.click();
+                return true;
+              }
+            }
+            return false;
+          });
+          await this.delay(10000);
+        } catch (e) {
+          // Ignorar errores
+        }
       }
-      await this.delay(10000); // Esperar adicional después del scroll
-    }
     
     // Esperar resultados con estrategia mejorada
     try {
@@ -423,7 +449,22 @@ class SBSSOATScraper {
       
       // Esperar a que la tabla tenga contenido (puede tardar más con AJAX)
       console.log('   ⏳ Esperando a que la tabla se cargue completamente...');
-      await this.delay(10000); // Esperar más tiempo para carga AJAX
+      await this.delay(20000); // Aumentado a 20s para carga AJAX
+      
+      // Intentar esperar a que aparezcan filas en la tabla
+      try {
+        await page.waitForFunction(() => {
+          const tabla = document.querySelector('#listSoatPlacaVeh');
+          if (tabla) {
+            const filas = tabla.querySelectorAll('tbody tr, tr');
+            return filas.length > 1; // Más de 1 fila (header + datos)
+          }
+          return false;
+        }, { timeout: 30000 });
+        console.log('   ✅ Tabla con datos detectada');
+      } catch (e) {
+        console.log('   ⚠️ Timeout esperando tabla con datos, continuando...');
+      }
       
       // Verificar cuántas filas hay en la tabla - buscar en múltiples lugares
       const filasIniciales = await page.evaluate(() => {

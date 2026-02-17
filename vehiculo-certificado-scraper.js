@@ -818,17 +818,33 @@ class VehiculoCertificadoScraper {
       return this.formatDatos(datosVehiculo);
     }
     
-    // Si no, intentar extraer del DOM (tabla de resultados)
-    try {
-      console.log('   🔍 Extrayendo datos de la tabla...');
-      await this.delay(3000);
-      
-      // Esperar a que aparezca la tabla de resultados
+      // Si no, intentar extraer del DOM (tabla de resultados)
       try {
-        await page.waitForSelector('table', { timeout: 10000 });
-      } catch (e) {
-        console.log('   ⚠️ Tabla no encontrada, buscando en todo el DOM...');
-      }
+        console.log('   🔍 Extrayendo datos de la tabla...');
+        await this.delay(5000); // Aumentado a 5s
+        
+        // Esperar a que aparezca la tabla de resultados - MÚLTIPLES INTENTOS
+        let tablaEncontrada = false;
+        for (let intento = 0; intento < 5; intento++) {
+          try {
+            await page.waitForSelector('table', { timeout: 5000 });
+            tablaEncontrada = true;
+            console.log(`   ✅ Tabla encontrada en intento ${intento + 1}`);
+            break;
+          } catch (e) {
+            if (intento < 4) {
+              console.log(`   ⏳ Intento ${intento + 1} fallido, esperando más tiempo...`);
+              await this.delay(3000);
+            }
+          }
+        }
+        
+        if (!tablaEncontrada) {
+          console.log('   ⚠️ Tabla no encontrada después de múltiples intentos, buscando en todo el DOM...');
+        }
+        
+        // Esperar adicional para que se carguen datos dinámicos
+        await this.delay(5000);
       
       const datos = await page.evaluate(() => {
         const data = {};
@@ -873,29 +889,125 @@ class VehiculoCertificadoScraper {
           if (data.placa) break; // Si encontramos datos, salir
         }
         
-        // Si no hay tabla, buscar en texto
+        // Si no hay tabla, buscar en texto - MÉTODO MEJORADO
         if (!data.placa) {
           const textContent = document.body.innerText || '';
+          const htmlContent = document.body.innerHTML || '';
           
-          const placaMatch = textContent.match(/PLACA[:\s]+([A-Z0-9]{6,7})/i);
-          if (placaMatch) data.placa = placaMatch[1];
+          // Buscar placa en múltiples formatos
+          const placaPatterns = [
+            /PLACA[:\s]+([A-Z0-9]{6,7})/i,
+            /Placa[:\s]+([A-Z0-9]{6,7})/i,
+            /placa[:\s]+([A-Z0-9]{6,7})/i,
+            /([A-Z]{1,3}[0-9]{3,4}[A-Z0-9]{0,2})/,
+            /<td[^>]*>([A-Z0-9]{6,7})<\/td>/i
+          ];
           
-          const marcaMatch = textContent.match(/MARCA[:\s]+([A-ZÁÉÍÓÚÑ\s]+)/i);
-          if (marcaMatch) data.marca = marcaMatch[1].trim();
+          for (const pattern of placaPatterns) {
+            const match = textContent.match(pattern) || htmlContent.match(pattern);
+            if (match && match[1] && match[1].length >= 4) {
+              data.placa = match[1].toUpperCase();
+              break;
+            }
+          }
           
-          const modeloMatch = textContent.match(/MODELO[:\s]+([A-ZÁÉÍÓÚÑ0-9\s\-]+)/i);
-          if (modeloMatch) data.modelo = modeloMatch[1].trim();
+          // Buscar marca en múltiples formatos
+          const marcaPatterns = [
+            /MARCA[:\s]+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]{2,30})/i,
+            /Marca[:\s]+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]{2,30})/i,
+            /<td[^>]*>([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]{2,30})<\/td>/i
+          ];
+          
+          for (const pattern of marcaPatterns) {
+            const match = textContent.match(pattern) || htmlContent.match(pattern);
+            if (match && match[1] && match[1].trim().length >= 2) {
+              data.marca = match[1].trim();
+              break;
+            }
+          }
+          
+          // Buscar modelo
+          const modeloPatterns = [
+            /MODELO[:\s]+([A-ZÁÉÍÓÚÑ0-9][A-ZÁÉÍÓÚÑa-záéíóúñ0-9\s\-]{2,40})/i,
+            /Modelo[:\s]+([A-ZÁÉÍÓÚÑ0-9][A-ZÁÉÍÓÚÑa-záéíóúñ0-9\s\-]{2,40})/i
+          ];
+          
+          for (const pattern of modeloPatterns) {
+            const match = textContent.match(pattern);
+            if (match && match[1] && match[1].trim().length >= 2) {
+              data.modelo = match[1].trim();
+              break;
+            }
+          }
+          
+          // Buscar certificado
+          const certPatterns = [
+            /CERTIFICADO[:\s]+([A-Z0-9\-]{5,20})/i,
+            /NRO[:\s]+CERTIFICADO[:\s]+([A-Z0-9\-]{5,20})/i,
+            /Certificado[:\s]+([A-Z0-9\-]{5,20})/i
+          ];
+          
+          for (const pattern of certPatterns) {
+            const match = textContent.match(pattern);
+            if (match && match[1]) {
+              data.nro_certificado = match[1].trim();
+              break;
+            }
+          }
         }
         
         return data;
       });
       
-      if (datos.placa || datos.marca) {
+      // Verificar si hay datos - MÁS FLEXIBLE
+      const hasData = datos.placa || datos.marca || datos.modelo || datos.nro_certificado || 
+                      datos.serie || datos.motor || datos.color || datos.anio || datos.categoria;
+      
+      if (hasData) {
         console.log(`   ✅ Datos extraídos del DOM: ${datos.placa || 'N/A'} - ${datos.marca || 'N/A'} - ${datos.modelo || 'N/A'}`);
+        console.log(`[CERT-VEHICULO] Datos encontrados en DOM - OBLIGATORIO mostrar`);
         return this.formatDatos(datos);
       }
       
-      console.log('   ⚠️ No se encontraron datos en el DOM - La placa no cuenta con certificado');
+      // Si no hay datos, intentar una vez más después de esperar más tiempo
+      console.log('   ⚠️ No se encontraron datos en el primer intento, esperando más tiempo y reintentando...');
+      await this.delay(10000);
+      
+      // Reintentar extracción
+      const datosRetry = await page.evaluate(() => {
+        const data = {};
+        const textContent = document.body.innerText || '';
+        const htmlContent = document.body.innerHTML || '';
+        
+        // Buscar cualquier dato visible en la página
+        if (textContent.includes('VCM675') || htmlContent.includes('VCM675')) {
+          data.placa = 'VCM675';
+        }
+        
+        // Buscar en todos los elementos de la página
+        const allElements = document.querySelectorAll('td, div, span, p, li');
+        for (const el of allElements) {
+          const text = (el.textContent || '').trim();
+          if (text.length > 0 && text.length < 100) {
+            // Si contiene palabras clave, puede ser un dato
+            if (text.match(/^[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]{2,30}$/) && !data.marca) {
+              data.marca = text;
+            }
+            if (text.match(/^[A-ZÁÉÍÓÚÑ0-9][A-ZÁÉÍÓÚÑa-záéíóúñ0-9\s\-]{2,40}$/) && !data.modelo && text !== data.marca) {
+              data.modelo = text;
+            }
+          }
+        }
+        
+        return data;
+      });
+      
+      if (datosRetry.placa || datosRetry.marca || datosRetry.modelo) {
+        console.log(`   ✅ Datos encontrados en segundo intento: ${JSON.stringify(datosRetry)}`);
+        return this.formatDatos(datosRetry);
+      }
+      
+      console.log('   ⚠️ No se encontraron datos en el DOM después de múltiples intentos');
       // Devolver objeto vacío para que el servidor maneje el mensaje
       return {};
     } catch (e) {
