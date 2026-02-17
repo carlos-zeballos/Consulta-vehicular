@@ -1,0 +1,52 @@
+# ============================================
+# COMANDO DE DESPLIEGUE - CORRECCIONES SBS Y LUNAS POLARIZADAS
+# ============================================
+
+# ============================================
+# CAMBIOS REALIZADOS
+# ============================================
+# 1. SBS (Siniestralidad SOAT):
+#    - Mejorado logging para detectar pólizas encontradas
+#    - Asegurado que se muestren cuando hay datos
+#    - Timeout: 10 minutos (600 segundos)
+#
+# 2. Lunas Polarizadas (Certificado Vehicular):
+#    - Mejorado logging para detectar datos encontrados
+#    - Verificación mejorada de datos antes de cerrar navegador
+#    - Timeout: 5 minutos (300 segundos)
+
+# ============================================
+# COMANDO DE DESPLIEGUE
+# ============================================
+
+ssh root@217.216.87.255
+# Contraseña: tg4VBxwU7SCG
+
+cd /opt/Consulta-vehicular
+git pull origin main
+docker build -t consulta-vehicular:latest .
+docker rm -f consulta-vehicular
+docker run -d --name consulta-vehicular --env-file .env -p 127.0.0.1:8080:3000 consulta-vehicular:latest
+
+# ============================================
+# VERIFICACIÓN
+# ============================================
+
+# Ver logs
+docker logs -f consulta-vehicular --tail 100
+
+# Verificar que el contenedor está corriendo
+docker ps | grep consulta-vehicular
+
+# ============================================
+# COMANDO ÚNICO
+# ============================================
+
+ssh root@217.216.87.255 "cd /opt/Consulta-vehicular && git pull origin main && docker build -t consulta-vehicular:latest . && docker rm -f consulta-vehicular && docker run -d --name consulta-vehicular --env-file .env -p 127.0.0.1:8080:3000 consulta-vehicular:latest"
+
+# ============================================
+# PRUEBAS RECOMENDADAS
+# ============================================
+# 1. Probar placa VCM675 para SBS (debe mostrar pólizas)
+# 2. Probar placa VCM675 para Lunas Polarizadas (debe mostrar certificado)
+# 3. Verificar logs con: docker logs consulta-vehicular | grep -E "SINIESTRO|CERT-VEHICULO"
