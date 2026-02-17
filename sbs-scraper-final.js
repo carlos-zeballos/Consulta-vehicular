@@ -382,10 +382,10 @@ class SBSSOATScraper {
       // Si estamos en ReporteCentralRiesgo, esperar más tiempo para que se cargue el contenido dinámico
       if (urlActual.includes('ReporteCentralRiesgo')) {
         console.log('   ⚠️ Página ReporteCentralRiesgo detectada, esperando carga dinámica...');
-        await this.delay(45000); // Aumentado a 45s para carga dinámica
+        await this.delay(60000); // Aumentado a 60s para carga dinámica
         
         // Intentar hacer scroll para activar carga lazy - MÁS AGRESIVO
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 30; i++) {
           await page.evaluate(() => {
             window.scrollTo(0, document.body.scrollHeight);
             // También hacer scroll en la tabla específica
@@ -396,7 +396,32 @@ class SBSSOATScraper {
           });
           await this.delay(2000);
         }
-        await this.delay(15000); // Esperar adicional después del scroll
+        await this.delay(20000); // Esperar adicional después del scroll
+        
+        // Intentar esperar a que aparezcan datos específicos en la tabla
+        try {
+          await page.waitForFunction(() => {
+            const tabla = document.querySelector('#listSoatPlacaVeh');
+            if (tabla) {
+              const filas = tabla.querySelectorAll('tbody tr, tr');
+              // Buscar filas con datos (más de 5 celdas)
+              for (const fila of filas) {
+                const celdas = fila.querySelectorAll('td');
+                if (celdas.length >= 8) {
+                  const primeraCelda = celdas[0]?.textContent.trim();
+                  // Si la primera celda tiene texto (aseguradora), hay datos
+                  if (primeraCelda && primeraCelda.length > 2) {
+                    return true;
+                  }
+                }
+              }
+            }
+            return false;
+          }, { timeout: 30000 });
+          console.log('   ✅ Datos detectados en tabla después de scroll');
+        } catch (e) {
+          console.log('   ⚠️ Timeout esperando datos en tabla, continuando...');
+        }
         
         // Intentar hacer clic en cualquier botón de "cargar más" o "ver más"
         try {
@@ -449,7 +474,35 @@ class SBSSOATScraper {
       
       // Esperar a que la tabla tenga contenido (puede tardar más con AJAX)
       console.log('   ⏳ Esperando a que la tabla se cargue completamente...');
-      await this.delay(20000); // Aumentado a 20s para carga AJAX
+      await this.delay(30000); // Aumentado a 30s para carga AJAX
+      
+      // Intentar múltiples veces esperar a que aparezcan datos
+      for (let intento = 0; intento < 5; intento++) {
+        const tieneDatos = await page.evaluate(() => {
+          const tabla = document.querySelector('#listSoatPlacaVeh');
+          if (tabla) {
+            const filas = tabla.querySelectorAll('tbody tr, tr');
+            for (const fila of filas) {
+              const celdas = fila.querySelectorAll('td');
+              if (celdas.length >= 8) {
+                const primeraCelda = celdas[0]?.textContent.trim();
+                if (primeraCelda && primeraCelda.length > 2 && !primeraCelda.toLowerCase().includes('aseguradora')) {
+                  return true;
+                }
+              }
+            }
+          }
+          return false;
+        });
+        
+        if (tieneDatos) {
+          console.log(`   ✅ Datos detectados en intento ${intento + 1}`);
+          break;
+        } else {
+          console.log(`   ⏳ Intento ${intento + 1}: Esperando más tiempo para carga de datos...`);
+          await this.delay(5000);
+        }
+      }
       
       // Intentar esperar a que aparezcan filas en la tabla
       try {

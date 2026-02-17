@@ -844,7 +844,35 @@ class VehiculoCertificadoScraper {
         }
         
         // Esperar adicional para que se carguen datos dinámicos
-        await this.delay(5000);
+        await this.delay(10000); // Aumentado a 10s
+        
+        // Intentar múltiples veces esperar a que aparezcan datos
+        for (let intento = 0; intento < 5; intento++) {
+          const tieneDatos = await page.evaluate(() => {
+            const tables = document.querySelectorAll('table');
+            for (const table of tables) {
+              const rows = table.querySelectorAll('tr');
+              for (let i = 1; i < rows.length; i++) {
+                const cells = rows[i].querySelectorAll('td');
+                if (cells.length >= 9) {
+                  const placa = cells[0]?.textContent.trim() || '';
+                  if (placa && placa.length >= 4) {
+                    return true;
+                  }
+                }
+              }
+            }
+            return false;
+          });
+          
+          if (tieneDatos) {
+            console.log(`   ✅ Datos detectados en intento ${intento + 1}`);
+            break;
+          } else {
+            console.log(`   ⏳ Intento ${intento + 1}: Esperando más tiempo para carga de datos...`);
+            await this.delay(3000);
+          }
+        }
       
       const datos = await page.evaluate(() => {
         const data = {};
@@ -889,14 +917,18 @@ class VehiculoCertificadoScraper {
           if (data.placa) break; // Si encontramos datos, salir
         }
         
-        // Si no hay tabla, buscar en texto - MÉTODO MEJORADO
-        if (!data.placa) {
+        // Si no hay tabla, buscar en texto - MÉTODO MEJORADO Y MÁS AGRESIVO
+        if (!data.placa || !data.marca) {
           const textContent = document.body.innerText || '';
           const htmlContent = document.body.innerHTML || '';
+          
+          console.log(`Buscando datos en texto (longitud: ${textContent.length})...`);
           
           // Buscar placa en múltiples formatos
           const placaPatterns = [
             /PLACA[:\s]+([A-Z0-9]{6,7})/i,
+            /PLACA\s*[:\-]?\s*([A-Z0-9]{6,7})/i,
+            /\b([A-Z]{1,3}[0-9]{3,4}[A-Z0-9]{0,2})\b/,
             /Placa[:\s]+([A-Z0-9]{6,7})/i,
             /placa[:\s]+([A-Z0-9]{6,7})/i,
             /([A-Z]{1,3}[0-9]{3,4}[A-Z0-9]{0,2})/,

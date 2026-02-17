@@ -1,0 +1,59 @@
+# ============================================
+# COMANDO DE DESPLIEGUE - MEJORAS EXTRACCIÓN DOM
+# ============================================
+
+# ============================================
+# CAMBIOS REALIZADOS
+# ============================================
+# 1. SBS (Siniestralidad SOAT):
+#    - Aumentado tiempo de espera en ReporteCentralRiesgo a 60s
+#    - Aumentado scroll iterations a 30
+#    - Agregado espera específica para detectar datos en tabla
+#    - Múltiples intentos de verificación de datos (5 intentos)
+#    - Timeout total: 10 minutos
+#
+# 2. Lunas Polarizadas (Certificado Vehicular):
+#    - Aumentado tiempo de espera inicial a 10s
+#    - Múltiples intentos de verificación de datos (5 intentos)
+#    - Búsqueda mejorada en texto con múltiples patrones
+#    - Búsqueda de marca, modelo y certificado en texto
+#    - Timeout total: 5 minutos
+
+# ============================================
+# COMANDO DE DESPLIEGUE
+# ============================================
+
+ssh root@217.216.87.255
+# Contraseña: tg4VBxwU7SCG
+
+cd /opt/Consulta-vehicular
+git pull origin main
+docker build -t consulta-vehicular:latest .
+docker rm -f consulta-vehicular
+docker run -d --name consulta-vehicular --env-file .env -p 127.0.0.1:8080:3000 consulta-vehicular:latest
+
+# ============================================
+# VERIFICACIÓN
+# ============================================
+
+# Ver logs
+docker logs -f consulta-vehicular --tail 100
+
+# Verificar que el contenedor está corriendo
+docker ps | grep consulta-vehicular
+
+# Ver logs específicos de extracción
+docker logs consulta-vehicular | grep -E "Buscando datos|Datos detectados|Tabla encontrada|Placa encontrada|Marca encontrada"
+
+# ============================================
+# COMANDO ÚNICO
+# ============================================
+
+ssh root@217.216.87.255 "cd /opt/Consulta-vehicular && git pull origin main && docker build -t consulta-vehicular:latest . && docker rm -f consulta-vehicular && docker run -d --name consulta-vehicular --env-file .env -p 127.0.0.1:8080:3000 consulta-vehicular:latest"
+
+# ============================================
+# PRUEBAS RECOMENDADAS
+# ============================================
+# 1. Probar placa VCM675 para SBS (debe mostrar pólizas si existen)
+# 2. Probar placa VCM675 para Lunas Polarizadas (debe mostrar certificado si existe)
+# 3. Verificar logs con: docker logs consulta-vehicular | grep -E "SINIESTRO|CERT-VEHICULO|Datos detectados"
